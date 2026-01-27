@@ -41,6 +41,14 @@
     }
   }
 
+  function handleKeyDown(e: KeyboardEvent) {
+    if (!map) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      (map as any).__countyKeyboardActivate?.();
+    }
+  }
+
   function addGeorgiaCountiesLayers(m: maplibregl.Map) {
     // Update path if you placed it differently
     const countiesUrl = "/data/geo/ga_counties.geojson";
@@ -66,41 +74,89 @@
         outlineColor: "#0f172a",
         beforeId: labelLayerId,
         generateId: true,
+        hoverFillColor: '#f59e0b',
+        hoverOutlineColor: '#ffffff',
       });
-      log.info("counties:source-added", { url: countiesUrl });
-      return;
-    }
+      log.info("counties:source-added", { url: countiesUrl, beforeId: labelLayerId });
+    } else {
+      // If source exists but layers are missing, add them (keeping previous behavior)
+      if (!m.getLayer("ga-counties-fill")) {
+        m.addLayer(
+          {
+            id: "ga-counties-fill",
+            type: "fill",
+            source: "ga-counties",
+            paint: {
+              "fill-opacity": 0.28,
+              "fill-color": fillColor,
+            },
+          } as any,
+          labelLayerId
+        );
+        log.info("counties:fill-layer-added");
+      }
 
-    // If source exists but layers are missing, add them (keeping previous behavior)
-    if (!m.getLayer("ga-counties-fill")) {
-      m.addLayer(
-        {
-          id: "ga-counties-fill",
-          type: "fill",
+      if (!m.getLayer("ga-counties-outline")) {
+        m.addLayer({
+          id: "ga-counties-outline",
+          type: "line",
           source: "ga-counties",
           paint: {
-            "fill-opacity": 0.28,
-            "fill-color": fillColor,
+            "line-color": "#0f172a",
+            "line-width": 1,
+            "line-opacity": 0.8,
           },
-        } as any,
-        labelLayerId
-      );
-      log.info("counties:fill-layer-added");
+        });
+        log.info("counties:outline-layer-added");
+      }
     }
 
-    if (!m.getLayer("ga-counties-outline")) {
-      m.addLayer({
-        id: "ga-counties-outline",
-        type: "line",
-        source: "ga-counties",
-        paint: {
-          "line-color": "#0f172a",
-          "line-width": 1,
-          "line-opacity": 0.8,
-        },
-      });
-      log.info("counties:outline-layer-added");
+    // Hover / cursor handlers
+    let hoveredFeatureId: string | number | null = null;
+
+    function onMove(e: any) {
+      if (!e.features || !e.features.length) return;
+      const f = e.features[0];
+
+      if (hoveredFeatureId !== null && hoveredFeatureId !== f.id) {
+        try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
+      }
+
+      hoveredFeatureId = f.id;
+      m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: true });
+      m.getCanvas().style.cursor = 'pointer';
     }
+
+    function onLeave() {
+      if (hoveredFeatureId !== null) {
+        try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
+        hoveredFeatureId = null;
+      }
+      m.getCanvas().style.cursor = '';
+    }
+
+    m.on('mousemove', 'ga-counties-fill', onMove);
+    m.on('mouseleave', 'ga-counties-fill', onLeave);
+
+    function keyboardActivate() {
+      if (!mapEl) return;
+      const rect = mapEl.getBoundingClientRect();
+      const point = [rect.width / 2, rect.height / 2] as const;
+      const features = m.queryRenderedFeatures(point as any, { layers: ['ga-counties-fill'] });
+      if (!features.length) return;
+      const f = features[0];
+      if (hoveredFeatureId !== null) {
+        try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
+      }
+      hoveredFeatureId = f.id;
+      m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: true });
+      setTimeout(() => {
+        try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
+        hoveredFeatureId = null;
+      }, 2000);
+    }
+
+    (m as any).__countyKeyboardActivate = keyboardActivate;
   }
 
   onMount(() => {
@@ -179,6 +235,9 @@
       cancelled = true;
       ro?.disconnect();
       ro = null;
+      if (map) {
+        try { (map as any).__countyKeyboardActivate = undefined } catch (e) { /* ignore */ }
+      }
       destroyMap("unmount");
       log.info("mount:cleanup");
     };
@@ -208,7 +267,20 @@
       aria-label="Metro Atlanta map"
     >
       <!-- MapLibre mounts here; .map-container MUST be 100%/100% -->
-      <div class="map-container" bind:this={mapEl}></div>
+      <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+      <div
+        class="map-container"
+        bind:this={mapEl}
+        tabindex="0"
+        role="application"
+        on:keydown={handleKeyDown}
+        aria-describedby="map-instructions"
+      ></div>
+
+      <p id="map-instructions" class="sr-only">
+        Focus the map and press Enter to highlight the county at the center of the map.
+      </p>
     </div>
   </div>
 </section>

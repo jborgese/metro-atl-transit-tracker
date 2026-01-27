@@ -8,6 +8,9 @@ export interface AddGeoJsonLayerOptions {
   fillColor?: string | any
   fillOpacity?: number
   outlineColor?: string
+  /** Color used when a feature is hovered (feature-state hover === true) */
+  hoverFillColor?: string
+  hoverOutlineColor?: string
   /** Insert layer before this layer id (useful to place below labels) */
   beforeId?: string
   /** If true, generate numeric feature ids for feature-state usage */
@@ -33,7 +36,13 @@ export function addGeoJsonLayer(
     type: 'fill',
     source: id,
     paint: {
-      'fill-color': options?.fillColor ?? '#3b82f6',
+      // highlight using feature-state 'hover', fall back to provided fillColor expression or a default
+      'fill-color': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        options?.hoverFillColor ?? '#f59e0b',
+        options?.fillColor ?? '#3b82f6',
+      ],
       'fill-opacity': options?.fillOpacity ?? 0.25,
     },
   }
@@ -46,8 +55,18 @@ export function addGeoJsonLayer(
     type: 'line',
     source: id,
     paint: {
-      'line-color': options?.outlineColor ?? '#1e40af',
-      'line-width': 1,
+      'line-color': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        options?.hoverOutlineColor ?? '#ffffff',
+        options?.outlineColor ?? '#1e40af',
+      ],
+      'line-width': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        2,
+        1,
+      ],
     },
   }
 
