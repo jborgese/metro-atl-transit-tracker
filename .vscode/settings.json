@@ -5,6 +5,7 @@
     "Gwinnett",
     "maplibre",
     "maplibregl",
-    "MAPTILER"
+    "MAPTILER",
+    "vercel"
   ]
 }
