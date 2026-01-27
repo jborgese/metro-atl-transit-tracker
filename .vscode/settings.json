@@ -2,7 +2,9 @@
   "css.lint.unknownAtRules": "ignore",
   "cSpell.words": [
     "drilldowns",
+    "Gwinnett",
     "maplibre",
-    "maplibregl"
+    "maplibregl",
+    "MAPTILER"
   ]
 }

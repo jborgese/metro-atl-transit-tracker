@@ -3,16 +3,16 @@
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
 
-  // ✅ update this import path to your global helper
-  import { createLogger } from "../../utils/logger"; // <-- adjust
+  import { createLogger } from "../../utils/logger"; // adjust if needed
 
-  const log = createLogger("MetroMap"); // should no-op in prod if your helper is gated
+  const log = createLogger("MetroMap");
 
   export let title = "Metro Atlanta map";
   export let subtitle =
     "Interactive county/region map will load here (MapLibre next).";
   export let height = "520px";
 
+  // IMPORTANT: this element is the MapLibre container
   let mapEl: HTMLDivElement | null = null;
   let map: maplibregl.Map | null = null;
   let ro: ResizeObserver | null = null;
@@ -40,58 +40,119 @@
     }
   }
 
+  function addGeorgiaCountiesLayers(m: maplibregl.Map) {
+    // Update path if you placed it differently
+    const countiesUrl = "/data/geo/ga_counties.geojson";
+
+    if (!m.getSource("ga-counties")) {
+      m.addSource("ga-counties", {
+        type: "geojson",
+        data: countiesUrl,
+      });
+      log.info("counties:source-added", { url: countiesUrl });
+    }
+
+    // Put counties under labels but above basemap fills (MapTiler uses "label" layers near top)
+    // If you want guaranteed placement, we can find a specific label layer id.
+    if (!m.getLayer("ga-counties-fill")) {
+      m.addLayer({
+        id: "ga-counties-fill",
+        type: "fill",
+        source: "ga-counties",
+        paint: {
+          "fill-opacity": 0.28,
+          // Start with a simple metro highlight set (adjust as needed)
+          "fill-color": [
+            "match",
+            ["get", "NAME"],
+            "Fulton", "#2563eb",
+            "DeKalb", "#7c3aed",
+            "Cobb", "#16a34a",
+            "Gwinnett", "#f59e0b",
+            "#334155", // default
+          ],
+        },
+      });
+      log.info("counties:fill-layer-added");
+    }
+
+    if (!m.getLayer("ga-counties-outline")) {
+      m.addLayer({
+        id: "ga-counties-outline",
+        type: "line",
+        source: "ga-counties",
+        paint: {
+          "line-color": "#0f172a",
+          "line-width": 1,
+          "line-opacity": 0.8,
+        },
+      });
+      log.info("counties:outline-layer-added");
+    }
+  }
+
   onMount(() => {
     log.info("mount:start");
 
     let cancelled = false;
 
     (async () => {
-      // allow Astro/Svelte to paint + layout
       await tick();
       await new Promise((r) => requestAnimationFrame(r));
       if (cancelled) return;
 
-      const rect = mapEl?.getBoundingClientRect();
-      log.debug("container:post-layout", rect);
+      log.debug("container:post-layout", mapEl?.getBoundingClientRect());
 
-      // If still zero, we can still construct map (it loads),
-      // but we MUST resize once we have real dimensions.
       try {
         if (!mapEl) {
           log.error("mapEl is null, cannot construct map");
           return;
         }
-        const key = import.meta.env.PUBLIC_MAPTILER_KEY
+
+        const key = import.meta.env.PUBLIC_MAPTILER_KEY;
         if (!key) {
-          log.error('maptiler:key-missing (set PUBLIC_MAPTILER_KEY)')
-          return
+          log.error("maptiler:key-missing (set PUBLIC_MAPTILER_KEY)");
+          return;
         }
 
-        const styleUrl = `https://api.maptiler.com/maps/streets/style.json?key=${key}`
+        const styleUrl = `https://api.maptiler.com/maps/streets/style.json?key=${key}`;
 
         map = new maplibregl.Map({
           container: mapEl,
           style: styleUrl,
-
-          // Atlanta, GA
-          center: [-84.3880, 33.7490],
+          center: [-84.388, 33.749], // Atlanta, GA
           zoom: 9,
-
-          attributionControl: {}, // ✅ correct typing
+          attributionControl: false, // ✅ correct for MapLibre types
         });
+
+        map.addControl(
+          new maplibregl.AttributionControl({
+            compact: true,
+            customAttribution: [
+              'Map tiles © MapTiler',
+              'County boundaries © US Census Bureau (TIGER/Line)'
+            ],
+          }),
+          'bottom-right'
+        );
 
         map.addControl(new maplibregl.NavigationControl(), "top-right");
 
         map.on("load", () => {
           log.info("map:load (Atlanta)");
           safeResize();
+
+          try {
+            addGeorgiaCountiesLayers(map!);
+          } catch (e) {
+            log.error("counties:add-layers-failed", e);
+          }
         });
 
         map.on("error", (e) => {
           log.error("map:error", e);
         });
 
-        // Watch size changes (fixes client:visible + responsive layout)
         ro = new ResizeObserver(() => safeResize());
         ro.observe(mapEl);
 
@@ -113,7 +174,6 @@
 </script>
 
 <section aria-label={title}>
-  <!-- Tailwind can still style the card; sizing does NOT depend on it -->
   <div class="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
     <header class="mb-3 flex items-start justify-between gap-4">
       <div>
@@ -130,14 +190,21 @@
       </span>
     </header>
 
-    <!-- ✅ MapLibre wrapper with explicit size -->
     <div
       class="relative w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950"
       style={`height: ${height};`}
       aria-label="Metro Atlanta map"
     >
-      <!-- ✅ MapLibre mounts here -->
+      <!-- MapLibre mounts here; .map-container MUST be 100%/100% -->
       <div class="map-container" bind:this={mapEl}></div>
     </div>
   </div>
 </section>
+
+<style>
+  /* Ensure the MapLibre container fills the wrapper */
+  .map-container {
+    width: 100%;
+    height: 100%;
+  }
+</style>
