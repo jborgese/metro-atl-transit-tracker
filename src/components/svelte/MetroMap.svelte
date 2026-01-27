@@ -61,12 +61,20 @@
           log.error("mapEl is null, cannot construct map");
           return;
         }
+        const key = import.meta.env.PUBLIC_MAPTILER_KEY
+        if (!key) {
+          log.error('maptiler:key-missing (set PUBLIC_MAPTILER_KEY)')
+          return
+        }
+
+        const styleUrl = `https://api.maptiler.com/maps/streets/style.json?key=${key}`
+
         map = new maplibregl.Map({
           container: mapEl,
-          style: "https://demotiles.maplibre.org/style.json",
+          style: styleUrl,
 
-          // ✅ Atlanta, GA
-          center: [-84.388, 33.749],
+          // Atlanta, GA
+          center: [-84.3880, 33.7490],
           zoom: 9,
 
           attributionControl: {}, // ✅ correct typing
