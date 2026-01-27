@@ -4,6 +4,7 @@
   import "maplibre-gl/dist/maplibre-gl.css";
 
   import { createLogger } from "../../utils/logger"; // adjust if needed
+  import { addGeoJsonLayer } from "../../lib/map/addGeoJsonLayer";
 
   const log = createLogger("MetroMap");
 
@@ -44,35 +45,46 @@
     // Update path if you placed it differently
     const countiesUrl = "/data/geo/ga_counties.geojson";
 
+    const fillColor = [
+      "match",
+      ["get", "NAME"],
+      "Fulton", "#2563eb",
+      "DeKalb", "#7c3aed",
+      "Cobb", "#16a34a",
+      "Gwinnett", "#f59e0b",
+      "#334155", // default
+    ];
+
+    // Find a reasonable label layer to insert counties before (keep them below labels)
+    const labelLayerId = m.getStyle?.()?.layers?.find((l) => l.type === "symbol" && /label/i.test(l.id))?.id;
+
+    // If the source doesn't exist yet, use the shared helper which also adds layers
     if (!m.getSource("ga-counties")) {
-      m.addSource("ga-counties", {
-        type: "geojson",
-        data: countiesUrl,
+      addGeoJsonLayer(m, "ga-counties", countiesUrl, {
+        fillColor,
+        fillOpacity: 0.28,
+        outlineColor: "#0f172a",
+        beforeId: labelLayerId,
+        generateId: true,
       });
       log.info("counties:source-added", { url: countiesUrl });
+      return;
     }
 
-    // Put counties under labels but above basemap fills (MapTiler uses "label" layers near top)
-    // If you want guaranteed placement, we can find a specific label layer id.
+    // If source exists but layers are missing, add them (keeping previous behavior)
     if (!m.getLayer("ga-counties-fill")) {
-      m.addLayer({
-        id: "ga-counties-fill",
-        type: "fill",
-        source: "ga-counties",
-        paint: {
-          "fill-opacity": 0.28,
-          // Start with a simple metro highlight set (adjust as needed)
-          "fill-color": [
-            "match",
-            ["get", "NAME"],
-            "Fulton", "#2563eb",
-            "DeKalb", "#7c3aed",
-            "Cobb", "#16a34a",
-            "Gwinnett", "#f59e0b",
-            "#334155", // default
-          ],
-        },
-      });
+      m.addLayer(
+        {
+          id: "ga-counties-fill",
+          type: "fill",
+          source: "ga-counties",
+          paint: {
+            "fill-opacity": 0.28,
+            "fill-color": fillColor,
+          },
+        } as any,
+        labelLayerId
+      );
       log.info("counties:fill-layer-added");
     }
 
