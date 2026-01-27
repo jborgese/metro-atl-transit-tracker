@@ -112,13 +112,13 @@
     }
 
     // Hover / cursor handlers
-    let hoveredFeatureId: string | number | null = null;
+    let hoveredFeatureId: string | number | undefined = undefined;
 
     function onMove(e: any) {
       if (!e.features || !e.features.length) return;
       const f = e.features[0];
 
-      if (hoveredFeatureId !== null && hoveredFeatureId !== f.id) {
+      if (hoveredFeatureId !== undefined && hoveredFeatureId !== f.id) {
         try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
       }
 
@@ -128,9 +128,9 @@
     }
 
     function onLeave() {
-      if (hoveredFeatureId !== null) {
+      if (hoveredFeatureId !== undefined) {
         try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
-        hoveredFeatureId = null;
+        hoveredFeatureId = undefined;
       }
       m.getCanvas().style.cursor = '';
     }
@@ -145,14 +145,14 @@
       const features = m.queryRenderedFeatures(point as any, { layers: ['ga-counties-fill'] });
       if (!features.length) return;
       const f = features[0];
-      if (hoveredFeatureId !== null) {
+      if (hoveredFeatureId !== undefined) {
         try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
       }
       hoveredFeatureId = f.id;
       m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: true });
       setTimeout(() => {
         try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
-        hoveredFeatureId = null;
+        hoveredFeatureId = undefined;
       }, 2000);
     }
 
