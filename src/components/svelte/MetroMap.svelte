@@ -5,6 +5,7 @@
 
   import { createLogger } from "../../utils/logger"; // adjust if needed
   import { addGeoJsonLayer } from "../../lib/map/addGeoJsonLayer";
+  import { metroCountyColorMatch } from "../../lib/map/countyStyles";
 
   const log = createLogger("MetroMap");
 
@@ -53,15 +54,8 @@
     // Update path if you placed it differently
     const countiesUrl = "/data/geo/ga_counties.geojson";
 
-    const fillColor = [
-      "match",
-      ["get", "NAME"],
-      "Fulton", "#2563eb",
-      "DeKalb", "#7c3aed",
-      "Cobb", "#16a34a",
-      "Gwinnett", "#f59e0b",
-      "#334155", // default
-    ];
+    // Use centralized GEOID-based color mapping
+    const fillColor = metroCountyColorMatch;
 
     // Find a reasonable label layer to insert counties before (keep them below labels)
     const labelLayerId = m.getStyle?.()?.layers?.find((l) => l.type === "symbol" && /label/i.test(l.id))?.id;
