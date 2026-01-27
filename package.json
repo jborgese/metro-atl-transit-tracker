@@ -12,6 +12,7 @@
     "@astrojs/svelte": "^7.2.5",
     "@tailwindcss/vite": "^4.1.18",
     "astro": "^5.16.15",
+    "maplibre-gl": "^5.16.0",
     "svelte": "^5.48.3",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3"

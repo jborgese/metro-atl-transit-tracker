@@ -1,6 +1,8 @@
 /* Tailwind v4 preflight */
 @import "tailwindcss/preflight";
 @import "tailwindcss/utilities";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
 
 /* Base document defaults */
 html {
