@@ -14,9 +14,6 @@ import MetroMap from '../components/svelte/MetroMap.svelte'
       Use this site as a jumping-off point for deeper sources and how to take action.
     </p>
 
-    <div style="height: 560px;">
-      <MetroMap client:visible />
-    </div>
-
+    <MetroMap client:load height="560px" />
   </section>
 </BaseLayout>
