@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
+import MetroMap from '../components/svelte/MetroMap.svelte'
 ---
 
 <BaseLayout>
@@ -13,10 +14,7 @@ import BaseLayout from '../layouts/BaseLayout.astro'
       Use this site as a jumping-off point for deeper sources and how to take action.
     </p>
 
-    <div class="mt-8 rounded-xl border border-neutral-800 bg-neutral-900/40 p-6">
-      <p class="text-neutral-400 italic">
-        Map placeholder — we’ll mount a Svelte interactive map component here next.
-      </p>
-    </div>
+    <MetroMap client:visible height="560px" />
+
   </section>
 </BaseLayout>
