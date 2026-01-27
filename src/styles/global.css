@@ -1,0 +1,15 @@
+/* Tailwind v4 preflight */
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
+
+/* Base document defaults */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #0a0a0a; /* neutral-950-ish */
+  color: #fafafa; /* neutral-50-ish */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

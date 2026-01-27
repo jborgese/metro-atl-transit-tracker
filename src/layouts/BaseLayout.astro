@@ -1,0 +1,50 @@
+---
+import '../styles/global.css'
+
+interface Props {
+  title?: string
+  description?: string
+}
+
+const {
+  title = 'Metro Atlanta Transit Tracker',
+  description = 'A public, data-driven Metro Atlanta transit advocacy intelligence hub.'
+} = Astro.props
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+  </head>
+
+  <body class="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
+    <a class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-neutral-900 focus:px-3 focus:py-2" href="#content">
+      Skip to content
+    </a>
+
+    <header class="border-b border-neutral-800">
+      <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
+        <a href="/" class="text-lg font-semibold tracking-tight hover:opacity-90">
+          Metro ATL Transit Tracker
+        </a>
+        <nav class="flex gap-4 text-sm text-neutral-300">
+          <a class="hover:text-white" href="/methodology">Methodology</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="content" class="mx-auto w-full max-w-7xl px-4 py-8">
+      <slot />
+    </main>
+
+    <footer class="border-t border-neutral-800">
+      <div class="mx-auto max-w-7xl px-4 py-6 text-sm text-neutral-400">
+        Not affiliated with MARTA, ARC, GDOT, or any governing body.
+      </div>
+    </footer>
+  </body>
+</html>
