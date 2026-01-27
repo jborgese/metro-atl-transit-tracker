@@ -1,7 +1,9 @@
 {
   "css.lint.unknownAtRules": "ignore",
   "cSpell.words": [
+    "basemap",
     "drilldowns",
+    "FIPS",
     "Gwinnett",
     "maplibre",
     "maplibregl",
