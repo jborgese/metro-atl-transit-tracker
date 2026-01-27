@@ -4,24 +4,31 @@ import { createLogger } from '../../utils/logger'
 
 const log = createLogger('MapLayer')
 
+export interface AddGeoJsonLayerOptions {
+  fillColor?: string | any
+  fillOpacity?: number
+  outlineColor?: string
+  /** Insert layer before this layer id (useful to place below labels) */
+  beforeId?: string
+  /** If true, generate numeric feature ids for feature-state usage */
+  generateId?: boolean
+}
+
 export function addGeoJsonLayer(
   map: Map,
   id: string,
   url: string,
-  options?: {
-    fillColor?: any
-    fillOpacity?: number
-    outlineColor?: string
-  }
+  options?: AddGeoJsonLayerOptions
 ) {
   log.info(`layer:add:${id}`)
 
   map.addSource(id, {
     type: 'geojson',
     data: url,
+    generateId: options?.generateId ?? false,
   })
 
-  map.addLayer({
+  const fillLayer = {
     id: `${id}-fill`,
     type: 'fill',
     source: id,
@@ -29,9 +36,12 @@ export function addGeoJsonLayer(
       'fill-color': options?.fillColor ?? '#3b82f6',
       'fill-opacity': options?.fillOpacity ?? 0.25,
     },
-  })
+  }
 
-  map.addLayer({
+  // Add fill; allow explicit placement before a label layer
+  map.addLayer(fillLayer as any, options?.beforeId)
+
+  const outlineLayer = {
     id: `${id}-outline`,
     type: 'line',
     source: id,
@@ -39,5 +49,8 @@ export function addGeoJsonLayer(
       'line-color': options?.outlineColor ?? '#1e40af',
       'line-width': 1,
     },
-  })
+  }
+
+  // Keep outline above the fill (no beforeId) for clear borders
+  map.addLayer(outlineLayer as any)
 }

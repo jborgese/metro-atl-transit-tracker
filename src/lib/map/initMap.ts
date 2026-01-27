@@ -1,6 +1,6 @@
 // src/lib/map/initMap.ts
 import maplibregl from 'maplibre-gl'
-import { createLogger } from '../..//utils/logger'
+import { createLogger } from '../../utils/logger'
 
 const log = createLogger('MapInit')
 
