@@ -265,6 +265,61 @@
 
           try {
             addGeorgiaCountiesLayers(map!);
+            // Ensure map is centered and zoomed to show all metro counties on initial render.
+            // We fetch the GeoJSON directly so we can compute bounds for the metro GEOIDs.
+            (async () => {
+              try {
+                const countiesUrl = '/data/geo/ga_counties.geojson';
+                const res = await fetch(countiesUrl);
+                if (!res.ok) throw new Error(`counties fetch ${res.status}`);
+                const gj = await res.json();
+                if (!gj || !gj.features || !gj.features.length) return;
+
+                // compute bbox across all metro county features
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+                function updateBoundsFromCoords(coords: any) {
+                  if (!Array.isArray(coords)) return;
+                  if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+                    const x = coords[0]; const y = coords[1];
+                    if (x < minX) minX = x;
+                    if (y < minY) minY = y;
+                    if (x > maxX) maxX = x;
+                    if (y > maxY) maxY = y;
+                    return;
+                  }
+                  for (const c of coords) updateBoundsFromCoords(c);
+                }
+
+                for (const f of gj.features) {
+                  const props = f.properties || {};
+                  const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
+                  if (!geoid || !metroCountyGeoids.includes(String(geoid))) continue;
+                  const geom = f.geometry;
+                  if (!geom) continue;
+                  updateBoundsFromCoords(geom.coordinates);
+                }
+
+                if (minX === Infinity) {
+                  log.warn('fitBounds: no metro features found');
+                  return;
+                }
+
+                // Apply a small padding in degrees if bbox is tiny
+                const pad = 0.02; // ~ a couple km depending on lat
+                const sw = [minX - pad, minY - pad];
+                const ne = [maxX + pad, maxY + pad];
+
+                try {
+                  map!.fitBounds([sw, ne], { padding: 80, maxZoom: 12, duration: 1000 });
+                  log.info('map:fitBounds:metro-counties', { sw, ne });
+                } catch (e) {
+                  log.warn('map:fitBounds-failed', e);
+                }
+              } catch (e) {
+                log.warn('metro-bounds-calc-failed', e);
+              }
+            })();
             // load project/county metadata for popups/panels
             await loadCountyMetadata();
             await loadProjectsMetadata();
