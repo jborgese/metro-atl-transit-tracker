@@ -307,8 +307,8 @@
 
                 // Apply a small padding in degrees if bbox is tiny
                 const pad = 0.02; // ~ a couple km depending on lat
-                const sw = [minX - pad, minY - pad];
-                const ne = [maxX + pad, maxY + pad];
+                const sw: [number, number] = [minX - pad, minY - pad];
+                const ne: [number, number] = [maxX + pad, maxY + pad];
 
                 try {
                   map!.fitBounds([sw, ne], { padding: 80, maxZoom: 12, duration: 1000 });
