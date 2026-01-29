@@ -28,6 +28,9 @@
   // derived related projects for the selected county
   let relatedProjects: any[] = [];
 
+  let panelEl: HTMLElement | null = null;
+  let closeBtn: HTMLButtonElement | null = null;
+
   $: relatedProjects = selectedCounty && projectsMetadata && projectsMetadata.length
     ? projectsMetadata.filter(p => p.related_counties && p.related_counties.indexOf(String(selectedCounty.geoid)) !== -1)
     : [];
@@ -59,6 +62,11 @@
     } catch (e) {
       log.warn('projects:load-failed', e);
     }
+  }
+
+  function closePanel() {
+    selectedCounty = null;
+    try { mapEl?.focus(); } catch (e) { /* ignore */ }
   }
 
   function destroyMap(reason: string) {
@@ -416,6 +424,37 @@
       log.info("mount:cleanup");
     };
   });
+
+  // Global handlers for Escape/outside click to close the panel; keep them mounted
+  function handleGlobalKey(e: KeyboardEvent) {
+    if (!selectedCounty) return;
+    if (e.key === 'Escape') {
+      closePanel();
+    }
+  }
+
+  function handlePointerDown(e: PointerEvent) {
+    if (!selectedCounty) return;
+    if (!panelEl) return;
+    const target = e.target as Node;
+    if (!panelEl.contains(target)) {
+      closePanel();
+    }
+  }
+
+  onMount(() => {
+    document.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleGlobalKey);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleGlobalKey);
+    };
+  });
+
+  $: if (selectedCounty) {
+    // Focus the close button when the panel opens
+    tick().then(() => closeBtn?.focus());
+  }
 </script>
 
 <section aria-label={title}>
@@ -465,13 +504,13 @@
     </div>
     {#if selectedCounty}
       <Portal>
-        <aside style="z-index:100000;" class="fixed left-4 bottom-4 w-72 max-w-full rounded-md bg-neutral-900/90 border border-neutral-800 p-3 text-sm text-neutral-200 shadow-lg">
+        <aside bind:this={panelEl} class="county-panel fixed w-72 max-w-full text-sm text-neutral-200">
         <div class="flex items-start justify-between">
           <div>
             <strong class="block text-sm">{selectedCounty.display_name ?? selectedCounty.name}</strong>
             <div class="text-xs text-neutral-400">GEOID: {selectedCounty.geoid}</div>
           </div>
-          <button aria-label="Close county panel" class="ml-2 text-neutral-400" on:click={() => (selectedCounty = null)}>✕</button>
+          <button bind:this={closeBtn} aria-label="Close county panel" class="ml-2 text-neutral-400" on:click={closePanel}>✕</button>
         </div>
 
         {#if selectedCounty.governance}
