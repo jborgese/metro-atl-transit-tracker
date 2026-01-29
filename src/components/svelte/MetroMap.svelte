@@ -6,6 +6,8 @@
   import { createLogger } from "../../utils/logger"; // adjust if needed
   import { addGeoJsonLayer } from "../../lib/map/addGeoJsonLayer";
   import { metroCountyColorMatch, metroCountyGeoids } from "../../lib/map/countyStyles";
+  import ProjectFilters from './ProjectFilters.svelte';
+  import Portal from './Portal.svelte';
 
   const log = createLogger("MetroMap");
 
@@ -29,6 +31,24 @@
   $: relatedProjects = selectedCounty && projectsMetadata && projectsMetadata.length
     ? projectsMetadata.filter(p => p.related_counties && p.related_counties.indexOf(String(selectedCounty.geoid)) !== -1)
     : [];
+
+  // UI: available project modes and currently selected modes for filtering
+  let availableModes: string[] = [];
+  let selectedModes: string[] = [];
+  // filtered list derived from relatedProjects + selectedModes
+  let relatedProjectsFiltered: any[] = [];
+
+  $: debugAvailableCount = availableModes ? availableModes.length : 0;
+  $: debugRelatedCount = relatedProjects ? relatedProjects.length : 0;
+  $: debugSelectedKey = selectedCounty ? (selectedCounty.geoid ?? selectedCounty.name ?? 'unknown') : 'none';
+
+  $: availableModes = projectsMetadata && projectsMetadata.length
+    ? Array.from(new Set(projectsMetadata.flatMap((p: any) => p.modes || []))).sort()
+    : [];
+
+  $: relatedProjectsFiltered = selectedModes && selectedModes.length
+    ? relatedProjects.filter((p: any) => (p.modes || []).some((m: string) => selectedModes.indexOf(m) !== -1))
+    : relatedProjects;
 
   async function loadProjectsMetadata() {
     try {
@@ -326,28 +346,45 @@
 
             // show selected county metadata on click
             map!.on('click', 'ga-counties-fill', (e: any) => {
-              if (!e.features || !e.features.length) return;
-              const props = e.features[0].properties || {};
-              const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
-              if (!geoid || !metroCountyGeoids.includes(String(geoid))) return;
-              const idKey = String(geoid);
-              selectedCounty = countyMetadataMap[idKey] ?? { geoid: idKey, name: props.NAME || props.name };
+              try {
+                console.log('ga-counties-fill:click', e);
+                if (!e.features || !e.features.length) return;
+                const props = e.features[0].properties || {};
+                console.log('feature.props:', props);
+                const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
+                console.log('derived geoid:', geoid);
+                if (!geoid || !metroCountyGeoids.includes(String(geoid))) {
+                  console.log('click: geoid missing or not metro:', geoid);
+                  return;
+                }
+                const idKey = String(geoid);
+                selectedCounty = countyMetadataMap[idKey] ?? { geoid: idKey, name: props.NAME || props.name };
+                console.log('selectedCounty set ->', selectedCounty);
+              } catch (err) {
+                console.error('county click handler error', err);
+              }
             });
 
             // allow clicking outside to clear selection
             map!.on('click', (e) => {
-              const features = map!.queryRenderedFeatures(e.point, { layers: ['ga-counties-fill'] });
-              if (!features.length) {
-                selectedCounty = null;
-                return;
+              try {
+                const features = map!.queryRenderedFeatures(e.point, { layers: ['ga-counties-fill'] });
+                console.log('map:click features at point', features && features.length);
+                if (!features.length) {
+                  selectedCounty = null;
+                  return;
+                }
+                // If there are features but none are metro counties, clear selection
+                const metroHit = features.find((f: any) => {
+                  const p = f.properties || {};
+                  const g = (p.GEOID || p.geoid || p.GEOIDFQ || p.GEOID_FQ);
+                  return g && metroCountyGeoids.includes(String(g));
+                });
+                console.log('map:click metroHit', !!metroHit);
+                if (!metroHit) selectedCounty = null;
+              } catch (err) {
+                console.error('map:click handler error', err);
               }
-              // If there are features but none are metro counties, clear selection
-              const metroHit = features.find((f: any) => {
-                const p = f.properties || {};
-                const g = (p.GEOID || p.geoid || p.GEOIDFQ || p.GEOID_FQ);
-                return g && metroCountyGeoids.includes(String(g));
-              });
-              if (!metroHit) selectedCounty = null;
             });
           } catch (e) {
             log.error("counties:add-layers-failed", e);
@@ -382,7 +419,7 @@
 </script>
 
 <section aria-label={title}>
-  <div class="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
+  <div class="relative rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
     <header class="mb-3 flex items-start justify-between gap-4">
       <div>
         <h2 class="text-base font-semibold tracking-tight text-neutral-100">
@@ -418,53 +455,68 @@
       <p id="map-instructions" class="sr-only">
         Focus the map and press Enter to highlight the county at the center of the map.
       </p>
-      {#if selectedCounty}
-        <aside class="absolute left-4 bottom-4 w-72 max-w-full rounded-md bg-neutral-900/90 border border-neutral-800 p-3 text-sm text-neutral-200">
-          <div class="flex items-start justify-between">
-            <div>
-              <strong class="block text-sm">{selectedCounty.display_name ?? selectedCounty.name}</strong>
-              <div class="text-xs text-neutral-400">GEOID: {selectedCounty.geoid}</div>
-            </div>
-            <button aria-label="Close county panel" class="ml-2 text-neutral-400" on:click={() => (selectedCounty = null)}>✕</button>
-          </div>
-
-          {#if selectedCounty.governance}
-            <div class="mt-2 text-xs">
-              <div class="font-medium">Governance</div>
-              <div>{selectedCounty.governance.governing_body ?? selectedCounty.governance.governance_type}</div>
-            </div>
-          {/if}
-
-          {#if selectedCounty.primary_transit_agencies && selectedCounty.primary_transit_agencies.length}
-            <div class="mt-2 text-xs">
-              <div class="font-medium">Transit agencies</div>
-              <ul class="list-disc pl-4">
-                {#each selectedCounty.primary_transit_agencies as a}
-                  <li><a class="text-neutral-200 underline" href={a.contact_url} target="_blank" rel="noopener">{a.name}</a></li>
-                {/each}
-              </ul>
-            </div>
-          {/if}
-
-          {#if relatedProjects && relatedProjects.length}
-            <div class="mt-3 text-xs">
-              <div class="font-medium">Related projects & initiatives</div>
-              <ul class="mt-1 space-y-2">
-                {#each relatedProjects as pr}
-                  <li>
-                    <div class="font-medium text-sm">{pr.title}</div>
-                    <div class="text-neutral-400 text-xs">{pr.summary}</div>
-                    {#if pr.sources && pr.sources.length}
-                      <div class="text-xs mt-1"><a class="underline text-neutral-200" href={pr.sources[0].url} target="_blank" rel="noopener">Source</a></div>
-                    {/if}
-                  </li>
-                {/each}
-              </ul>
-            </div>
-          {/if}
-        </aside>
-      {/if}
+      <!-- Debug badge: visible during development to help diagnose click/filter state -->
+      <div style="z-index:99999;" class="absolute top-4 right-4 rounded bg-black/80 text-white text-xs p-2 border border-neutral-700 shadow-lg">
+        <div class="font-medium">Debug</div>
+        <div>selected: {debugSelectedKey}</div>
+        <div>available modes: {debugAvailableCount}</div>
+        <div>related projects: {debugRelatedCount}</div>
+      </div>
     </div>
+    {#if selectedCounty}
+      <Portal>
+        <aside style="z-index:100000;" class="fixed left-4 bottom-4 w-72 max-w-full rounded-md bg-neutral-900/90 border border-neutral-800 p-3 text-sm text-neutral-200 shadow-lg">
+        <div class="flex items-start justify-between">
+          <div>
+            <strong class="block text-sm">{selectedCounty.display_name ?? selectedCounty.name}</strong>
+            <div class="text-xs text-neutral-400">GEOID: {selectedCounty.geoid}</div>
+          </div>
+          <button aria-label="Close county panel" class="ml-2 text-neutral-400" on:click={() => (selectedCounty = null)}>✕</button>
+        </div>
+
+        {#if selectedCounty.governance}
+          <div class="mt-2 text-xs">
+            <div class="font-medium">Governance</div>
+            <div>{selectedCounty.governance.governing_body ?? selectedCounty.governance.governance_type}</div>
+          </div>
+        {/if}
+
+        {#if selectedCounty.primary_transit_agencies && selectedCounty.primary_transit_agencies.length}
+          <div class="mt-2 text-xs">
+            <div class="font-medium">Transit agencies</div>
+            <ul class="list-disc pl-4">
+              {#each selectedCounty.primary_transit_agencies as a}
+                <li><a class="text-neutral-200 underline" href={a.contact_url} target="_blank" rel="noopener">{a.name}</a></li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+
+        {#if relatedProjects && relatedProjects.length}
+          <div class="mt-3 text-xs">
+            <div class="font-medium">Related projects & initiatives</div>
+            {#if availableModes && availableModes.length}
+              <div class="mt-2">
+                <ProjectFilters {availableModes} bind:selectedModes />
+              </div>
+            {/if}
+
+            <ul class="mt-1 space-y-2">
+              {#each relatedProjectsFiltered as pr}
+                <li>
+                  <div class="font-medium text-sm">{pr.title}</div>
+                  <div class="text-neutral-400 text-xs">{pr.summary}</div>
+                  {#if pr.sources && pr.sources.length}
+                    <div class="text-xs mt-1"><a class="underline text-neutral-200" href={pr.sources[0].url} target="_blank" rel="noopener">Source</a></div>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+        </aside>
+        </Portal>
+      {/if}
   </div>
 </section>
 
