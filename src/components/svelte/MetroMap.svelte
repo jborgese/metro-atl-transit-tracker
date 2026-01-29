@@ -59,24 +59,26 @@
 
     // Find a reasonable label layer to insert counties before (keep them below labels)
     const labelLayerId = m.getStyle?.()?.layers?.find((l) => l.type === "symbol" && /label/i.test(l.id))?.id;
+    const beforeId = labelLayerId ? labelLayerId : undefined;
 
     // If the source doesn't exist yet, use the shared helper which also adds layers
     if (!m.getSource("ga-counties")) {
-      addGeoJsonLayer(m, "ga-counties", countiesUrl, {
+      const layerOpts: any = {
         fillColor,
         fillOpacity: 0.28,
         outlineColor: "#0f172a",
-        beforeId: labelLayerId,
         generateId: true,
         hoverFillColor: '#f59e0b',
         hoverOutlineColor: '#ffffff',
-      });
+      };
+      if (beforeId) layerOpts.beforeId = beforeId;
+
+      addGeoJsonLayer(m, "ga-counties", countiesUrl, layerOpts);
       log.info("counties:source-added", { url: countiesUrl, beforeId: labelLayerId });
     } else {
       // If source exists but layers are missing, add them (keeping previous behavior)
-      if (!m.getLayer("ga-counties-fill")) {
-        m.addLayer(
-          {
+        if (!m.getLayer("ga-counties-fill")) {
+        const fillLayer = {
             id: "ga-counties-fill",
             type: "fill",
             source: "ga-counties",
@@ -84,9 +86,13 @@
               "fill-opacity": 0.28,
               "fill-color": fillColor,
             },
-          } as any,
-          labelLayerId
-        );
+          } as any;
+
+        if (labelLayerId) {
+          m.addLayer(fillLayer, labelLayerId);
+        } else {
+          m.addLayer(fillLayer);
+        }
         log.info("counties:fill-layer-added");
       }
 

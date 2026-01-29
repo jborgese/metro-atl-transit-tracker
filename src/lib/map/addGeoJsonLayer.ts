@@ -1,21 +1,9 @@
 // src/lib/map/addGeoJsonLayer.ts
 import type { Map } from 'maplibre-gl'
 import { createLogger } from '../../utils/logger'
+import type { AddGeoJsonLayerOptions } from '@/types'
 
 const log = createLogger('MapLayer')
-
-export interface AddGeoJsonLayerOptions {
-  fillColor?: string | any
-  fillOpacity?: number
-  outlineColor?: string
-  /** Color used when a feature is hovered (feature-state hover === true) */
-  hoverFillColor?: string
-  hoverOutlineColor?: string
-  /** Insert layer before this layer id (useful to place below labels) */
-  beforeId?: string
-  /** If true, generate numeric feature ids for feature-state usage */
-  generateId?: boolean
-}
 
 export function addGeoJsonLayer(
   map: Map,

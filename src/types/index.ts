@@ -1,3 +1,6 @@
+// src/types/index.ts
+// Barrel exports for centralized types
+export * from './map'
 export type Id = string
 
 export type JurisdictionType = 'region' | 'county'
