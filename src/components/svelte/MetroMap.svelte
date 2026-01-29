@@ -5,7 +5,7 @@
 
   import { createLogger } from "../../utils/logger"; // adjust if needed
   import { addGeoJsonLayer } from "../../lib/map/addGeoJsonLayer";
-  import { metroCountyColorMatch } from "../../lib/map/countyStyles";
+  import { metroCountyColorMatch, metroCountyGeoids } from "../../lib/map/countyStyles";
 
   const log = createLogger("MetroMap");
 
@@ -140,6 +140,19 @@
       if (!e.features || !e.features.length) return;
       const f = e.features[0];
 
+      // Only allow hover/cursor for metro counties
+      const props = f.properties || {};
+      const geoid = (props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ);
+      if (!geoid || !metroCountyGeoids.includes(String(geoid))) {
+        // If previously hovering a metro feature, clear it
+        if (hoveredFeatureId !== undefined) {
+          try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
+          hoveredFeatureId = undefined;
+        }
+        m.getCanvas().style.cursor = '';
+        return;
+      }
+
       if (hoveredFeatureId !== undefined && hoveredFeatureId !== f.id) {
         try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
       }
@@ -167,6 +180,9 @@
       const features = m.queryRenderedFeatures(point as any, { layers: ['ga-counties-fill'] });
       if (!features.length) return;
       const f = features[0];
+      const props = f.properties || {};
+      const geoid = (props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ);
+      if (!geoid || !metroCountyGeoids.includes(String(geoid))) return;
       if (hoveredFeatureId !== undefined) {
         try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
       }
@@ -258,6 +274,7 @@
               if (!e.features || !e.features.length) return;
               const props = e.features[0].properties || {};
               const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
+              if (!geoid || !metroCountyGeoids.includes(String(geoid))) return;
               const idKey = String(geoid);
               selectedCounty = countyMetadataMap[idKey] ?? { geoid: idKey, name: props.NAME || props.name };
             });
@@ -265,7 +282,17 @@
             // allow clicking outside to clear selection
             map!.on('click', (e) => {
               const features = map!.queryRenderedFeatures(e.point, { layers: ['ga-counties-fill'] });
-              if (!features.length) selectedCounty = null;
+              if (!features.length) {
+                selectedCounty = null;
+                return;
+              }
+              // If there are features but none are metro counties, clear selection
+              const metroHit = features.find((f: any) => {
+                const p = f.properties || {};
+                const g = (p.GEOID || p.geoid || p.GEOIDFQ || p.GEOID_FQ);
+                return g && metroCountyGeoids.includes(String(g));
+              });
+              if (!metroHit) selectedCounty = null;
             });
           } catch (e) {
             log.error("counties:add-layers-failed", e);
