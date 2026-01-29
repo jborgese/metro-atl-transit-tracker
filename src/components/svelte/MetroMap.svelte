@@ -18,6 +18,10 @@
   let mapEl: HTMLDivElement | null = null;
   let map: maplibregl.Map | null = null;
   let ro: ResizeObserver | null = null;
+  // County metadata (loaded from public/data/geo/counties-metadata.json)
+  let countyMetadata: any[] = [];
+  let countyMetadataMap: Record<string, any> = {};
+  let selectedCounty: any = null;
 
   function destroyMap(reason: string) {
     log.info("map:destroy", { reason });
@@ -159,6 +163,21 @@
     (m as any).__countyKeyboardActivate = keyboardActivate;
   }
 
+  async function loadCountyMetadata() {
+    try {
+      const res = await fetch('/data/geo/counties-metadata.json');
+      if (!res.ok) throw new Error(`metadata fetch ${res.status}`);
+      countyMetadata = await res.json();
+      countyMetadataMap = {};
+      for (const c of countyMetadata) {
+        if (c.geoid) countyMetadataMap[String(c.geoid)] = c;
+      }
+      log.info('metadata:loaded', { count: countyMetadata.length });
+    } catch (e) {
+      log.warn('metadata:load-failed', e);
+    }
+  }
+
   onMount(() => {
     log.info("mount:start");
 
@@ -212,6 +231,23 @@
 
           try {
             addGeorgiaCountiesLayers(map!);
+            // load project/county metadata for popups/panels
+            loadCountyMetadata();
+
+            // show selected county metadata on click
+            map!.on('click', 'ga-counties-fill', (e: any) => {
+              if (!e.features || !e.features.length) return;
+              const props = e.features[0].properties || {};
+              const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
+              const idKey = String(geoid);
+              selectedCounty = countyMetadataMap[idKey] ?? { geoid: idKey, name: props.NAME || props.name };
+            });
+
+            // allow clicking outside to clear selection
+            map!.on('click', (e) => {
+              const features = map!.queryRenderedFeatures(e.point, { layers: ['ga-counties-fill'] });
+              if (!features.length) selectedCounty = null;
+            });
           } catch (e) {
             log.error("counties:add-layers-failed", e);
           }
@@ -281,6 +317,35 @@
       <p id="map-instructions" class="sr-only">
         Focus the map and press Enter to highlight the county at the center of the map.
       </p>
+      {#if selectedCounty}
+        <aside class="absolute left-4 bottom-4 w-72 max-w-full rounded-md bg-neutral-900/90 border border-neutral-800 p-3 text-sm text-neutral-200">
+          <div class="flex items-start justify-between">
+            <div>
+              <strong class="block text-sm">{selectedCounty.display_name ?? selectedCounty.name}</strong>
+              <div class="text-xs text-neutral-400">GEOID: {selectedCounty.geoid}</div>
+            </div>
+            <button aria-label="Close county panel" class="ml-2 text-neutral-400" on:click={() => (selectedCounty = null)}>✕</button>
+          </div>
+
+          {#if selectedCounty.governance}
+            <div class="mt-2 text-xs">
+              <div class="font-medium">Governance</div>
+              <div>{selectedCounty.governance.governing_body ?? selectedCounty.governance.governance_type}</div>
+            </div>
+          {/if}
+
+          {#if selectedCounty.primary_transit_agencies && selectedCounty.primary_transit_agencies.length}
+            <div class="mt-2 text-xs">
+              <div class="font-medium">Transit agencies</div>
+              <ul class="list-disc pl-4">
+                {#each selectedCounty.primary_transit_agencies as a}
+                  <li><a class="text-neutral-200 underline" href={a.contact_url} target="_blank" rel="noopener">{a.name}</a></li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+        </aside>
+      {/if}
     </div>
   </div>
 </section>
