@@ -22,6 +22,24 @@
   let countyMetadata: any[] = [];
   let countyMetadataMap: Record<string, any> = {};
   let selectedCounty: any = null;
+  let projectsMetadata: any[] = [];
+  // derived related projects for the selected county
+  let relatedProjects: any[] = [];
+
+  $: relatedProjects = selectedCounty && projectsMetadata && projectsMetadata.length
+    ? projectsMetadata.filter(p => p.related_counties && p.related_counties.indexOf(String(selectedCounty.geoid)) !== -1)
+    : [];
+
+  async function loadProjectsMetadata() {
+    try {
+      const res = await fetch('/data/geo/projects-metadata.json');
+      if (!res.ok) throw new Error(`projects fetch ${res.status}`);
+      projectsMetadata = await res.json();
+      log.info('projects:loaded', { count: projectsMetadata.length });
+    } catch (e) {
+      log.warn('projects:load-failed', e);
+    }
+  }
 
   function destroyMap(reason: string) {
     log.info("map:destroy", { reason });
@@ -225,14 +243,15 @@
 
         map.addControl(new maplibregl.NavigationControl(), "top-right");
 
-        map.on("load", () => {
+        map.on("load", async () => {
           log.info("map:load (Atlanta)");
           safeResize();
 
           try {
             addGeorgiaCountiesLayers(map!);
             // load project/county metadata for popups/panels
-            loadCountyMetadata();
+            await loadCountyMetadata();
+            await loadProjectsMetadata();
 
             // show selected county metadata on click
             map!.on('click', 'ga-counties-fill', (e: any) => {
@@ -340,6 +359,23 @@
               <ul class="list-disc pl-4">
                 {#each selectedCounty.primary_transit_agencies as a}
                   <li><a class="text-neutral-200 underline" href={a.contact_url} target="_blank" rel="noopener">{a.name}</a></li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+
+          {#if relatedProjects && relatedProjects.length}
+            <div class="mt-3 text-xs">
+              <div class="font-medium">Related projects & initiatives</div>
+              <ul class="mt-1 space-y-2">
+                {#each relatedProjects as pr}
+                  <li>
+                    <div class="font-medium text-sm">{pr.title}</div>
+                    <div class="text-neutral-400 text-xs">{pr.summary}</div>
+                    {#if pr.sources && pr.sources.length}
+                      <div class="text-xs mt-1"><a class="underline text-neutral-200" href={pr.sources[0].url} target="_blank" rel="noopener">Source</a></div>
+                    {/if}
+                  </li>
                 {/each}
               </ul>
             </div>
