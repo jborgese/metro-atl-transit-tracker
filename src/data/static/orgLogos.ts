@@ -3,6 +3,7 @@
 
 export const orgLogos: Record<string, string> = {
   "MARTA": "/logos/marta.png",
+  "Metropolitan Atlanta Rapid Transit Authority": "/logos/marta.png",
   "GDOT": "/logos/gdot.png",
   "ATL Trains": "/logos/atl-trains.png",
   "Sunbelt Atlantic Railroad": "/logos/sunbelt-atlantic-railroad.png",
