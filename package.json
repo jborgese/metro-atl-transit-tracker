@@ -8,7 +8,8 @@
     "preview": "astro preview",
     "astro": "astro",
     "lint": "eslint . --ext .js,.ts,.svelte,.astro",
-    "lint:fix": "eslint . --ext .js,.ts,.svelte,.astro --fix"
+    "lint:fix": "eslint . --ext .js,.ts,.svelte,.astro --fix",
+    "build:org-logos": "node scripts/build-org-logos.js"
   },
   "dependencies": {
     "@astrojs/svelte": "^7.2.5",

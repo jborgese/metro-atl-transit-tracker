@@ -4,7 +4,8 @@
 
   // Helper to get logo URL by agency/group name
   function getLogo(name: string): string | undefined {
-    return orgLogos[name];
+    const logo = orgLogos[name];
+    return logo === null ? undefined : logo;
   }
 </script>
 
@@ -12,10 +13,26 @@
   <h2 class="panel-header">{county.display_name}</h2>
 
   <section class="panel-section">
-    <h3 class="panel-subheader">Governance</h3>
-    <a class="panel-link" href={county.governance.official_website} target="_blank" rel="noopener">
-      {county.governance.governing_body}
-    </a>
+      <h3 class="panel-subheader">Governance</h3>
+      <a class="panel-link" href={county.governance.official_website} target="_blank" rel="noopener">
+        {county.governance.governing_body}
+      </a>
+      {#if county.governance.groups && county.governance.groups.length}
+        <ul class="panel-list">
+          {#each county.governance.groups as group}
+            <li>
+              {#if getLogo(group.name)}
+                <a href={group.website} target="_blank" rel="noopener">
+                  <img src={getLogo(group.name)} alt={group.name} class="panel-logo" />
+                  <span class="sr-only">{group.name}</span>
+                </a>
+              {:else}
+                <a class="panel-link" href={group.website} target="_blank" rel="noopener">{group.name}</a>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
   </section>
 
   <section class="panel-section">

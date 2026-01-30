@@ -1,7 +1,9 @@
 {
   "css.lint.unknownAtRules": "ignore",
   "cSpell.words": [
+    "abettercobb",
     "basemap",
+    "beltlinerailnow",
     "cobblinc",
     "drilldowns",
     "FIPS",
@@ -10,6 +12,7 @@
     "maplibre",
     "maplibregl",
     "MAPTILER",
+    "ridegwinnett",
     "vercel"
   ]
 }
