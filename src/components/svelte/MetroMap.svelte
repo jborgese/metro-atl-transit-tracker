@@ -1,4 +1,5 @@
 <script lang="ts">
+  import DebugBadge from './DebugBadge.svelte';
   import {
     handleCountySelection,
     handleMapClick,
@@ -276,13 +277,11 @@
       <p id="map-instructions" class="sr-only">
         Focus the map and press Enter to highlight the county at the center of the map.
       </p>
-      <!-- Debug badge: visible during development to help diagnose click/filter state -->
-      <div style="z-index:99999;" class="absolute top-4 right-4 rounded bg-black/80 text-white text-xs p-2 border border-neutral-700 shadow-lg">
-        <div class="font-medium">Debug</div>
-        <div>selected: {debugSelectedKey}</div>
-        <div>available modes: {debugAvailableCount}</div>
-        <div>related projects: {debugRelatedCount}</div>
-      </div>
+      <DebugBadge
+        selectedCountyKey={debugSelectedKey}
+        availableModesCount={debugAvailableCount}
+        relatedProjectsCount={debugRelatedCount}
+      />
       {#if selectedCounty}
         <aside bind:this={panelEl} class="map-panel-wrapper absolute top-4 left-4 z-50">
           <button bind:this={closeBtn} aria-label="Close county panel" class="ml-2 text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2" on:click={closePanel}>✕</button>
