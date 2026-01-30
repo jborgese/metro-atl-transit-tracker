@@ -1,4 +1,10 @@
 <script lang="ts">
+  import {
+    handleCountySelection,
+    handleMapClick,
+    handlePanelClose,
+    setupGlobalPanelListeners,
+  } from "../../lib/map/countyPanelHandlers";
   import { loadCountyMetadata, loadProjectsMetadata } from "../../lib/map/metadataLoader";
   import { getMetroCountyBounds } from "../../lib/map/getMetroCountyBounds";
   import { onMount, tick } from "svelte";
@@ -62,8 +68,7 @@
 
 
   function closePanel() {
-    selectedCounty = null;
-    try { mapEl?.focus(); } catch (e) { /* ignore */ }
+    handlePanelClose({ mapEl, setSelectedCounty: (val) => (selectedCounty = val) });
   }
 
   function destroyMap(reason: string) {
@@ -172,42 +177,20 @@
                 else log.info('projects:loaded', { count: pm.length });
               }
               mapInstance.on('click', 'ga-counties-fill', (e: any) => {
-                try {
-                  console.log('ga-counties-fill:click', e);
-                  if (!e.features || !e.features.length) return;
-                  const props = e.features[0].properties || {};
-                  console.log('feature.props:', props);
-                  const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
-                  console.log('derived geoid:', geoid);
-                  if (!geoid || !metroCountyGeoids.includes(String(geoid))) {
-                    console.log('click: geoid missing or not metro:', geoid);
-                    return;
-                  }
-                  const idKey = String(geoid);
-                  selectedCounty = countyMetadataMap[idKey] ?? { geoid: idKey, name: props.NAME || props.name };
-                  console.log('selectedCounty set ->', selectedCounty);
-                } catch (err) {
-                  console.error('county click handler error', err);
-                }
+                handleCountySelection({
+                  event: e,
+                  countyMetadataMap,
+                  metroCountyGeoids,
+                  setSelectedCounty: (val) => (selectedCounty = val),
+                });
               });
               mapInstance.on('click', (e) => {
-                try {
-                  const features = mapInstance.queryRenderedFeatures(e.point, { layers: ['ga-counties-fill'] });
-                  console.log('map:click features at point', features && features.length);
-                  if (!features.length) {
-                    selectedCounty = null;
-                    return;
-                  }
-                  const metroHit = features.find((f: any) => {
-                    const p = f.properties || {};
-                    const g = (p.GEOID || p.geoid || p.GEOIDFQ || p.GEOID_FQ);
-                    return g && metroCountyGeoids.includes(String(g));
-                  });
-                  console.log('map:click metroHit', !!metroHit);
-                  if (!metroHit) selectedCounty = null;
-                } catch (err) {
-                  console.error('map:click handler error', err);
-                }
+                handleMapClick({
+                  event: e,
+                  mapInstance,
+                  metroCountyGeoids,
+                  setSelectedCounty: (val) => (selectedCounty = val),
+                });
               });
             } catch (e) {
               log.error("counties:add-layers-failed", e);
@@ -240,30 +223,14 @@
     };
   });
 
-  // Global handlers for Escape/outside click to close the panel; keep them mounted
-  function handleGlobalKey(e: KeyboardEvent) {
-    if (!selectedCounty) return;
-    if (e.key === 'Escape') {
-      closePanel();
-    }
-  }
-
-  function handlePointerDown(e: PointerEvent) {
-    if (!selectedCounty) return;
-    if (!panelEl) return;
-    const target = e.target as Node;
-    if (!panelEl.contains(target)) {
-      closePanel();
-    }
-  }
-
   onMount(() => {
-    document.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('keydown', handleGlobalKey);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('keydown', handleGlobalKey);
-    };
+    // Use helper for global panel listeners
+    const removeListeners = setupGlobalPanelListeners({
+      selectedCounty: () => selectedCounty,
+      panelEl,
+      setSelectedCounty: (val) => (selectedCounty = val),
+    });
+    return removeListeners;
   });
 
   $: if (selectedCounty) {
