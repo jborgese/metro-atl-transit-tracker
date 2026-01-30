@@ -8,6 +8,7 @@
   import { metroCountyColorMatch, metroCountyGeoids } from "../../lib/map/countyStyles";
   import ProjectFilters from './ProjectFilters.svelte';
   import Portal from './Portal.svelte';
+  import { orgLogos } from '../../data/static/orgLogos';
 
   const log = createLogger("MetroMap");
 
@@ -529,7 +530,15 @@
               <div class="font-semibold text-xs text-blue-200 mb-1 tracking-wide">Transit Agencies</div>
               <ul class="pl-3 space-y-1">
                 {#each selectedCounty.primary_transit_agencies as a}
-                  <li><a class="panel-link" href={a.contact_url} target="_blank" rel="noopener">{a.name}</a></li>
+                  <li>
+                    {#if orgLogos[a.name]}
+                      <a class="panel-link" href={a.contact_url} target="_blank" rel="noopener">
+                        <img src={orgLogos[a.name]} alt={a.name + ' logo'} class="panel-logo" />
+                      </a>
+                    {:else}
+                      <a class="panel-link" href={a.contact_url} target="_blank" rel="noopener">{a.name}</a>
+                    {/if}
+                  </li>
                 {/each}
               </ul>
             </div>

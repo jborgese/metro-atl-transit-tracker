@@ -2,8 +2,10 @@
   "css.lint.unknownAtRules": "ignore",
   "cSpell.words": [
     "basemap",
+    "cobblinc",
     "drilldowns",
     "FIPS",
+    "gdot",
     "Gwinnett",
     "maplibre",
     "maplibregl",
