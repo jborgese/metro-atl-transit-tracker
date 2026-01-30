@@ -1,12 +1,13 @@
 <script lang="ts">
+  import { getMetroCountyBounds } from "../../lib/map/getMetroCountyBounds";
   import { onMount, tick } from "svelte";
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { initMetroMap } from "../../lib/map/initMetroMap";
 
   import { createLogger } from "../../utils/logger"; // adjust if needed
-  import { addGeoJsonLayer } from "../../lib/map/addGeoJsonLayer";
-  import { metroCountyColorMatch, metroCountyGeoids } from "../../lib/map/countyStyles";
+  import { metroCountyGeoids } from "../../lib/map/countyStyles";
+  import { addMetroCountyLayers } from "../../lib/map/addMetroCountyLayers";
   import ProjectFilters from './ProjectFilters.svelte';
   import MetroCountyPanel from './MetroCountyPanel.svelte';
 
@@ -105,130 +106,6 @@
     }
   }
 
-  function addGeorgiaCountiesLayers(m: maplibregl.Map) {
-    // Update path if you placed it differently
-    const countiesUrl = "/data/geo/ga_counties.geojson";
-
-    // Use centralized GEOID-based color mapping
-    const fillColor = metroCountyColorMatch;
-
-    // Find a reasonable label layer to insert counties before (keep them below labels)
-    const labelLayerId = m.getStyle?.()?.layers?.find((l) => l.type === "symbol" && /label/i.test(l.id))?.id;
-    const beforeId = labelLayerId ? labelLayerId : undefined;
-
-    // If the source doesn't exist yet, use the shared helper which also adds layers
-    if (!m.getSource("ga-counties")) {
-      const layerOpts: any = {
-        fillColor,
-        fillOpacity: 0.28,
-        outlineColor: "#0f172a",
-        generateId: true,
-        hoverFillColor: '#f59e0b',
-        hoverOutlineColor: '#ffffff',
-      };
-      if (beforeId) layerOpts.beforeId = beforeId;
-
-      addGeoJsonLayer(m, "ga-counties", countiesUrl, layerOpts);
-      log.info("counties:source-added", { url: countiesUrl, beforeId: labelLayerId });
-    } else {
-      // If source exists but layers are missing, add them (keeping previous behavior)
-        if (!m.getLayer("ga-counties-fill")) {
-        const fillLayer = {
-            id: "ga-counties-fill",
-            type: "fill",
-            source: "ga-counties",
-            paint: {
-              "fill-opacity": 0.28,
-              "fill-color": fillColor,
-            },
-          } as any;
-
-        if (labelLayerId) {
-          m.addLayer(fillLayer, labelLayerId);
-        } else {
-          m.addLayer(fillLayer);
-        }
-        log.info("counties:fill-layer-added");
-      }
-
-      if (!m.getLayer("ga-counties-outline")) {
-        m.addLayer({
-          id: "ga-counties-outline",
-          type: "line",
-          source: "ga-counties",
-          paint: {
-            "line-color": "#0f172a",
-            "line-width": 1,
-            "line-opacity": 0.8,
-          },
-        });
-        log.info("counties:outline-layer-added");
-      }
-    }
-
-    // Hover / cursor handlers
-    let hoveredFeatureId: string | number | undefined = undefined;
-
-    function onMove(e: any) {
-      if (!e.features || !e.features.length) return;
-      const f = e.features[0];
-
-      // Only allow hover/cursor for metro counties
-      const props = f.properties || {};
-      const geoid = (props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ);
-      if (!geoid || !metroCountyGeoids.includes(String(geoid))) {
-        // If previously hovering a metro feature, clear it
-        if (hoveredFeatureId !== undefined) {
-          try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
-          hoveredFeatureId = undefined;
-        }
-        m.getCanvas().style.cursor = '';
-        return;
-      }
-
-      if (hoveredFeatureId !== undefined && hoveredFeatureId !== f.id) {
-        try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
-      }
-
-      hoveredFeatureId = f.id;
-      m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: true });
-      m.getCanvas().style.cursor = 'pointer';
-    }
-
-    function onLeave() {
-      if (hoveredFeatureId !== undefined) {
-        try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
-        hoveredFeatureId = undefined;
-      }
-      m.getCanvas().style.cursor = '';
-    }
-
-    m.on('mousemove', 'ga-counties-fill', onMove);
-    m.on('mouseleave', 'ga-counties-fill', onLeave);
-
-    function keyboardActivate() {
-      if (!mapEl) return;
-      const rect = mapEl.getBoundingClientRect();
-      const point = [rect.width / 2, rect.height / 2] as const;
-      const features = m.queryRenderedFeatures(point as any, { layers: ['ga-counties-fill'] });
-      if (!features.length) return;
-      const f = features[0];
-      const props = f.properties || {};
-      const geoid = (props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ);
-      if (!geoid || !metroCountyGeoids.includes(String(geoid))) return;
-      if (hoveredFeatureId !== undefined) {
-        try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
-      }
-      hoveredFeatureId = f.id;
-      m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: true });
-      setTimeout(() => {
-        try { m.setFeatureState({ source: 'ga-counties', id: hoveredFeatureId }, { hover: false }); } catch {}
-        hoveredFeatureId = undefined;
-      }, 2000);
-    }
-
-    (m as any).__countyKeyboardActivate = keyboardActivate;
-  }
 
   async function loadCountyMetadata() {
     try {
@@ -281,7 +158,7 @@
             log.info("map:load (Atlanta)");
             safeResize();
             try {
-              addGeorgiaCountiesLayers(mapInstance);
+              addMetroCountyLayers({ map: mapInstance, mapEl, log });
               // ...existing code for fitBounds, metadata loading, and event listeners...
               (async () => {
                 try {
@@ -289,39 +166,14 @@
                   const res = await fetch(countiesUrl);
                   if (!res.ok) throw new Error(`counties fetch ${res.status}`);
                   const gj = await res.json();
-                  if (!gj || !gj.features || !gj.features.length) return;
-                  // ...existing code for bbox calculation...
-                  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                  function updateBoundsFromCoords(coords: any) {
-                    if (!Array.isArray(coords)) return;
-                    if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-                      const x = coords[0]; const y = coords[1];
-                      if (x < minX) minX = x;
-                      if (y < minY) minY = y;
-                      if (x > maxX) maxX = x;
-                      if (y > maxY) maxY = y;
-                      return;
-                    }
-                    for (const c of coords) updateBoundsFromCoords(c);
-                  }
-                  for (const f of gj.features) {
-                    const props = f.properties || {};
-                    const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
-                    if (!geoid || !metroCountyGeoids.includes(String(geoid))) continue;
-                    const geom = f.geometry;
-                    if (!geom) continue;
-                    updateBoundsFromCoords(geom.coordinates);
-                  }
-                  if (minX === Infinity) {
+                  const bounds = getMetroCountyBounds(gj);
+                  if (!bounds) {
                     log.warn('fitBounds: no metro features found');
                     return;
                   }
-                  const pad = 0.02;
-                  const sw: [number, number] = [minX - pad, minY - pad];
-                  const ne: [number, number] = [maxX + pad, maxY + pad];
                   try {
-                    mapInstance.fitBounds([sw, ne], { padding: 80, maxZoom: 12, duration: 1000 });
-                    log.info('map:fitBounds:metro-counties', { sw, ne });
+                    mapInstance.fitBounds([bounds.sw, bounds.ne], { padding: 80, maxZoom: 12, duration: 1000 });
+                    log.info('map:fitBounds:metro-counties', bounds);
                   } catch (e) {
                     log.warn('map:fitBounds-failed', e);
                   }
