@@ -2,13 +2,13 @@
   import { onMount, tick } from "svelte";
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
+  import { initMetroMap } from "../../lib/map/initMetroMap";
 
   import { createLogger } from "../../utils/logger"; // adjust if needed
   import { addGeoJsonLayer } from "../../lib/map/addGeoJsonLayer";
   import { metroCountyColorMatch, metroCountyGeoids } from "../../lib/map/countyStyles";
   import ProjectFilters from './ProjectFilters.svelte';
-  import Portal from './Portal.svelte';
-  import { orgLogos } from '../../data/static/orgLogos';
+  import MetroCountyPanel from './MetroCountyPanel.svelte';
 
   const log = createLogger("MetroMap");
 
@@ -271,141 +271,111 @@
 
         const styleUrl = `https://api.maptiler.com/maps/streets/style.json?key=${key}`;
 
-        map = new maplibregl.Map({
+        map = initMetroMap({
           container: mapEl,
-          style: styleUrl,
-          center: [-84.388, 33.749], // Atlanta, GA
+          styleUrl,
+          center: [-84.388, 33.749],
           zoom: 9,
-          attributionControl: false, // ✅ correct for MapLibre types
-        });
-
-        map.addControl(
-          new maplibregl.AttributionControl({
-            compact: true,
-            customAttribution: [
-              'Map tiles © MapTiler',
-              'County boundaries © US Census Bureau (TIGER/Line)'
-            ],
-          }),
-          'bottom-right'
-        );
-
-        map.addControl(new maplibregl.NavigationControl(), "top-right");
-
-        map.on("load", async () => {
-          log.info("map:load (Atlanta)");
-          safeResize();
-
-          try {
-            addGeorgiaCountiesLayers(map!);
-            // Ensure map is centered and zoomed to show all metro counties on initial render.
-            // We fetch the GeoJSON directly so we can compute bounds for the metro GEOIDs.
-            (async () => {
-              try {
-                const countiesUrl = '/data/geo/ga_counties.geojson';
-                const res = await fetch(countiesUrl);
-                if (!res.ok) throw new Error(`counties fetch ${res.status}`);
-                const gj = await res.json();
-                if (!gj || !gj.features || !gj.features.length) return;
-
-                // compute bbox across all metro county features
-                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-                function updateBoundsFromCoords(coords: any) {
-                  if (!Array.isArray(coords)) return;
-                  if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-                    const x = coords[0]; const y = coords[1];
-                    if (x < minX) minX = x;
-                    if (y < minY) minY = y;
-                    if (x > maxX) maxX = x;
-                    if (y > maxY) maxY = y;
+          attributionControl: false,
+          onLoad: async (mapInstance) => {
+            log.info("map:load (Atlanta)");
+            safeResize();
+            try {
+              addGeorgiaCountiesLayers(mapInstance);
+              // ...existing code for fitBounds, metadata loading, and event listeners...
+              (async () => {
+                try {
+                  const countiesUrl = '/data/geo/ga_counties.geojson';
+                  const res = await fetch(countiesUrl);
+                  if (!res.ok) throw new Error(`counties fetch ${res.status}`);
+                  const gj = await res.json();
+                  if (!gj || !gj.features || !gj.features.length) return;
+                  // ...existing code for bbox calculation...
+                  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                  function updateBoundsFromCoords(coords: any) {
+                    if (!Array.isArray(coords)) return;
+                    if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+                      const x = coords[0]; const y = coords[1];
+                      if (x < minX) minX = x;
+                      if (y < minY) minY = y;
+                      if (x > maxX) maxX = x;
+                      if (y > maxY) maxY = y;
+                      return;
+                    }
+                    for (const c of coords) updateBoundsFromCoords(c);
+                  }
+                  for (const f of gj.features) {
+                    const props = f.properties || {};
+                    const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
+                    if (!geoid || !metroCountyGeoids.includes(String(geoid))) continue;
+                    const geom = f.geometry;
+                    if (!geom) continue;
+                    updateBoundsFromCoords(geom.coordinates);
+                  }
+                  if (minX === Infinity) {
+                    log.warn('fitBounds: no metro features found');
                     return;
                   }
-                  for (const c of coords) updateBoundsFromCoords(c);
-                }
-
-                for (const f of gj.features) {
-                  const props = f.properties || {};
-                  const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
-                  if (!geoid || !metroCountyGeoids.includes(String(geoid))) continue;
-                  const geom = f.geometry;
-                  if (!geom) continue;
-                  updateBoundsFromCoords(geom.coordinates);
-                }
-
-                if (minX === Infinity) {
-                  log.warn('fitBounds: no metro features found');
-                  return;
-                }
-
-                // Apply a small padding in degrees if bbox is tiny
-                const pad = 0.02; // ~ a couple km depending on lat
-                const sw: [number, number] = [minX - pad, minY - pad];
-                const ne: [number, number] = [maxX + pad, maxY + pad];
-
-                try {
-                  map!.fitBounds([sw, ne], { padding: 80, maxZoom: 12, duration: 1000 });
-                  log.info('map:fitBounds:metro-counties', { sw, ne });
+                  const pad = 0.02;
+                  const sw: [number, number] = [minX - pad, minY - pad];
+                  const ne: [number, number] = [maxX + pad, maxY + pad];
+                  try {
+                    mapInstance.fitBounds([sw, ne], { padding: 80, maxZoom: 12, duration: 1000 });
+                    log.info('map:fitBounds:metro-counties', { sw, ne });
+                  } catch (e) {
+                    log.warn('map:fitBounds-failed', e);
+                  }
                 } catch (e) {
-                  log.warn('map:fitBounds-failed', e);
+                  log.warn('metro-bounds-calc-failed', e);
                 }
-              } catch (e) {
-                log.warn('metro-bounds-calc-failed', e);
-              }
-            })();
-            // load project/county metadata for popups/panels
-            await loadCountyMetadata();
-            await loadProjectsMetadata();
-
-            // show selected county metadata on click
-            map!.on('click', 'ga-counties-fill', (e: any) => {
-              try {
-                console.log('ga-counties-fill:click', e);
-                if (!e.features || !e.features.length) return;
-                const props = e.features[0].properties || {};
-                console.log('feature.props:', props);
-                const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
-                console.log('derived geoid:', geoid);
-                if (!geoid || !metroCountyGeoids.includes(String(geoid))) {
-                  console.log('click: geoid missing or not metro:', geoid);
-                  return;
+              })();
+              await loadCountyMetadata();
+              await loadProjectsMetadata();
+              mapInstance.on('click', 'ga-counties-fill', (e: any) => {
+                try {
+                  console.log('ga-counties-fill:click', e);
+                  if (!e.features || !e.features.length) return;
+                  const props = e.features[0].properties || {};
+                  console.log('feature.props:', props);
+                  const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
+                  console.log('derived geoid:', geoid);
+                  if (!geoid || !metroCountyGeoids.includes(String(geoid))) {
+                    console.log('click: geoid missing or not metro:', geoid);
+                    return;
+                  }
+                  const idKey = String(geoid);
+                  selectedCounty = countyMetadataMap[idKey] ?? { geoid: idKey, name: props.NAME || props.name };
+                  console.log('selectedCounty set ->', selectedCounty);
+                } catch (err) {
+                  console.error('county click handler error', err);
                 }
-                const idKey = String(geoid);
-                selectedCounty = countyMetadataMap[idKey] ?? { geoid: idKey, name: props.NAME || props.name };
-                console.log('selectedCounty set ->', selectedCounty);
-              } catch (err) {
-                console.error('county click handler error', err);
-              }
-            });
-
-            // allow clicking outside to clear selection
-            map!.on('click', (e) => {
-              try {
-                const features = map!.queryRenderedFeatures(e.point, { layers: ['ga-counties-fill'] });
-                console.log('map:click features at point', features && features.length);
-                if (!features.length) {
-                  selectedCounty = null;
-                  return;
+              });
+              mapInstance.on('click', (e) => {
+                try {
+                  const features = mapInstance.queryRenderedFeatures(e.point, { layers: ['ga-counties-fill'] });
+                  console.log('map:click features at point', features && features.length);
+                  if (!features.length) {
+                    selectedCounty = null;
+                    return;
+                  }
+                  const metroHit = features.find((f: any) => {
+                    const p = f.properties || {};
+                    const g = (p.GEOID || p.geoid || p.GEOIDFQ || p.GEOID_FQ);
+                    return g && metroCountyGeoids.includes(String(g));
+                  });
+                  console.log('map:click metroHit', !!metroHit);
+                  if (!metroHit) selectedCounty = null;
+                } catch (err) {
+                  console.error('map:click handler error', err);
                 }
-                // If there are features but none are metro counties, clear selection
-                const metroHit = features.find((f: any) => {
-                  const p = f.properties || {};
-                  const g = (p.GEOID || p.geoid || p.GEOIDFQ || p.GEOID_FQ);
-                  return g && metroCountyGeoids.includes(String(g));
-                });
-                console.log('map:click metroHit', !!metroHit);
-                if (!metroHit) selectedCounty = null;
-              } catch (err) {
-                console.error('map:click handler error', err);
-              }
-            });
-          } catch (e) {
-            log.error("counties:add-layers-failed", e);
-          }
-        });
-
-        map.on("error", (e) => {
-          log.error("map:error", e);
+              });
+            } catch (e) {
+              log.error("counties:add-layers-failed", e);
+            }
+          },
+          onError: (e) => {
+            log.error("map:error", e);
+          },
         });
 
         ro = new ResizeObserver(() => safeResize());
@@ -506,87 +476,13 @@
         <div>available modes: {debugAvailableCount}</div>
         <div>related projects: {debugRelatedCount}</div>
       </div>
-    </div>
-    {#if selectedCounty}
-      <Portal>
-        <aside bind:this={panelEl} class="county-panel fixed w-72 max-w-full text-sm text-neutral-200">
-          <div class="sticky top-0 z-10 flex items-start justify-between bg-transparent pb-2" style="backdrop-filter: blur(2px);">
-            <div>
-              <strong class="block text-base leading-tight">{selectedCounty.display_name ?? selectedCounty.name}</strong>
-              <div class="text-xs text-neutral-400">GEOID: {selectedCounty.geoid}</div>
-            </div>
-            <button bind:this={closeBtn} aria-label="Close county panel" class="ml-2 text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded" on:click={closePanel}>✕</button>
-          </div>
-
-          {#if selectedCounty.governance}
-            <div class="mt-3">
-              <div class="font-semibold text-xs text-blue-200 mb-1 tracking-wide">Governance</div>
-              <div class="text-sm">{selectedCounty.governance.governing_body ?? selectedCounty.governance.governance_type}</div>
-            </div>
-          {/if}
-
-          {#if selectedCounty.primary_transit_agencies && selectedCounty.primary_transit_agencies.length}
-            <div class="mt-4">
-              <div class="font-semibold text-xs text-blue-200 mb-1 tracking-wide">Transit Agencies</div>
-              <ul class="pl-3 space-y-1">
-                {#each selectedCounty.primary_transit_agencies as a}
-                  <li>
-                    {#if orgLogos[a.name]}
-                      <a class="panel-link" href={a.contact_url} target="_blank" rel="noopener">
-                        <img src={orgLogos[a.name]} alt={a.name + ' logo'} class="panel-logo" />
-                      </a>
-                    {:else}
-                      <a class="panel-link" href={a.contact_url} target="_blank" rel="noopener">{a.name}</a>
-                    {/if}
-                  </li>
-                {/each}
-              </ul>
-            </div>
-          {/if}
-
-          {#if relatedProjects && relatedProjects.length}
-            <div class="mt-4">
-              <div class="font-semibold text-xs text-blue-200 mb-1 tracking-wide">Related Projects & Initiatives</div>
-              {#if availableModes && availableModes.length}
-                <div class="mb-2">
-                  <ProjectFilters {availableModes} bind:selectedModes />
-                </div>
-              {/if}
-
-              {#if relatedProjectsFiltered.length > 3}
-                <ul class="space-y-2">
-                  {#each relatedProjectsFiltered.slice(0, showAllProjects ? undefined : 3) as pr}
-                    <li>
-                      <div class="font-medium text-sm">{pr.title}</div>
-                      <div class="text-neutral-400 text-xs">{pr.summary}</div>
-                      {#if pr.sources && pr.sources.length}
-                        <div class="text-xs mt-1"><a class="panel-link" href={pr.sources[0].url} target="_blank" rel="noopener">Source</a></div>
-                      {/if}
-                    </li>
-                  {/each}
-                </ul>
-                <button class="mt-2 text-xs text-blue-300 underline hover:text-blue-100 focus:outline-none" on:click={() => showAllProjects = !showAllProjects}>
-                  {showAllProjects ? 'Show less' : `Show all (${relatedProjectsFiltered.length})`}
-                </button>
-              {:else}
-                <ul class="space-y-2">
-                  {#each relatedProjectsFiltered as pr}
-                    <li>
-                      <div class="font-medium text-sm">{pr.title}</div>
-                      <div class="text-neutral-400 text-xs">{pr.summary}</div>
-                      {#if pr.sources && pr.sources.length}
-                        <div class="text-xs mt-1"><a class="panel-link" href={pr.sources[0].url} target="_blank" rel="noopener">Source</a></div>
-                      {/if}
-                    </li>
-                  {/each}
-                </ul>
-              {/if}
-            </div>
-          {/if}
+      {#if selectedCounty}
+        <aside bind:this={panelEl} class="map-panel-wrapper absolute top-4 left-4 z-50">
+          <button bind:this={closeBtn} aria-label="Close county panel" class="ml-2 text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2" on:click={closePanel}>✕</button>
+          <MetroCountyPanel county={selectedCounty} />
         </aside>
-      </Portal>
-    {/if}
-    let showAllProjects = false;
+      {/if}
+    </div>
   </div>
 </section>
 
@@ -595,5 +491,19 @@
   .map-container {
     width: 100%;
     height: 100%;
+  }
+
+  /* Override global .county-panel fixed positioning when rendered inside this map wrapper.
+     Use :global so the rule is emitted to the page and higher specificity to trump global.css. */
+  /* Target the renamed inner panel class */
+  :global(.relative .county-panel-content) {
+    position: absolute !important;
+    top: 1rem !important;
+    left: 1rem !important;
+    bottom: auto !important;
+    width: 18rem !important;
+    max-height: calc(100% - 2rem) !important;
+    overflow-y: auto !important;
+    z-index: 10050 !important;
   }
 </style>

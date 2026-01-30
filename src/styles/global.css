@@ -31,7 +31,7 @@ body {
 }
 
 /* County panel override to ensure deterministic layout regardless of tailwind purge/JIT */
-  .county-panel {
+  .county-panel-content {
     position: fixed;
     left: 1rem;
     bottom: 1rem;
@@ -50,19 +50,70 @@ body {
     padding-top: 1.5rem;
   }
 
-  .county-panel .panel-link {
+  .county-panel-content .panel-link {
     color: #a5d8ff;
     text-decoration: underline;
     transition: color 0.15s;
   }
-  .county-panel .panel-link:hover,
-  .county-panel .panel-link:focus {
+  .county-panel-content .panel-link:hover,
+  .county-panel-content .panel-link:focus {
     color: #fff;
     text-decoration: underline;
   }
 
+  /* Panel typography and utility styles */
+  .county-panel-content .panel-header {
+    font-size: 1.125rem; /* ~text-xl */
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: #f8fafc; /* slightly brighter */
+  }
+
+  .county-panel-content .panel-subheader {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #e6eef8;
+  }
+
+  .county-panel-content .panel-section {
+    margin-bottom: 0.75rem;
+  }
+
+  .county-panel-content .panel-muted {
+    color: #9aa8b6;
+    font-size: 0.95rem;
+  }
+
+  .county-panel-content .panel-list {
+    padding-left: 0; /* reset any list padding
+                       we let li spacing control layout */
+    list-style: none;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .county-panel-content .panel-list li {
+    margin: 0.25rem 0;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Logo sizing inside lists - reuses .panel-logo but tighten spacing */
+  .county-panel-content .panel-logo {
+    height: 1.5rem;
+    width: auto;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .county-panel-content .panel-source {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #96a0ae;
+  }
+
 @media (max-width: 640px) {
-  .county-panel {
+  .county-panel-content {
     left: 0.5rem;
     right: 0.5rem;
     bottom: 0.5rem;
