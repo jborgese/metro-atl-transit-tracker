@@ -1,17 +1,38 @@
-/* Panel logo universal style */
-.panel-logo {
-  height: 3rem;
-  max-width: 80%;
-  width: auto;
-  object-fit: contain;
-  display: inline-block;
-  vertical-align: middle;
-}
-/* Tailwind v4 preflight */
 @import "tailwindcss/preflight";
 @import "tailwindcss/utilities";
 @import "maplibre-gl/dist/maplibre-gl.css";
 
+/* ================================
+   Atlanta 1996 Design Tokens
+   ================================ */
+:root {
+  /* Brand */
+  --atl-green: #33514D;
+  --atl-bronze: #7E6E4F;
+
+  --atl-red: #a73a32;
+  --atl-magenta: #a32f65;
+  --atl-blue: #4280c4;
+  --atl-lavender: #8a62b0;
+
+  /* Neutrals */
+  --text-on-dark: #F3F2EE;
+  --text-muted: #C6CBC6;
+  --text-dim: #9FA7A2;
+  --text-on-light: #1F1F1F;
+
+  /* Surfaces */
+  --surface-0: var(--atl-green);
+  --surface-1: rgba(18, 32, 30, 0.78);
+  --surface-2: rgba(18, 32, 30, 0.92);
+
+  /* Borders & shadows */
+  --border-subtle: rgba(126, 110, 79, 0.30);
+  --border-strong: rgba(126, 110, 79, 0.55);
+
+  --shadow-1: 0 6px 18px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
 
 /* Base document defaults */
 html {
@@ -19,11 +40,21 @@ html {
 }
 
 body {
-  background-color: #0a0a0a; /* neutral-950-ish */
-  color: #fafafa; /* neutral-50-ish */
+  background-color: var(--surface-0);
+  color: var(--text-on-dark);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+a {
+  color: var(--atl-blue);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--text-on-dark);
+}
+
 
 .map-container {
   width: 100%;
@@ -39,12 +70,12 @@ body {
     max-width: calc(100% - 2rem);
     max-height: calc(100vh - 2rem);
     overflow-y: auto;
-    background: rgba(15, 23, 42, 0.9); /* neutral-900/90 fallback */
-    color: #e6e6e6;
-    border: 1px solid rgba(148,163,184,0.12);
+    background: var(--surface-2);
+    color: var(--text-on-dark);
+    border: 1px solid var(--border-subtle);
     padding: 0.75rem;
-    border-radius: 0.375rem;
-    box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-2);
     z-index: 100000;
     /* Add extra padding for sticky header */
     padding-top: 1.5rem;
@@ -65,38 +96,68 @@ body {
 }
 
   .county-panel-content .panel-link {
-    color: #a5d8ff;
-    text-decoration: underline;
-    transition: color 0.15s;
+  color: var(--atl-blue);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s, opacity 0.15s;
   }
+
   .county-panel-content .panel-link:hover,
   .county-panel-content .panel-link:focus {
-    color: #fff;
-    text-decoration: underline;
+    color: var(--text-on-dark);
+    opacity: 0.95;
   }
+
+  /* High-level app layout styles */
+  .main-content {
+    max-width: 900px;
+    margin: 2.5rem auto 0 auto;
+    padding: 0 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
+  .page-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: left;
+  }
+    .page-header h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--text-on-dark);
+      margin: 0;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+
 
   /* Panel typography and utility styles */
   .county-panel-content .panel-header {
-    font-size: 1.125rem; /* ~text-xl */
-    font-weight: 700;
-    margin: 0 0 0.5rem 0;
-    color: #f8fafc; /* slightly brighter */
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-on-dark);
   }
 
   .county-panel-content .panel-subheader {
     font-size: 0.95rem;
     font-weight: 600;
     margin: 0 0 0.5rem 0;
-    color: #e6eef8;
-  }
-
-  .county-panel-content .panel-section {
-    margin-bottom: 0.75rem;
+    color: var(--text-muted);
   }
 
   .county-panel-content .panel-muted {
-    color: #9aa8b6;
+    color: var(--text-dim);
     font-size: 0.95rem;
+  }
+
+  .county-panel-content .panel-source {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-dim);
   }
 
   .county-panel-content .panel-list {
@@ -120,12 +181,6 @@ body {
     vertical-align: middle;
   }
 
-  .county-panel-content .panel-source {
-    margin-top: 0.5rem;
-    font-size: 0.85rem;
-    color: #96a0ae;
-  }
-
 @media (max-width: 640px) {
   .county-panel-content {
     left: 0.5rem;
@@ -135,4 +190,103 @@ body {
     max-width: calc(100% - 1rem);
     border-radius: 0.5rem;
   }
+}
+/* BaseLayout high-level styles */
+.site-header {
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.20);
+}
+.site-header-inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+}
+.site-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-on-dark);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.site-title:hover {
+  opacity: 0.9;
+}
+.site-nav {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+.site-nav-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.site-nav-link:hover {
+  color: var(--text-on-dark);
+}
+.site-footer {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  padding: 1.5rem;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  z-index: 10001;
+
+  background: var(--surface-2);
+  color: var(--text-on-dark);
+  border: 1px solid var(--border-subtle);
+
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  text-decoration: none;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, pointer-events 0.2s;
+}
+
+.skip-link:focus {
+  opacity: 1;
+  pointer-events: auto;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 128, 196, 0.45); /* atl-blue */
+}
+
+/* Methodology page styles */
+.methodology-container {
+  max-width: 700px;
+  margin: 2.5rem auto 0 auto;
+  padding: 0 1.5rem;
+}
+.methodology-article {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-1);
+  padding: 2rem 2rem 1.5rem 2rem;
+  color: var(--text-muted);
+}
+.methodology-article h1,
+.methodology-article h2 {
+  color: var(--text-on-dark);
+}
+.methodology-article ul {
+  margin-left: 1.25rem;
+}
+.methodology-article li {
+  margin-bottom: 0.5rem;
 }

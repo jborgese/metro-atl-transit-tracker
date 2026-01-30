@@ -244,21 +244,6 @@
 
 <section aria-label={title}>
   <div class="relative rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
-    <header class="mb-3 flex items-start justify-between gap-4">
-      <div>
-        <h2 class="text-base font-semibold tracking-tight text-neutral-100">
-          {title}
-        </h2>
-        <p class="mt-1 text-sm text-neutral-400">{subtitle}</p>
-      </div>
-
-      <span
-        class="inline-flex items-center rounded-full border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-500"
-      >
-        Island: Svelte
-      </span>
-    </header>
-
     <div
       class="relative w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950"
       style={`height: ${height};`}
