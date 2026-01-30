@@ -37,6 +37,19 @@ body {
     border-radius: 0.375rem;
     box-shadow: 0 6px 18px rgba(2,6,23,0.6);
     z-index: 100000;
+    /* Add extra padding for sticky header */
+    padding-top: 1.5rem;
+  }
+
+  .county-panel .panel-link {
+    color: #a5d8ff;
+    text-decoration: underline;
+    transition: color 0.15s;
+  }
+  .county-panel .panel-link:hover,
+  .county-panel .panel-link:focus {
+    color: #fff;
+    text-decoration: underline;
   }
 
 @media (max-width: 640px) {

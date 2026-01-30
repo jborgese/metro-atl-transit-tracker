@@ -28,8 +28,12 @@
   // derived related projects for the selected county
   let relatedProjects: any[] = [];
 
+
   let panelEl: HTMLElement | null = null;
   let closeBtn: HTMLButtonElement | null = null;
+
+  // Controls whether to show all related projects in the panel
+  let showAllProjects = false;
 
   $: relatedProjects = selectedCounty && projectsMetadata && projectsMetadata.length
     ? projectsMetadata.filter(p => p.related_counties && p.related_counties.indexOf(String(selectedCounty.geoid)) !== -1)
@@ -505,57 +509,75 @@
     {#if selectedCounty}
       <Portal>
         <aside bind:this={panelEl} class="county-panel fixed w-72 max-w-full text-sm text-neutral-200">
-        <div class="flex items-start justify-between">
-          <div>
-            <strong class="block text-sm">{selectedCounty.display_name ?? selectedCounty.name}</strong>
-            <div class="text-xs text-neutral-400">GEOID: {selectedCounty.geoid}</div>
+          <div class="sticky top-0 z-10 flex items-start justify-between bg-transparent pb-2" style="backdrop-filter: blur(2px);">
+            <div>
+              <strong class="block text-base leading-tight">{selectedCounty.display_name ?? selectedCounty.name}</strong>
+              <div class="text-xs text-neutral-400">GEOID: {selectedCounty.geoid}</div>
+            </div>
+            <button bind:this={closeBtn} aria-label="Close county panel" class="ml-2 text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded" on:click={closePanel}>✕</button>
           </div>
-          <button bind:this={closeBtn} aria-label="Close county panel" class="ml-2 text-neutral-400" on:click={closePanel}>✕</button>
-        </div>
 
-        {#if selectedCounty.governance}
-          <div class="mt-2 text-xs">
-            <div class="font-medium">Governance</div>
-            <div>{selectedCounty.governance.governing_body ?? selectedCounty.governance.governance_type}</div>
-          </div>
-        {/if}
+          {#if selectedCounty.governance}
+            <div class="mt-3">
+              <div class="font-semibold text-xs text-blue-200 mb-1 tracking-wide">Governance</div>
+              <div class="text-sm">{selectedCounty.governance.governing_body ?? selectedCounty.governance.governance_type}</div>
+            </div>
+          {/if}
 
-        {#if selectedCounty.primary_transit_agencies && selectedCounty.primary_transit_agencies.length}
-          <div class="mt-2 text-xs">
-            <div class="font-medium">Transit agencies</div>
-            <ul class="list-disc pl-4">
-              {#each selectedCounty.primary_transit_agencies as a}
-                <li><a class="text-neutral-200 underline" href={a.contact_url} target="_blank" rel="noopener">{a.name}</a></li>
-              {/each}
-            </ul>
-          </div>
-        {/if}
+          {#if selectedCounty.primary_transit_agencies && selectedCounty.primary_transit_agencies.length}
+            <div class="mt-4">
+              <div class="font-semibold text-xs text-blue-200 mb-1 tracking-wide">Transit Agencies</div>
+              <ul class="pl-3 space-y-1">
+                {#each selectedCounty.primary_transit_agencies as a}
+                  <li><a class="panel-link" href={a.contact_url} target="_blank" rel="noopener">{a.name}</a></li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
 
-        {#if relatedProjects && relatedProjects.length}
-          <div class="mt-3 text-xs">
-            <div class="font-medium">Related projects & initiatives</div>
-            {#if availableModes && availableModes.length}
-              <div class="mt-2">
-                <ProjectFilters {availableModes} bind:selectedModes />
-              </div>
-            {/if}
+          {#if relatedProjects && relatedProjects.length}
+            <div class="mt-4">
+              <div class="font-semibold text-xs text-blue-200 mb-1 tracking-wide">Related Projects & Initiatives</div>
+              {#if availableModes && availableModes.length}
+                <div class="mb-2">
+                  <ProjectFilters {availableModes} bind:selectedModes />
+                </div>
+              {/if}
 
-            <ul class="mt-1 space-y-2">
-              {#each relatedProjectsFiltered as pr}
-                <li>
-                  <div class="font-medium text-sm">{pr.title}</div>
-                  <div class="text-neutral-400 text-xs">{pr.summary}</div>
-                  {#if pr.sources && pr.sources.length}
-                    <div class="text-xs mt-1"><a class="underline text-neutral-200" href={pr.sources[0].url} target="_blank" rel="noopener">Source</a></div>
-                  {/if}
-                </li>
-              {/each}
-            </ul>
-          </div>
-        {/if}
+              {#if relatedProjectsFiltered.length > 3}
+                <ul class="space-y-2">
+                  {#each relatedProjectsFiltered.slice(0, showAllProjects ? undefined : 3) as pr}
+                    <li>
+                      <div class="font-medium text-sm">{pr.title}</div>
+                      <div class="text-neutral-400 text-xs">{pr.summary}</div>
+                      {#if pr.sources && pr.sources.length}
+                        <div class="text-xs mt-1"><a class="panel-link" href={pr.sources[0].url} target="_blank" rel="noopener">Source</a></div>
+                      {/if}
+                    </li>
+                  {/each}
+                </ul>
+                <button class="mt-2 text-xs text-blue-300 underline hover:text-blue-100 focus:outline-none" on:click={() => showAllProjects = !showAllProjects}>
+                  {showAllProjects ? 'Show less' : `Show all (${relatedProjectsFiltered.length})`}
+                </button>
+              {:else}
+                <ul class="space-y-2">
+                  {#each relatedProjectsFiltered as pr}
+                    <li>
+                      <div class="font-medium text-sm">{pr.title}</div>
+                      <div class="text-neutral-400 text-xs">{pr.summary}</div>
+                      {#if pr.sources && pr.sources.length}
+                        <div class="text-xs mt-1"><a class="panel-link" href={pr.sources[0].url} target="_blank" rel="noopener">Source</a></div>
+                      {/if}
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            </div>
+          {/if}
         </aside>
-        </Portal>
-      {/if}
+      </Portal>
+    {/if}
+    let showAllProjects = false;
   </div>
 </section>
 
