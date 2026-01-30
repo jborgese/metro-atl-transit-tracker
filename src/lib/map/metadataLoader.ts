@@ -1,0 +1,25 @@
+export async function loadCountyMetadata(url = '/data/geo/counties-metadata.json') {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`metadata fetch ${res.status}`);
+    const countyMetadata = await res.json();
+    const countyMetadataMap: Record<string, any> = {};
+    for (const c of countyMetadata) {
+      if (c.geoid) countyMetadataMap[String(c.geoid)] = c;
+    }
+    return { countyMetadata, countyMetadataMap };
+  } catch (e) {
+    return { countyMetadata: [], countyMetadataMap: {}, error: e };
+  }
+}
+
+export async function loadProjectsMetadata(url = '/data/geo/projects-metadata.json') {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`projects fetch ${res.status}`);
+    const projectsMetadata = await res.json();
+    return { projectsMetadata };
+  } catch (e) {
+    return { projectsMetadata: [], error: e };
+  }
+}

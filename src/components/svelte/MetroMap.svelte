@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { loadCountyMetadata, loadProjectsMetadata } from "../../lib/map/metadataLoader";
   import { getMetroCountyBounds } from "../../lib/map/getMetroCountyBounds";
   import { onMount, tick } from "svelte";
   import maplibregl from "maplibre-gl";
@@ -59,16 +60,6 @@
     ? relatedProjects.filter((p: any) => (p.modes || []).some((m: string) => selectedModes.indexOf(m) !== -1))
     : relatedProjects;
 
-  async function loadProjectsMetadata() {
-    try {
-      const res = await fetch('/data/geo/projects-metadata.json');
-      if (!res.ok) throw new Error(`projects fetch ${res.status}`);
-      projectsMetadata = await res.json();
-      log.info('projects:loaded', { count: projectsMetadata.length });
-    } catch (e) {
-      log.warn('projects:load-failed', e);
-    }
-  }
 
   function closePanel() {
     selectedCounty = null;
@@ -107,20 +98,6 @@
   }
 
 
-  async function loadCountyMetadata() {
-    try {
-      const res = await fetch('/data/geo/counties-metadata.json');
-      if (!res.ok) throw new Error(`metadata fetch ${res.status}`);
-      countyMetadata = await res.json();
-      countyMetadataMap = {};
-      for (const c of countyMetadata) {
-        if (c.geoid) countyMetadataMap[String(c.geoid)] = c;
-      }
-      log.info('metadata:loaded', { count: countyMetadata.length });
-    } catch (e) {
-      log.warn('metadata:load-failed', e);
-    }
-  }
 
   onMount(() => {
     log.info("mount:start");
@@ -181,8 +158,19 @@
                   log.warn('metro-bounds-calc-failed', e);
                 }
               })();
-              await loadCountyMetadata();
-              await loadProjectsMetadata();
+              {
+                const { countyMetadata: cm, countyMetadataMap: cmm, error: countyError } = await loadCountyMetadata();
+                countyMetadata = cm;
+                countyMetadataMap = cmm;
+                if (countyError) log.warn('metadata:load-failed', countyError);
+                else log.info('metadata:loaded', { count: cm.length });
+              }
+              {
+                const { projectsMetadata: pm, error: projectsError } = await loadProjectsMetadata();
+                projectsMetadata = pm;
+                if (projectsError) log.warn('projects:load-failed', projectsError);
+                else log.info('projects:loaded', { count: pm.length });
+              }
               mapInstance.on('click', 'ga-counties-fill', (e: any) => {
                 try {
                   console.log('ga-counties-fill:click', e);
