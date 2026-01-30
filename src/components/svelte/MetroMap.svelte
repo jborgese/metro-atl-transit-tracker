@@ -1,5 +1,7 @@
 <script lang="ts">
   import DebugBadge from './DebugBadge.svelte';
+  // Set this to true to show the debug panel
+  let showDebugPanel = false;
   import {
     handleCountySelection,
     handleMapClick,
@@ -272,22 +274,24 @@
         role="application"
         on:keydown={handleKeyDown}
         aria-describedby="map-instructions"
-      ></div>
-
-      <p id="map-instructions" class="sr-only">
-        Focus the map and press Enter to highlight the county at the center of the map.
-      </p>
-      <DebugBadge
-        selectedCountyKey={debugSelectedKey}
-        availableModesCount={debugAvailableCount}
-        relatedProjectsCount={debugRelatedCount}
-      />
-      {#if selectedCounty}
-        <aside bind:this={panelEl} class="map-panel-wrapper absolute top-4 left-4 z-50">
-          <button bind:this={closeBtn} aria-label="Close county panel" class="ml-2 text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2" on:click={closePanel}>✕</button>
-          <MetroCountyPanel county={selectedCounty} />
-        </aside>
-      {/if}
+      >
+        <p id="map-instructions" class="sr-only">
+          Focus the map and press Enter to highlight the county at the center of the map.
+        </p>
+        {#if showDebugPanel}
+          <DebugBadge
+            selectedCountyKey={debugSelectedKey}
+            availableModesCount={debugAvailableCount}
+            relatedProjectsCount={debugRelatedCount}
+          />
+        {/if}
+        {#if selectedCounty}
+          <aside bind:this={panelEl} class="map-panel-wrapper absolute top-4 left-4 z-50">
+            <button bind:this={closeBtn} aria-label="Close county panel" class="ml-2 text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2" on:click={closePanel}>✕</button>
+            <MetroCountyPanel county={selectedCounty} />
+          </aside>
+        {/if}
+      </div>
     </div>
   </div>
 </section>
@@ -299,17 +303,5 @@
     height: 100%;
   }
 
-  /* Override global .county-panel fixed positioning when rendered inside this map wrapper.
-     Use :global so the rule is emitted to the page and higher specificity to trump global.css. */
-  /* Target the renamed inner panel class */
-  :global(.relative .county-panel-content) {
-    position: absolute !important;
-    top: 1rem !important;
-    left: 1rem !important;
-    bottom: auto !important;
-    width: 18rem !important;
-    max-height: calc(100% - 2rem) !important;
-    overflow-y: auto !important;
-    z-index: 10050 !important;
-  }
+  /* ...existing code... */
 </style>

@@ -50,6 +50,20 @@ body {
     padding-top: 1.5rem;
   }
 
+/* County panel overlay for map view only */
+.map-container .county-panel-content {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  bottom: auto;
+  width: 16rem;
+  min-width: 16rem;
+  max-width: 90vw;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  z-index: 10050;
+}
+
   .county-panel-content .panel-link {
     color: #a5d8ff;
     text-decoration: underline;
@@ -100,7 +114,7 @@ body {
 
   /* Logo sizing inside lists - reuses .panel-logo but tighten spacing */
   .county-panel-content .panel-logo {
-    height: 1.5rem;
+    height: 4rem;
     width: auto;
     margin-right: 0.5rem;
     vertical-align: middle;
