@@ -1,7 +1,10 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
 import MetroMap from '../components/svelte/MetroMap.svelte'
+import ProjectsTable from '../components/svelte/ProjectsTable.svelte'
+import projects from '../data/geo/loadProjects'
 ---
+
 
 <BaseLayout>
   <section class="main-content">
@@ -15,5 +18,6 @@ import MetroMap from '../components/svelte/MetroMap.svelte'
     </p>
 
     <MetroMap client:load />
+    <ProjectsTable projects={projects} selectedCounty={null} />
   </section>
 </BaseLayout>

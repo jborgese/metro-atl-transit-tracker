@@ -10,7 +10,9 @@
   } from "../../lib/map/countyPanelHandlers";
   import { loadCountyMetadata, loadProjectsMetadata } from "../../lib/map/metadataLoader";
   import { getMetroCountyBounds } from "../../lib/map/getMetroCountyBounds";
-  import { onMount, tick } from "svelte";
+  import { onMount, tick, createEventDispatcher } from "svelte";
+    // Svelte event dispatcher for parent communication
+    const dispatch = createEventDispatcher();
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { initMetroMap } from "../../lib/map/initMetroMap";
@@ -50,6 +52,11 @@
   $: relatedProjects = selectedCounty && projectsMetadata && projectsMetadata.length
     ? projectsMetadata.filter(p => p.related_counties && p.related_counties.indexOf(String(selectedCounty.geoid)) !== -1)
     : [];
+
+  // Emit event when selectedCounty changes
+  $: if (selectedCounty && selectedCounty.geoid) {
+    dispatch('countySelected', { geoid: String(selectedCounty.geoid) });
+  }
 
   // UI: available project modes and currently selected modes for filtering
   let availableModes: string[] = [];
@@ -184,7 +191,9 @@
                   event: e,
                   countyMetadataMap,
                   metroCountyGeoids,
-                  setSelectedCounty: (val) => (selectedCounty = val),
+                  setSelectedCounty: (val) => {
+                    selectedCounty = val;
+                  },
                 });
               });
               mapInstance.on('click', (e) => {
@@ -192,7 +201,9 @@
                   event: e,
                   mapInstance,
                   metroCountyGeoids,
-                  setSelectedCounty: (val) => (selectedCounty = val),
+                  setSelectedCounty: (val) => {
+                    selectedCounty = val;
+                  },
                 });
               });
             } catch (e) {
