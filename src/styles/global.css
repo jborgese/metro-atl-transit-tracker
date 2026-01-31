@@ -182,10 +182,13 @@ a:hover {
 
   /* Logo sizing inside lists - reuses .panel-logo but tighten spacing */
   .county-panel-content .panel-logo {
-    height: 4rem;
+    height: auto;
+    max-height: 4rem;
     width: auto;
+    max-width: 100%;
     margin-right: 0.5rem;
-    vertical-align: middle;
+    object-fit: contain;
+    display: block;
   }
 
 @media (max-width: 640px) {

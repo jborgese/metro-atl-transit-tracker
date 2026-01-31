@@ -13,7 +13,10 @@ import BaseLayout from '../layouts/BaseLayout.svelte';
       <h2>Definitions</h2>
       <ul>
         <li>
-          <strong>Metro Atlanta</strong>: definition TBD (e.g., census / ARC region).
+          <strong>Metro Atlanta</strong>:  county GEOIDs — Fulton (13121), DeKalb (13089), Cobb (13067), and Gwinnett (13135) — used to highlight, select, and compute bounds.
+        </li>
+        <li>
+          <strong>GEOID</strong>: a U.S. Census Bureau's geographic identifier that uniquely identifies a county or other census geography, used in TIGER/Line and Census data for reliable matching.
         </li>
         <li>
           <strong>Status</strong>: binary for advocacy points; progress for projects where measurable phases exist.
