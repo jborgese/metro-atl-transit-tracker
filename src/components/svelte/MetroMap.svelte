@@ -22,6 +22,7 @@
   import { metroCountyGeoids } from "../../lib/map/countyStyles";
   import { addMetroCountyLayers } from "../../lib/map/addMetroCountyLayers";
   import MetroCountyPanel from './MetroCountyPanel.svelte';
+  import { orgLogos } from '../../data/static/orgLogos';
 
   const log = createLogger("MetroMap");
 
@@ -301,6 +302,47 @@
   $: if (selectedCounty) {
     // Focus the close button when the panel opens
     tick().then(() => closeBtn?.focus());
+    // Preload any logos referenced by the county to avoid delayed image paints
+    try {
+      preloadLogosForCounty(selectedCounty);
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  // Insert <link rel="preload" as="image"> tags for logos used by a county
+  const _preloadedLogoHrefs = new Set<string>();
+  function preloadLogosForCounty(county: any) {
+    if (!county) return;
+    const hrefs: string[] = [];
+    const collect = (name: string | undefined) => {
+      if (!name) return;
+      const url = orgLogos[name];
+      if (url) hrefs.push(url);
+    };
+    if (county.primary_transit_agencies && Array.isArray(county.primary_transit_agencies)) {
+      for (const a of county.primary_transit_agencies) collect(a.name);
+    }
+    if (county.governance && county.governance.groups && Array.isArray(county.governance.groups)) {
+      for (const g of county.governance.groups) collect(g.name);
+    }
+    if (county.advocacy && county.advocacy.groups && Array.isArray(county.advocacy.groups)) {
+      for (const g of county.advocacy.groups) collect(g.name);
+    }
+    for (const h of hrefs) {
+      if (!_preloadedLogoHrefs.has(h)) {
+        try {
+          const link = document.createElement('link');
+          link.rel = 'preload';
+          link.as = 'image';
+          link.href = h;
+          document.head.appendChild(link);
+          _preloadedLogoHrefs.add(h);
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    }
   }
 </script>
 
