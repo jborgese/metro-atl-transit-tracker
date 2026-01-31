@@ -41,6 +41,12 @@
           "website": "https://beltlinerailnow.com",
           "description": "Advocacy group supporting the construction of rail transit on the Atlanta BeltLine.",
           "notes": "Active in Fulton and DeKalb counties."
+        },
+        {
+          "name": "Let's Propel ATL",
+          "website": "https://www.letspropelatl.org/",
+          "description": "Regional advocacy organization focused on equitable transit investments and improved mobility in the Atlanta region.",
+          "notes": "Added to county advocacy groups across metro Atlanta."
         }
       ]
     },
@@ -97,6 +103,12 @@
           "website": "https://beltlinerailnow.com",
           "description": "Advocacy group supporting the construction of rail transit on the Atlanta BeltLine.",
           "notes": "Active in Fulton and DeKalb counties."
+        },
+        {
+          "name": "Let's Propel ATL",
+          "website": "https://www.letspropelatl.org/",
+          "description": "Regional advocacy organization focused on equitable transit investments and improved mobility in the Atlanta region.",
+          "notes": "Added to county advocacy groups across metro Atlanta."
         }
       ]
     },
@@ -133,6 +145,12 @@
           "website": "https://abettercobb.com/",
           "description": "Advocacy group supporting improved transit and mobility options in Cobb County.",
           "notes": "Active in Cobb County; focuses on transit expansion and community engagement."
+        },
+        {
+          "name": "Let's Propel ATL",
+          "website": "https://www.letspropelatl.org/",
+          "description": "Regional advocacy organization focused on equitable transit investments and improved mobility in the Atlanta region.",
+          "notes": "Added to county advocacy groups across metro Atlanta."
         }
       ]
     },
@@ -155,7 +173,14 @@
       "scope_notes": "Major suburban county with commuter and local services",
       "tags": ["suburban","growth"],
       "recommended_links": [],
-      "groups": []
+      "groups": [
+        {
+          "name": "Let's Propel ATL",
+          "website": "https://www.letspropelatl.org/",
+          "description": "Regional advocacy organization focused on equitable transit investments and improved mobility in the Atlanta region.",
+          "notes": "Added to county advocacy groups across metro Atlanta."
+        }
+      ]
     },
     "sources": [ { "label": "Gwinnett County Transit", "url": "https://www.gwinnettcounty.com/", "last_verified": "2026-01-29" } ],
     "provenance": { "created_at": "2026-01-29T12:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-01-29T12:30:00Z", "license": "CC-BY-4.0" },
@@ -176,7 +201,14 @@
       "scope_notes": "Regional commuter and local services; participates in ARC planning",
       "tags": ["suburban"],
       "recommended_links": [],
-      "groups": []
+      "groups": [
+        {
+          "name": "Let's Propel ATL",
+          "website": "https://www.letspropelatl.org/",
+          "description": "Regional advocacy organization focused on equitable transit investments and improved mobility in the Atlanta region.",
+          "notes": "Added to county advocacy groups across metro Atlanta."
+        }
+      ]
     },
     "sources": [ { "label": "Clayton County", "url": "https://www.claytoncountyga.gov/", "last_verified": "2026-01-29" } ],
     "provenance": { "created_at": "2026-01-29T12:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-01-29T12:30:00Z", "license": "CC-BY-4.0" },
@@ -197,7 +229,14 @@
       "scope_notes": "Suburban county with growing transit connections",
       "tags": ["suburban"],
       "recommended_links": [],
-      "groups": []
+      "groups": [
+        {
+          "name": "Let's Propel ATL",
+          "website": "https://www.letspropelatl.org/",
+          "description": "Regional advocacy organization focused on equitable transit investments and improved mobility in the Atlanta region.",
+          "notes": "Added to county advocacy groups across metro Atlanta."
+        }
+      ]
     },
     "sources": [ { "label": "Henry County", "url": "https://www.henrycountyga.gov/", "last_verified": "2026-01-29" } ],
     "provenance": { "created_at": "2026-01-29T12:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-01-29T12:30:00Z", "license": "CC-BY-4.0" },
