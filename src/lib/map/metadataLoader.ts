@@ -13,7 +13,9 @@ export async function loadCountyMetadata(url = '/data/geo/counties-metadata.json
   }
 }
 
-export async function loadProjectsMetadata(url = '/data/geo/projects-metadata.json') {
+import projectsUrl from '../../data/geo/projects-metadata.json?url';
+
+export async function loadProjectsMetadata(url: string = projectsUrl) {
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`projects fetch ${res.status}`);
