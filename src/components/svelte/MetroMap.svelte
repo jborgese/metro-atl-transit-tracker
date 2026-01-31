@@ -16,11 +16,11 @@
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { initMetroMap } from "../../lib/map/initMetroMap";
+  import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
 
   import { createLogger } from "../../utils/logger"; // adjust if needed
   import { metroCountyGeoids } from "../../lib/map/countyStyles";
   import { addMetroCountyLayers } from "../../lib/map/addMetroCountyLayers";
-  import ProjectFilters from './ProjectFilters.svelte';
   import MetroCountyPanel from './MetroCountyPanel.svelte';
 
   const log = createLogger("MetroMap");
@@ -132,7 +132,7 @@
           return;
         }
 
-        const key = import.meta.env.PUBLIC_MAPTILER_KEY;
+        const key = PUBLIC_MAPTILER_KEY;
         if (!key) {
           log.error("maptiler:key-missing (set PUBLIC_MAPTILER_KEY)");
           return;

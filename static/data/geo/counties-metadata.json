@@ -1,0 +1,108 @@
+[
+  {
+    "geoid": "13121",
+    "state_fips": "13",
+    "county_fips": "121",
+    "name": "Fulton",
+    "display_name": "Fulton County, GA",
+    "state": "GA",
+    "mpo": { "name": "Atlanta Regional Commission", "id": "ARC", "boundary_source_url": "https://atlantaregional.org/" },
+    "regional_commission": { "name": "Atlanta Regional Commission", "website": "https://atlantaregional.org/" },
+    "governance": {
+      "governing_body": "Board of Commissioners",
+      "governance_type": "county",
+      "elected_board": true,
+      "board_size": 7,
+      "county_seat": "Atlanta",
+      "official_website": "https://www.fultoncountyga.gov/"
+      ,"groups": []
+    },
+    "primary_transit_agencies": [
+      {
+        "agency_id": "MARTA",
+        "name": "Metropolitan Atlanta Rapid Transit Authority",
+        "alternate_names": ["MARTA", "Metropolitan Atlanta Rapid Transit Authority"],
+        "gtfs_static_url": "https://www.itsmarta.com/google_transit.zip",
+        "gtfs_realtime_url": null,
+        "service_area_geojson_url": null,
+        "contact_url": "https://itsmarta.com/",
+        "notes": "Primary heavy-rail and bus operator serving Fulton and DeKalb counties within core Atlanta."
+      }
+    ],
+    "advocacy": {
+      "scope_notes": "Core metro county; active participant in regional planning and advocacy through ARC.",
+      "tags": ["metro", "core", "regional"],
+      "recommended_links": [
+        { "label": "ARC Mobility", "url": "https://atlantaregional.org/" }
+      ],
+      "groups": [
+        {
+          "name": "BeltLine Rail Now!",
+          "website": "https://beltlinerailnow.com",
+          "description": "Advocacy group supporting the construction of rail transit on the Atlanta BeltLine.",
+          "notes": "Active in Fulton and DeKalb counties."
+        }
+      ]
+    },
+    "sources": [
+      { "label": "Census TIGER/Line (counties)", "url": "https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html", "last_verified": "2026-01-29" },
+      { "label": "MARTA GTFS (agency page)", "url": "https://itsmarta.com/", "last_verified": "2026-01-29" }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:00:00Z",
+      "created_by": "metro-atl-transit-tracker",
+      "updated_at": "2026-01-29T12:00:00Z",
+      "license": "CC-BY-4.0"
+    },
+    "metadata_version": "v1.0"
+  }
+  ,
+  {
+    "geoid": "13089",
+    "state_fips": "13",
+    "county_fips": "089",
+    "name": "DeKalb",
+    "display_name": "DeKalb County, GA",
+    "state": "GA",
+    "mpo": { "name": "Atlanta Regional Commission", "id": "ARC" },
+    "regional_commission": { "name": "Atlanta Regional Commission", "website": "https://atlantaregional.org/" },
+    "governance": {
+      "governing_body": "Board of Commissioners",
+      "governance_type": "county",
+      "elected_board": true,
+      "board_size": null,
+      "county_seat": "Decatur",
+      "official_website": "https://www.dekalbcountyga.gov/"
+      ,"groups": []
+    },
+    "primary_transit_agencies": [
+      {
+        "agency_id": "MARTA",
+        "name": "Metropolitan Atlanta Rapid Transit Authority",
+        "alternate_names": ["MARTA", "Metropolitan Atlanta Rapid Transit Authority"],
+        "gtfs_static_url": "https://www.itsmarta.com/google_transit.zip",
+        "gtfs_realtime_url": null,
+        "service_area_geojson_url": null,
+        "contact_url": "https://itsmarta.com/",
+        "notes": "Primary transit operator within DeKalb and Fulton counties."
+      }
+    ],
+    "advocacy": {
+      "scope_notes": "Core metro county; ARC participant",
+      "tags": ["metro","core"],
+      "recommended_links": [],
+      "groups": [
+        {
+          "name": "BeltLine Rail Now!",
+          "website": "https://beltlinerailnow.com",
+          "description": "Advocacy group supporting the construction of rail transit on the Atlanta BeltLine.",
+          "notes": "Active in Fulton and DeKalb counties."
+        }
+      ]
+    },
+    "groups": [],
+    "sources": [ { "label": "DeKalb County official site", "url": "https://www.dekalbcountyga.gov/", "last_verified": "2026-01-29" } ],
+    "provenance": { "created_at": "2026-01-29T12:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-01-29T12:00:00Z", "license": "CC-BY-4.0" },
+    "metadata_version": "v1.0"
+  }
+]
