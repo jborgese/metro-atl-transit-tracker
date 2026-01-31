@@ -104,5 +104,103 @@
     "sources": [ { "label": "DeKalb County official site", "url": "https://www.dekalbcountyga.gov/", "last_verified": "2026-01-29" } ],
     "provenance": { "created_at": "2026-01-29T12:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-01-29T12:00:00Z", "license": "CC-BY-4.0" },
     "metadata_version": "v1.0"
+  },
+  {
+    "geoid": "13067",
+    "state_fips": "13",
+    "county_fips": "067",
+    "name": "Cobb",
+    "display_name": "Cobb County, GA",
+    "state": "GA",
+    "mpo": { "name": "Atlanta Regional Commission", "id": "ARC" },
+    "regional_commission": { "name": "Atlanta Regional Commission", "website": "https://atlantaregional.org/" },
+    "primary_transit_agencies": [ { "agency_id": "COBBLINC", "name": "CobbLinc (Cobb County Transit)", "alternate_names": ["CobbLinc", "Cobb County Transit", "COBBLINC"], "gtfs_static_url": null, "gtfs_realtime_url": null, "service_area_geojson_url": null, "contact_url": "https://www.cobbcounty.org/transportation", "notes": "Local county transit (CobbLinc); GTFS to be verified." } ],
+    "governance": { "governing_body": "Board of Commissioners", "governance_type": "county", "elected_board": true, "board_size": null, "county_seat": "Marietta", "official_website": "https://www.cobbcounty.org/", "groups": [
+      {
+        "name": "Transit System Advisory Board",
+        "website": "https://www.cobbcounty.gov/board/county-clerk/boards-authorities/transit-system-advisory-board",
+        "description": "Advisory board providing input on transit issues in Cobb County.",
+        "notes": ""
+      }
+    ] },
+    "advocacy": {
+      "scope_notes": "Suburban county with local and regional service",
+      "tags": ["suburban"],
+      "recommended_links": [],
+      "groups": [
+        {
+          "name": "A Better Cobb",
+          "website": "https://abettercobb.com/",
+          "description": "Advocacy group supporting improved transit and mobility options in Cobb County.",
+          "notes": "Active in Cobb County; focuses on transit expansion and community engagement."
+        }
+      ]
+    },
+    "sources": [ { "label": "Cobb County Transportation", "url": "https://www.cobbcounty.gov/transportation", "last_verified": "2026-01-29" } ],
+    "provenance": { "created_at": "2026-01-29T12:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-01-29T12:30:00Z", "license": "CC-BY-4.0" },
+    "metadata_version": "v1.0"
+  },
+  {
+    "geoid": "13135",
+    "state_fips": "13",
+    "county_fips": "135",
+    "name": "Gwinnett",
+    "display_name": "Gwinnett County, GA",
+    "state": "GA",
+    "mpo": { "name": "Atlanta Regional Commission", "id": "ARC" },
+    "regional_commission": { "name": "Atlanta Regional Commission", "website": "https://atlantaregional.org/" },
+    "governance": { "governing_body": "Board of Commissioners", "governance_type": "county", "elected_board": true, "board_size": null, "county_seat": "Lawrenceville", "official_website": "https://www.gwinnettcounty.com/", "groups": [] },
+    "primary_transit_agencies": [ { "agency_id": "GCT", "name": "Gwinnett County Transit", "alternate_names": ["Ride Gwinnett", "GCT", "Gwinnett County Transit"], "gtfs_static_url": null, "gtfs_realtime_url": null, "service_area_geojson_url": null, "contact_url": "https://www.gwinnettcounty.com/", "notes": "County-operated transit; no public GTFS found on official site as of 2026-01-29." } ],
+    "advocacy": {
+      "scope_notes": "Major suburban county with commuter and local services",
+      "tags": ["suburban","growth"],
+      "recommended_links": [],
+      "groups": []
+    },
+    "sources": [ { "label": "Gwinnett County Transit", "url": "https://www.gwinnettcounty.com/", "last_verified": "2026-01-29" } ],
+    "provenance": { "created_at": "2026-01-29T12:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-01-29T12:30:00Z", "license": "CC-BY-4.0" },
+    "metadata_version": "v1.0"
+  },
+  {
+    "geoid": "13063",
+    "state_fips": "13",
+    "county_fips": "063",
+    "name": "Clayton",
+    "display_name": "Clayton County, GA",
+    "state": "GA",
+    "mpo": { "name": "Atlanta Regional Commission", "id": "ARC" },
+    "regional_commission": { "name": "Atlanta Regional Commission", "website": "https://atlantaregional.org/" },
+    "governance": { "governing_body": "Board of Commissioners", "governance_type": "county", "elected_board": true, "board_size": null, "county_seat": "Jonesboro", "official_website": "https://www.claytoncountyga.gov/", "groups": [] },
+    "primary_transit_agencies": [ { "agency_id": "CCT", "name": "Clayton County Transit / CCT", "alternate_names": ["Clayton County Transit", "CCT"], "gtfs_static_url": null, "gtfs_realtime_url": null, "service_area_geojson_url": null, "contact_url": "https://www.claytoncountyga.gov/", "notes": "Local transit; no public GTFS found on official site as of 2026-01-29." } ],
+    "advocacy": {
+      "scope_notes": "Regional commuter and local services; participates in ARC planning",
+      "tags": ["suburban"],
+      "recommended_links": [],
+      "groups": []
+    },
+    "sources": [ { "label": "Clayton County", "url": "https://www.claytoncountyga.gov/", "last_verified": "2026-01-29" } ],
+    "provenance": { "created_at": "2026-01-29T12:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-01-29T12:30:00Z", "license": "CC-BY-4.0" },
+    "metadata_version": "v1.0"
+  },
+  {
+    "geoid": "13151",
+    "state_fips": "13",
+    "county_fips": "151",
+    "name": "Henry",
+    "display_name": "Henry County, GA",
+    "state": "GA",
+    "mpo": { "name": "Atlanta Regional Commission", "id": "ARC" },
+    "regional_commission": { "name": "Atlanta Regional Commission", "website": "https://atlantaregional.org/" },
+    "governance": { "governing_body": "Board of Commissioners", "governance_type": "county", "elected_board": true, "board_size": null, "county_seat": "McDonough", "official_website": "https://www.co.henry.ga.us/", "groups": [] },
+    "primary_transit_agencies": [ { "agency_id": null, "name": "Henry County Transit / local providers", "alternate_names": ["Henry County Transit", "Henry Transit", "Henry County local providers"], "gtfs_static_url": null, "gtfs_realtime_url": null, "service_area_geojson_url": null, "contact_url": "https://www.co.henry.ga.us/", "notes": "Local and regional commuter services; no public GTFS found on official site as of 2026-01-29." } ],
+    "advocacy": {
+      "scope_notes": "Suburban county with growing transit connections",
+      "tags": ["suburban"],
+      "recommended_links": [],
+      "groups": []
+    },
+    "sources": [ { "label": "Henry County", "url": "https://www.henrycountyga.gov/", "last_verified": "2026-01-29" } ],
+    "provenance": { "created_at": "2026-01-29T12:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-01-29T12:30:00Z", "license": "CC-BY-4.0" },
+    "metadata_version": "v1.0"
   }
 ]

@@ -77,11 +77,12 @@ table {
   margin-bottom: 1rem;
 }
 th, td {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-subtle);
   padding: 0.5rem 0.75rem;
   text-align: left;
 }
 th {
-  background: #f3f4f6;
+  background: var(--surface-1);
+  color: var(--text-on-dark);
 }
 </style>

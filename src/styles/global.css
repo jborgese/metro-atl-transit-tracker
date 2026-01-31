@@ -1,6 +1,7 @@
 @import "tailwindcss/preflight";
 @import "tailwindcss/utilities";
 @import "maplibre-gl/dist/maplibre-gl.css";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Merriweather:wght@300;400;700&display=swap');
 
 /* ================================
    Atlanta 1996 Design Tokens
@@ -32,6 +33,10 @@
 
   --shadow-1: 0 6px 18px rgba(0, 0, 0, 0.35);
   --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.45);
+  /* Font stacks */
+  --font-sans: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: 'Merriweather', Georgia, "Times New Roman", Times, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
 }
 
 /* Base document defaults */
@@ -42,6 +47,8 @@ html {
 body {
   background-color: var(--surface-0);
   color: var(--text-on-dark);
+  font-family: var(--font-sans);
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -279,6 +286,7 @@ a:hover {
   box-shadow: var(--shadow-1);
   padding: 2rem 2rem 1.5rem 2rem;
   color: var(--text-muted);
+  font-family: var(--font-serif);
 }
 .methodology-article h1,
 .methodology-article h2 {
