@@ -392,5 +392,20 @@
     height: 100%;
   }
 
-  /* ...existing code... */
+  /* Constrain the floating county panel to the map height and allow scrolling
+     when panel content is taller than the map container. Use box-sizing so
+     padding doesn't grow the element beyond the available space. */
+  .map-panel-wrapper {
+    box-sizing: border-box;
+    max-height: calc(100% - 1rem); /* leave a small gap from map edges */
+    overflow: auto;
+    padding-right: 0.25rem; /* room for scrollbar without covering content */
+  }
+
+  /* Ensure inner panel content doesn't force an overflow change; allow
+     images and lists to wrap inside the scrollable container. */
+  .map-panel-wrapper :global(.county-panel-content) {
+    box-sizing: border-box;
+    max-height: 100%;
+  }
 </style>
