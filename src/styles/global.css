@@ -107,6 +107,11 @@ a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
   transition: color 0.15s, opacity 0.15s;
+    /* Ensure consistent vertical rhythm: when a section contains
+      a single link (not a list), give it the same bottom spacing
+      as the `.panel-list` which uses margin-bottom: 0.5rem. */
+    display: inline-block;
+    margin-bottom: 0.5rem;
   }
 
   .county-panel-content .panel-link:hover,
