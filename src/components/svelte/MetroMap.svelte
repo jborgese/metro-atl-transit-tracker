@@ -41,6 +41,9 @@
   let projectsMetadata: any[] = [];
   // memoized map from county geoid -> projects list for fast lookup
   let projectsByCounty: Record<string, any[]> = {};
+  // lazy-load state for projects metadata
+  let projectsLoaded = false;
+  let projectsLoading = false;
   // derived related projects for the selected county
   let relatedProjects: any[] = [];
 
@@ -55,6 +58,42 @@
   $: relatedProjects = selectedCounty && projectsByCounty
     ? (projectsByCounty[String(selectedCounty.geoid)] || [])
     : [];
+
+  // Fetch projects metadata once (lazy). Called on first county selection or scheduled idle.
+  async function fetchProjectsIfNeeded({ background = false } = {}) {
+    if (projectsLoaded || projectsLoading) return;
+    projectsLoading = true;
+    try {
+      const { projectsMetadata: pm, error: projectsError } = await loadProjectsMetadata();
+      projectsMetadata = pm || [];
+      if (projectsError) log.warn('projects:load-failed', projectsError);
+      else log.info('projects:loaded', { count: projectsMetadata.length, background });
+
+      // Build lookup
+      projectsByCounty = {};
+      if (projectsMetadata && projectsMetadata.length) {
+        for (const proj of projectsMetadata) {
+          const rc = proj.related_counties;
+          if (!rc || !Array.isArray(rc)) continue;
+          for (const g of rc) {
+            const key = String(g);
+            if (!projectsByCounty[key]) projectsByCounty[key] = [];
+            projectsByCounty[key].push(proj);
+          }
+        }
+      }
+      projectsLoaded = true;
+    } catch (e) {
+      log.warn('projects:load-error', e);
+    } finally {
+      projectsLoading = false;
+    }
+  }
+
+  // Trigger lazy load when a county is first selected
+  $: if (selectedCounty && !projectsLoaded && !projectsLoading) {
+    fetchProjectsIfNeeded();
+  }
 
   // Emit event when selectedCounty changes
   $: if (selectedCounty && selectedCounty.geoid) {
@@ -183,25 +222,7 @@
                 if (countyError) log.warn('metadata:load-failed', countyError);
                 else log.info('metadata:loaded', { count: cm.length });
               }
-              {
-                const { projectsMetadata: pm, error: projectsError } = await loadProjectsMetadata();
-                projectsMetadata = pm;
-                if (projectsError) log.warn('projects:load-failed', projectsError);
-                else log.info('projects:loaded', { count: pm.length });
-                // Build a fast lookup of projects by county GEOID to avoid filtering on every selection
-                projectsByCounty = {};
-                if (pm && pm.length) {
-                  for (const proj of pm) {
-                    const rc = proj.related_counties;
-                    if (!rc || !Array.isArray(rc)) continue;
-                    for (const g of rc) {
-                      const key = String(g);
-                      if (!projectsByCounty[key]) projectsByCounty[key] = [];
-                      projectsByCounty[key].push(proj);
-                    }
-                  }
-                }
-              }
+              // Projects metadata is loaded lazily (on first county selection or after idle)
               mapInstance.on('click', 'ga-counties-fill', (e: any) => {
                 handleCountySelection({
                   event: e,
@@ -233,6 +254,20 @@
 
         ro = new ResizeObserver(() => safeResize());
         ro.observe(mapEl);
+
+        // Schedule an idle/background fetch of projects after map is constructed
+        try {
+          if (typeof window !== 'undefined') {
+            const doIdle = () => fetchProjectsIfNeeded({ background: true });
+            if ('requestIdleCallback' in window) {
+              (window as any).requestIdleCallback(doIdle, { timeout: 3000 });
+            } else {
+              setTimeout(doIdle, 3000);
+            }
+          }
+        } catch (e) {
+          /* ignore */
+        }
 
         log.info("map:constructed");
         safeResize();
