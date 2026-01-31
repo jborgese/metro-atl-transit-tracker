@@ -1,0 +1,40 @@
+---
+# ARCHIVED: This page is now replaced by methodology.svelte for Svelte-based pages.
+
+
+import BaseLayout from '../layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="Methodology | Metro ATL Transit Tracker">
+  <div class="methodology-container">
+    <article class="methodology-article">
+      <h1>Methodology</h1>
+
+      <p>
+        This site aggregates publicly available information about transit goals and projects across Metro Atlanta.
+        Status claims aim to be source-backed and time-stamped.
+      </p>
+
+      <h2>Definitions</h2>
+      <ul>
+        <li>
+          <strong>Metro Atlanta</strong>: definition TBD (e.g., census / ARC region).
+        </li>
+        <li>
+          <strong>Status</strong>: binary for advocacy points; progress for projects where measurable phases exist.
+        </li>
+        <li>
+          <strong>Sources</strong>: official agency releases, public meeting minutes, reputable reporting, and documented evidence.
+        </li>
+      </ul>
+
+      <h2>Disclaimer</h2>
+      <p>
+        Not affiliated with MARTA, ARC, GDOT, or any governing body. This site does not advocate highway expansion and strives to be non-partisan.
+      </p>
+    </article>
+  </div>
+</BaseLayout>
+
+# To restore, rename this file to methodology.astro and remove or rename methodology.svelte.
+---

@@ -1,11 +1,4 @@
 {
-  "extends": "astro/tsconfigs/strict",
-  "compilerOptions": {
-    "paths": {
-      "@/types": ["./src/types/index.ts"],
-      "@/types/*": ["./src/types/*"]
-    }
-  },
-  "include": [".astro/types.d.ts", "**/*"],
+  "extends": "./.svelte-kit/tsconfig.json",
   "exclude": ["dist"]
 }

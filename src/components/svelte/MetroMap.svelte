@@ -26,7 +26,7 @@
   const log = createLogger("MetroMap");
 
   export let title = "Metro Atlanta map";
-  export let subtitle =
+  export const subtitle =
     "Interactive county/region map will load here (MapLibre next).";
   export let height = "520px";
 

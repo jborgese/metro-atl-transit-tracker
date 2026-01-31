@@ -1,10 +1,11 @@
+<!-- ARCHIVED: This file has been replaced by index.svelte for interactive functionality. -->
+
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
 import MetroMap from '../components/svelte/MetroMap.svelte'
 import ProjectsTable from '../components/svelte/ProjectsTable.svelte'
 import projects from '../data/geo/loadProjects'
 ---
-
 
 <BaseLayout>
   <section class="main-content">
@@ -21,3 +22,5 @@ import projects from '../data/geo/loadProjects'
     <ProjectsTable projects={projects} selectedCounty={null} />
   </section>
 </BaseLayout>
+
+<!-- To restore, rename this file to index.astro and remove or rename index.svelte. -->

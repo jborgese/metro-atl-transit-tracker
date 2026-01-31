@@ -1,4 +1,7 @@
 ---
+# ARCHIVED: This layout is now replaced by BaseLayout.svelte for Svelte-based pages.
+
+
 import '../styles/global.css'
 
 interface Props {
@@ -46,3 +49,6 @@ const {
       </footer>
   </body>
 </html>
+
+# To restore, rename this file to BaseLayout.astro and remove or rename BaseLayout.svelte.
+---
