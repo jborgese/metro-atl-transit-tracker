@@ -39,6 +39,8 @@
   let countyMetadataMap: Record<string, any> = {};
   let selectedCounty: any = null;
   let projectsMetadata: any[] = [];
+  // memoized map from county geoid -> projects list for fast lookup
+  let projectsByCounty: Record<string, any[]> = {};
   // derived related projects for the selected county
   let relatedProjects: any[] = [];
 
@@ -49,8 +51,9 @@
   // Controls whether to show all related projects in the panel
   let showAllProjects = false;
 
-  $: relatedProjects = selectedCounty && projectsMetadata && projectsMetadata.length
-    ? projectsMetadata.filter(p => p.related_counties && p.related_counties.indexOf(String(selectedCounty.geoid)) !== -1)
+  // Use precomputed lookup to avoid scanning the full projects array on each selection
+  $: relatedProjects = selectedCounty && projectsByCounty
+    ? (projectsByCounty[String(selectedCounty.geoid)] || [])
     : [];
 
   // Emit event when selectedCounty changes
@@ -185,6 +188,19 @@
                 projectsMetadata = pm;
                 if (projectsError) log.warn('projects:load-failed', projectsError);
                 else log.info('projects:loaded', { count: pm.length });
+                // Build a fast lookup of projects by county GEOID to avoid filtering on every selection
+                projectsByCounty = {};
+                if (pm && pm.length) {
+                  for (const proj of pm) {
+                    const rc = proj.related_counties;
+                    if (!rc || !Array.isArray(rc)) continue;
+                    for (const g of rc) {
+                      const key = String(g);
+                      if (!projectsByCounty[key]) projectsByCounty[key] = [];
+                      projectsByCounty[key].push(proj);
+                    }
+                  }
+                }
               }
               mapInstance.on('click', 'ga-counties-fill', (e: any) => {
                 handleCountySelection({
