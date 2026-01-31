@@ -48,6 +48,13 @@
           "description": "Regional advocacy organization focused on equitable transit investments and improved mobility in the Atlanta region.",
           "notes": "Added to county advocacy groups across metro Atlanta."
         }
+        ,
+        {
+          "name": "MARTA Army",
+          "website": "https://www.martaarmy.org/",
+          "description": "Grassroots group advocating for improved MARTA service, funding, and accountability in the Atlanta region.",
+          "notes": "Added for counties served by MARTA."
+        }
       ]
     },
     "sources": [
@@ -109,6 +116,13 @@
           "website": "https://www.letspropelatl.org/",
           "description": "Regional advocacy organization focused on equitable transit investments and improved mobility in the Atlanta region.",
           "notes": "Added to county advocacy groups across metro Atlanta."
+        }
+        ,
+        {
+          "name": "MARTA Army",
+          "website": "https://www.martaarmy.org/",
+          "description": "Grassroots group advocating for improved MARTA service, funding, and accountability in the Atlanta region.",
+          "notes": "Added for counties served by MARTA."
         }
       ]
     },
