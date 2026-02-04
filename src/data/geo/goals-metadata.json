@@ -56,5 +56,61 @@
     "related_project_ids": [],
     "related_counties": ["13067"],
     "provenance": { "created_at": "2026-02-04T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-04T00:00:00Z", "license": "CC-BY-4.0" }
+  },
+  {
+    "id": "marta-support-regional-transit",
+    "goal": "Support broader regional transit goals.",
+    "status_related_projects": "Link back to the Metro Atlanta region page",
+    "actions": "",
+    "related_orgs": [],
+    "related_project_ids": ["arc-transportation-index"],
+    "related_counties": ["13121", "13089"],
+    "provenance": { "created_at": "2026-02-04T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-04T00:00:00Z", "license": "CC-BY-4.0" }
+  },
+  {
+    "id": "marta-beltline-rail",
+    "goal": "Immediate work on as much beltline rail as possible (and its supporting infrastructure).",
+    "status_related_projects": "Progress has been halted since a secret vote on the project occurred in May of 2025.",
+    "actions": "Pressure on the mayor to follow through on infill stations.",
+    "related_orgs": [
+      {
+        "name": "Beltline Rail Now",
+        "url": "https://beltlinerailnow.com/",
+        "contact_info": ""
+      }
+    ],
+    "related_project_ids": [],
+    "related_counties": ["13121", "13089"],
+    "provenance": { "created_at": "2026-02-04T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-04T00:00:00Z", "license": "CC-BY-4.0" }
+  },
+  {
+    "id": "marta-improve-frequency",
+    "goal": "Improve heavy rail and bus frequency. Specifically on weekends.",
+    "status_related_projects": "Rapid A line in construction (targeting having operations running by the 2026 World Cup)",
+    "actions": "MARTA must be held more accountable to provide their minimum weekend service.",
+    "related_orgs": [],
+    "related_project_ids": ["marta-rapid-a-line"],
+    "related_counties": ["13121", "13089"],
+    "provenance": { "created_at": "2026-02-04T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-04T00:00:00Z", "license": "CC-BY-4.0" }
+  },
+  {
+    "id": "marta-ridership-utility",
+    "goal": "Get more people riding MARTA for trips that highlight the system's utility.",
+    "status_related_projects": "",
+    "actions": "",
+    "related_orgs": [],
+    "related_project_ids": [],
+    "related_counties": ["13121", "13089"],
+    "provenance": { "created_at": "2026-02-04T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-04T00:00:00Z", "license": "CC-BY-4.0" }
+  },
+  {
+    "id": "marta-tod-advocacy",
+    "goal": "Advocate for land use surrounding train stations and bus stops that emphasize density, safe pedestrian and cycling infrastructure, and accessibility.",
+    "status_related_projects": "5 Points facelift",
+    "actions": "",
+    "related_orgs": [],
+    "related_project_ids": ["marta-five-points-facelift"],
+    "related_counties": ["13121", "13089"],
+    "provenance": { "created_at": "2026-02-04T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-04T00:00:00Z", "license": "CC-BY-4.0" }
   }
 ]

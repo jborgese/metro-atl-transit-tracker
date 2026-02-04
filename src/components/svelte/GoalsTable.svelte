@@ -4,11 +4,58 @@
   export let goals: Goal[] = [];
   export let projects: Project[] = [];
   export let selectedCounty: string | null = null;
+  export let countyNames: Record<string, string> = {};
+
+  // County name lookup (FIPS to name) - ordered for display
+  const defaultCountyNames: Record<string, string> = {
+    '13121': 'Fulton County',
+    '13089': 'DeKalb County',
+    '13067': 'Cobb County',
+    '13135': 'Gwinnett County',
+    '13063': 'Clayton County',
+    '13151': 'Henry County'
+  };
+
+  // Ordered list of county IDs for consistent display
+  const countyOrder = ['13121', '13089', '13067', '13135', '13063', '13151'];
+
+  $: countyLookup = { ...defaultCountyNames, ...countyNames };
 
   // Filter goals by selected county
   $: filtered = selectedCounty
     ? goals.filter((g) => g.related_counties && g.related_counties.includes(selectedCounty))
     : goals;
+
+  // Group goals by county (only used when no county is selected)
+  // Includes all counties, even those without goals
+  $: groupedByCounty = !selectedCounty ? groupGoalsByCounty(goals) : null;
+
+  function groupGoalsByCounty(goalsList: Goal[]): Map<string, Goal[]> {
+    const grouped = new Map<string, Goal[]>();
+    
+    // Initialize all counties with empty arrays (in order)
+    for (const countyId of countyOrder) {
+      grouped.set(countyId, []);
+    }
+    
+    // Populate with goals
+    for (const goal of goalsList) {
+      // Add goal to each county it's related to
+      if (goal.related_counties) {
+        for (const countyId of goal.related_counties) {
+          if (grouped.has(countyId)) {
+            grouped.get(countyId)!.push(goal);
+          }
+        }
+      }
+    }
+    
+    return grouped;
+  }
+
+  function getCountyName(geoid: string): string {
+    return countyLookup[geoid] || `County ${geoid}`;
+  }
 
   // Get related projects for a goal
   function getRelatedProjects(goal: Goal): Project[] {
@@ -31,81 +78,181 @@
 </script>
 
 <div class="goals-table">
-  {#if filtered.length === 0}
+  {#if selectedCounty && filtered.length === 0}
     <p>No goals found for the selected county.</p>
-  {:else}
-    <table>
-      <thead>
-        <tr>
-          <th>Goal</th>
-          <th>Status/Related Projects</th>
-          <th>Actions to take in support of the Goal</th>
-          <th>Related Orgs</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each filtered as goal}
-          <tr class="goal-row">
-            <td>{goal.goal}</td>
-            <td>
-              {#if goal.status_related_projects}
-                {goal.status_related_projects}
-              {/if}
-            </td>
-            <td>{goal.actions || ''}</td>
-            <td>
-              {#if goal.related_orgs && goal.related_orgs.length > 0}
-                {#each goal.related_orgs as org}
-                  <div class="related-org">
-                    {#if org.url}
-                      <a href={org.url} target="_blank" rel="noopener noreferrer">{org.name}</a>
-                    {:else}
-                      <span>{org.name}</span>
-                    {/if}
-                    {#if org.contact_info}
-                      <span class="contact-info">({org.contact_info})</span>
-                    {/if}
-                  </div>
-                {/each}
-              {/if}
-            </td>
-          </tr>
-          <!-- Nested project rows -->
-          {#each getRelatedProjects(goal) as project}
-            <tr class="project-row">
-              <td class="nested-cell" colspan="4">
-                <div class="project-card">
-                  <div class="project-header">
-                    <span class="project-indicator">↳</span>
-                    <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
-                      {project.title}
-                    </a>
-                    <span class="project-status">{statusLabel(project.status)}</span>
-                  </div>
-                  <p class="project-summary">{project.summary}</p>
-                  {#if project.lead_org}
-                    <div class="project-org">
-                      <span class="org-label">Lead:</span>
-                      {#if project.lead_org.url}
-                        <a href={project.lead_org.url} target="_blank" rel="noopener noreferrer">{project.lead_org.name}</a>
-                      {:else}
-                        <span>{project.lead_org.name}</span>
+  {:else if groupedByCounty}
+    <!-- No county selected: show grouped by county -->
+    {#each [...groupedByCounty.entries()] as [countyId, countyGoals]}
+      <div class="county-section">
+        <h2 class="county-header">{getCountyName(countyId)}</h2>
+        {#if countyGoals.length === 0}
+          <p class="no-goals-message">No goal information is available for this county.</p>
+        {:else}
+          <table>
+            <thead>
+              <tr>
+                <th>Goal</th>
+                <th>Status/Related Projects</th>
+                <th>Actions to take in support of the Goal</th>
+                <th>Related Orgs</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each countyGoals as goal}
+                <tr class="goal-row">
+                  <td>{goal.goal}</td>
+                <td>
+                  {#if goal.status_related_projects}
+                    {goal.status_related_projects}
+                  {/if}
+                </td>
+                <td>{goal.actions || ''}</td>
+                <td>
+                  {#if goal.related_orgs && goal.related_orgs.length > 0}
+                    {#each goal.related_orgs as org}
+                      <div class="related-org">
+                        {#if org.url}
+                          <a href={org.url} target="_blank" rel="noopener noreferrer">{org.name}</a>
+                        {:else}
+                          <span>{org.name}</span>
+                        {/if}
+                        {#if org.contact_info}
+                          <span class="contact-info">({org.contact_info})</span>
+                        {/if}
+                      </div>
+                    {/each}
+                  {/if}
+                </td>
+              </tr>
+              <!-- Nested project rows -->
+              {#each getRelatedProjects(goal) as project}
+                <tr class="project-row">
+                  <td class="nested-cell" colspan="4">
+                    <div class="project-card">
+                      <div class="project-header">
+                        <span class="project-indicator">↳</span>
+                        <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
+                          {project.title}
+                        </a>
+                        <span class="project-status">{statusLabel(project.status)}</span>
+                      </div>
+                      <p class="project-summary">{project.summary}</p>
+                      {#if project.lead_org}
+                        <div class="project-org">
+                          <span class="org-label">Lead:</span>
+                          {#if project.lead_org.url}
+                            <a href={project.lead_org.url} target="_blank" rel="noopener noreferrer">{project.lead_org.name}</a>
+                          {:else}
+                            <span>{project.lead_org.name}</span>
+                          {/if}
+                        </div>
                       {/if}
                     </div>
-                  {/if}
-                </div>
+                  </td>
+                </tr>
+              {/each}
+            {/each}
+          </tbody>
+        </table>
+        {/if}
+      </div>
+    {/each}
+  {:else}
+    <!-- County selected: show single table with header -->
+    <div class="county-section">
+      <h2 class="county-header">{getCountyName(selectedCounty)}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Goal</th>
+            <th>Status/Related Projects</th>
+            <th>Actions to take in support of the Goal</th>
+            <th>Related Orgs</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each filtered as goal}
+            <tr class="goal-row">
+              <td>{goal.goal}</td>
+              <td>
+                {#if goal.status_related_projects}
+                  {goal.status_related_projects}
+                {/if}
+              </td>
+              <td>{goal.actions || ''}</td>
+              <td>
+                {#if goal.related_orgs && goal.related_orgs.length > 0}
+                  {#each goal.related_orgs as org}
+                    <div class="related-org">
+                      {#if org.url}
+                        <a href={org.url} target="_blank" rel="noopener noreferrer">{org.name}</a>
+                      {:else}
+                        <span>{org.name}</span>
+                      {/if}
+                      {#if org.contact_info}
+                        <span class="contact-info">({org.contact_info})</span>
+                      {/if}
+                    </div>
+                  {/each}
+                {/if}
               </td>
             </tr>
+            <!-- Nested project rows -->
+            {#each getRelatedProjects(goal) as project}
+              <tr class="project-row">
+                <td class="nested-cell" colspan="4">
+                  <div class="project-card">
+                    <div class="project-header">
+                      <span class="project-indicator">↳</span>
+                      <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
+                        {project.title}
+                      </a>
+                      <span class="project-status">{statusLabel(project.status)}</span>
+                    </div>
+                    <p class="project-summary">{project.summary}</p>
+                    {#if project.lead_org}
+                      <div class="project-org">
+                        <span class="org-label">Lead:</span>
+                        {#if project.lead_org.url}
+                          <a href={project.lead_org.url} target="_blank" rel="noopener noreferrer">{project.lead_org.name}</a>
+                        {:else}
+                          <span>{project.lead_org.name}</span>
+                        {/if}
+                      </div>
+                    {/if}
+                  </div>
+                </td>
+              </tr>
+            {/each}
           {/each}
-        {/each}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   {/if}
 </div>
 
 <style>
 .goals-table {
   margin-top: 2rem;
+}
+.county-section {
+  margin-bottom: 2.5rem;
+}
+.county-header {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text-primary, #f1f5f9);
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--accent-color, #3b82f6);
+}
+.no-goals-message {
+  color: var(--text-muted, #94a3b8);
+  font-style: italic;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  border: 1px dashed var(--border-subtle, #334155);
 }
 table {
   width: 100%;

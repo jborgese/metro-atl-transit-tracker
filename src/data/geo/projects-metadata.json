@@ -1,5 +1,37 @@
 [
   {
+    "id": "marta-rapid-a-line",
+    "title": "MARTA Rapid A Line",
+    "summary": "Arterial Rapid Transit line connecting Clayton County to downtown Atlanta, targeting operations by the 2026 World Cup.",
+    "lead_org": { "name": "Metropolitan Atlanta Rapid Transit Authority", "url": "https://itsmarta.com/" },
+    "partners": [],
+    "status": "implementation",
+    "start_date": "2024-01-01",
+    "end_date": null,
+    "milestones": [ { "title": "Target operations start", "date": "2026-06-01" } ],
+    "geo_scope": "corridor",
+    "modes": ["bus","transit"],
+    "related_counties": ["13121", "13089", "13063"],
+    "sources": [ { "label": "MARTA A Line", "url": "https://itsmarta.com/aline.aspx", "last_verified": "2026-02-04" } ],
+    "provenance": { "created_at": "2026-02-04T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-04T00:00:00Z", "license": "CC-BY-4.0" }
+  },
+  {
+    "id": "marta-five-points-facelift",
+    "title": "Five Points Station Renovation",
+    "summary": "Major renovation and facelift of Five Points Station, MARTA's central hub connecting all rail lines.",
+    "lead_org": { "name": "Metropolitan Atlanta Rapid Transit Authority", "url": "https://itsmarta.com/" },
+    "partners": [],
+    "status": "planning",
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "local",
+    "modes": ["rail","transit"],
+    "related_counties": ["13121"],
+    "sources": [ { "label": "MARTA Five Points", "url": "https://itsmarta.com/fivepoints.aspx", "last_verified": "2026-02-04" } ],
+    "provenance": { "created_at": "2026-02-04T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-04T00:00:00Z", "license": "CC-BY-4.0" }
+  },
+  {
     "id": "marta-bus-rapid-transit-study-2025",
     "title": "MARTA Bus Rapid Transit Study",
     "summary": "Study and pilot implementation of BRT corridors to improve high-capacity bus service in core Atlanta.",
