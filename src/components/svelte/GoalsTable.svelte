@@ -79,7 +79,10 @@
 
 <div class="goals-table">
   {#if selectedCounty && filtered.length === 0}
-    <p>No goals found for the selected county.</p>
+    <div class="county-section">
+      <h2 class="county-header">{getCountyName(selectedCounty)}</h2>
+      <p class="no-goals-message">No goal information is available for this county.</p>
+    </div>
   {:else if groupedByCounty}
     <!-- No county selected: show grouped by county -->
     {#each [...groupedByCounty.entries()] as [countyId, countyGoals]}

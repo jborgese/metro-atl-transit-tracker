@@ -7,7 +7,7 @@ import type { Project, Goal } from '../components/svelte/types';
 
 let selectedCounty: string | null = null;
 
-function handleCountySelected(event: CustomEvent<{ geoid: string }>) {
+function handleCountySelected(event: CustomEvent<{ geoid: string | null }>) {
   selectedCounty = event.detail.geoid;
 }
 </script>

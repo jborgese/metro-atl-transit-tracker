@@ -96,10 +96,8 @@
     fetchProjectsIfNeeded();
   }
 
-  // Emit event when selectedCounty changes
-  $: if (selectedCounty && selectedCounty.geoid) {
-    dispatch('countySelected', { geoid: String(selectedCounty.geoid) });
-  }
+  // Emit event when selectedCounty changes (including deselection)
+  $: dispatch('countySelected', { geoid: selectedCounty?.geoid ? String(selectedCounty.geoid) : null });
 
   // UI: available project modes and currently selected modes for filtering
   let availableModes: string[] = [];
