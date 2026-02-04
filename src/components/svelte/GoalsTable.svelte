@@ -73,24 +73,27 @@
           <!-- Nested project rows -->
           {#each getRelatedProjects(goal) as project}
             <tr class="project-row">
-              <td class="nested-cell">
-                <span class="project-indicator">└</span>
-                <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer">
-                  {project.title}
-                </a>
-              </td>
-              <td>{statusLabel(project.status)}</td>
-              <td>{project.summary}</td>
-              <td>
-                {#if project.lead_org}
-                  <div class="related-org">
-                    {#if project.lead_org.url}
-                      <a href={project.lead_org.url} target="_blank" rel="noopener noreferrer">{project.lead_org.name}</a>
-                    {:else}
-                      <span>{project.lead_org.name}</span>
-                    {/if}
+              <td class="nested-cell" colspan="4">
+                <div class="project-card">
+                  <div class="project-header">
+                    <span class="project-indicator">↳</span>
+                    <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
+                      {project.title}
+                    </a>
+                    <span class="project-status">{statusLabel(project.status)}</span>
                   </div>
-                {/if}
+                  <p class="project-summary">{project.summary}</p>
+                  {#if project.lead_org}
+                    <div class="project-org">
+                      <span class="org-label">Lead:</span>
+                      {#if project.lead_org.url}
+                        <a href={project.lead_org.url} target="_blank" rel="noopener noreferrer">{project.lead_org.name}</a>
+                      {:else}
+                        <span>{project.lead_org.name}</span>
+                      {/if}
+                    </div>
+                  {/if}
+                </div>
               </td>
             </tr>
           {/each}
@@ -133,18 +136,63 @@ td a:hover {
   font-weight: 600;
 }
 .project-row {
-  background: var(--surface-nested, #f8f9fa);
+  background: transparent;
 }
 .project-row td {
-  font-size: 0.9em;
   border-top: none;
+  padding: 0;
 }
 .nested-cell {
-  padding-left: 1.5rem;
+  padding-left: 1.5rem !important;
+  padding-right: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+.project-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-left: 3px solid var(--link-color, #3b82f6);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-left: 1rem;
+}
+.project-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
 }
 .project-indicator {
-  color: var(--text-muted, #666);
-  margin-right: 0.5rem;
+  color: var(--link-color, #3b82f6);
+  font-weight: bold;
+  font-size: 1.1em;
+}
+.project-title {
+  font-weight: 600;
+  color: var(--link-color, #0066cc);
+}
+.project-status {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75em;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.project-summary {
+  font-size: 0.9em;
+  color: var(--text-secondary, #cbd5e1);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+}
+.project-org {
+  font-size: 0.85em;
+}
+.org-label {
+  color: var(--text-muted, #64748b);
+  margin-right: 0.25rem;
 }
 .related-org {
   margin-bottom: 0.5rem;
