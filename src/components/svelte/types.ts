@@ -1,4 +1,11 @@
-// Project type definition for use in Svelte components and elsewhere
+// Shared org type for related organizations
+export type RelatedOrg = {
+  name: string;
+  url?: string;
+  contact_info?: string;
+};
+
+// Project type definition for infrastructure/planning projects
 export type Project = {
   id: string;
   title: string;
@@ -13,5 +20,17 @@ export type Project = {
   modes?: string[];
   related_counties?: string[];
   sources?: any[];
+  provenance?: any;
+};
+
+// Goal type definition for citizen advocacy goals
+export type Goal = {
+  id: string;
+  goal: string;
+  status_related_projects?: string;
+  actions?: string;
+  related_orgs?: RelatedOrg[];
+  related_project_ids?: string[];  // IDs of related projects to display nested
+  related_counties?: string[];
   provenance?: any;
 };

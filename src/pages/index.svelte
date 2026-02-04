@@ -1,9 +1,9 @@
 <script lang="ts">
 import BaseLayout from '../layouts/BaseLayout.svelte';
 import MetroMap from '../components/svelte/MetroMap.svelte';
-import ProjectsTable from '../components/svelte/ProjectsTable.svelte';
-import projects from '../data/geo/loadProjects';
-import type { Project } from '../components/svelte/types';
+import GoalsTable from '../components/svelte/GoalsTable.svelte';
+import { projects, goals } from '../data/geo/loadProjects';
+import type { Project, Goal } from '../components/svelte/types';
 
 let selectedCounty: string | null = null;
 
@@ -22,7 +22,7 @@ function handleCountySelected(event: CustomEvent<{ geoid: string }>) {
       Use this site as a jumping-off point for deeper sources and how to take action.
     </p>
     <MetroMap on:countySelected={handleCountySelected} />
-    <ProjectsTable {projects} {selectedCounty} />
+    <GoalsTable {goals} {projects} {selectedCounty} />
   </section>
 </BaseLayout>
 

@@ -1,6 +1,4 @@
 <script lang="ts">
-
-
   import type { Project } from './types';
 
   export let projects: Project[] = [];
