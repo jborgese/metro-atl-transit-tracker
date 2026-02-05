@@ -3,8 +3,12 @@
 </script>
 
 <script lang="ts">
+  import MethodologyModal from '../components/svelte/MethodologyModal.svelte';
+
   export let title: string = 'Metro Atlanta Transit Tracker';
   export let description: string = 'A public, data-driven Metro Atlanta transit advocacy intelligence hub.';
+
+  let methodologyOpen = false;
 </script>
 
 <svelte:head>
@@ -26,7 +30,7 @@
       <img src="/mai-tai-logo.png" alt="MAI TAI" class="site-logo" />
     </a>
     <nav class="site-nav">
-      <a class="site-nav-link" href="/methodology">Methodology</a>
+      <button class="site-nav-link" on:click={() => methodologyOpen = true}>Methodology</button>
     </nav>
   </div>
 </header>
@@ -34,6 +38,8 @@
 <main id="content" class="main-content">
   <slot />
 </main>
+
+<MethodologyModal bind:open={methodologyOpen} />
 
 <footer class="site-footer">
   Not affiliated with MARTA, ARC, GDOT, or any governing body.
@@ -93,6 +99,11 @@
   color: #e0e7ef;
   text-decoration: none;
   font-weight: 500;
+  background: none;
+  border: none;
+  font-size: inherit;
+  cursor: pointer;
+  padding: 0;
 }
 .site-nav-link:hover {
   color: #fff;

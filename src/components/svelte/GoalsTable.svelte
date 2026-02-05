@@ -75,6 +75,19 @@
       default: return status;
     }
   }
+
+  // 1996 Summer Olympics inspired color palette for status
+  function getStatusColor(status: string): string {
+    switch (status) {
+      case 'planning': return '#4280c4';           // Olympic blue
+      case 'public-outreach': return '#8a62b0';    // Olympic purple
+      case 'funding-application': return '#a32f65'; // Olympic magenta
+      case 'implementation': return '#c4a042';      // Complementary gold
+      case 'completed': return '#2d8659';           // Complementary forest green
+      case 'ongoing': return '#a73a32';             // Olympic terracotta red
+      default: return '#4280c4';
+    }
+  }
 </script>
 
 <div class="goals-table">
@@ -131,13 +144,13 @@
               {#each getRelatedProjects(goal) as project}
                 <tr class="project-row">
                   <td class="nested-cell" colspan="4">
-                    <div class="project-card">
+                    <div class="project-card" style="--status-color: {getStatusColor(project.status)}">
                       <div class="project-header">
                         <span class="project-indicator">↳</span>
                         <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
                           {project.title}
                         </a>
-                        <span class="project-status">{statusLabel(project.status)}</span>
+                        <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
                       </div>
                       <p class="project-summary">{project.summary}</p>
                       {#if project.lead_org}
@@ -204,13 +217,13 @@
             {#each getRelatedProjects(goal) as project}
               <tr class="project-row">
                 <td class="nested-cell" colspan="4">
-                  <div class="project-card">
+                  <div class="project-card" style="--status-color: {getStatusColor(project.status)}">
                     <div class="project-header">
                       <span class="project-indicator">↳</span>
                       <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
                         {project.title}
                       </a>
-                      <span class="project-status">{statusLabel(project.status)}</span>
+                      <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
                     </div>
                     <p class="project-summary">{project.summary}</p>
                     {#if project.lead_org}
@@ -298,12 +311,19 @@ td a:hover {
   padding-bottom: 0.75rem !important;
 }
 .project-card {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-left: 3px solid var(--link-color, #3b82f6);
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--status-color) 12%, transparent) 0%, 
+    color-mix(in srgb, var(--status-color) 4%, transparent) 100%);
+  border: 1px solid color-mix(in srgb, var(--status-color) 30%, transparent);
+  border-left: 4px solid var(--status-color);
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
   margin-left: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.project-card:hover {
+  border-color: color-mix(in srgb, var(--status-color) 50%, transparent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--status-color) 15%, transparent);
 }
 .project-header {
   display: flex;
@@ -313,23 +333,26 @@ td a:hover {
   margin-bottom: 0.5rem;
 }
 .project-indicator {
-  color: var(--link-color, #3b82f6);
+  color: var(--status-color);
   font-weight: bold;
   font-size: 1.1em;
 }
 .project-title {
   font-weight: 600;
-  color: var(--link-color, #0066cc);
+  color: var(--link-color, #7dd3fc);
+}
+.project-title:hover {
+  color: #fff;
 }
 .project-status {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0.15rem 0.5rem;
+  color: #fff;
+  padding: 0.2rem 0.6rem;
   border-radius: 12px;
-  font-size: 0.75em;
-  color: var(--text-muted, #94a3b8);
+  font-size: 0.7em;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .project-summary {
   font-size: 0.9em;
