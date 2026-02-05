@@ -10,7 +10,7 @@ import projects from '../data/geo/loadProjects'
 <BaseLayout>
   <section class="main-content">
     <div class="page-header">
-      <h1>Metro Atlanta Transit Advocacy Intelligence</h1>
+      <h1>Metro Atlanta Interface for Transit Advocacy Intelligence</h1>
     </div>
 
     <p>

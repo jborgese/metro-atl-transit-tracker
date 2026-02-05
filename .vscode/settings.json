@@ -14,5 +14,13 @@
     "MAPTILER",
     "ridegwinnett",
     "vercel"
-  ]
+  ],
+  "chat.tools.terminal.autoApprove": {
+    "Add-Type": true,
+    "/^node scripts/convert-favicon\\.js \"c:\\\\Users\\\\Nipply Nathan\\\\Documents\\\\GitHub\\\\metro-atl-transit-tracker\\\\public\\\\MAI TAI favicon\\.png\"$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "Rename-Item": true
+  }
 }

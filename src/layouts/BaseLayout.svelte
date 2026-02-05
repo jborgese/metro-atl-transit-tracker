@@ -12,7 +12,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content={description} />
   <title>{title}</title>
-  
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 </svelte:head>
 
 <a class="skip-link" href="#content">
@@ -22,7 +23,7 @@
 <header class="site-header">
   <div class="site-header-inner">
     <a href="/" class="site-title">
-      Metro ATL Transit Tracker
+      <img src="/mai-tai-logo.png" alt="MAI TAI" class="site-logo" />
     </a>
     <nav class="site-nav">
       <a class="site-nav-link" href="/methodology">Methodology</a>
@@ -77,6 +78,12 @@
   font-size: 1.25rem;
   color: #7dd3fc;
   text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+.site-logo {
+  height: 8rem;
+  width: auto;
 }
 .site-nav {
   display: flex;

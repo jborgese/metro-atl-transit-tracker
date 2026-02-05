@@ -15,7 +15,7 @@ function handleCountySelected(event: CustomEvent<{ geoid: string | null }>) {
 <BaseLayout>
   <section class="main-content">
     <div class="page-header">
-      <h1>Metro Atlanta Transit Advocacy Intelligence</h1>
+      <h1>Metro Atlanta Interface for Transit Advocacy Intelligence</h1>
     </div>
     <p>
       A public, data-driven hub for understanding transit goals, agencies, and advocacy efforts across Metro Atlanta.
