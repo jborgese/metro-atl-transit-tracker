@@ -37,6 +37,13 @@
   --font-sans: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-serif: 'Merriweather', Georgia, "Times New Roman", Times, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+
+  /* Layout */
+  --content-max: 72rem;
+  --content-narrow: 44rem;
+  --content-padding: clamp(1rem, 4vw, 2.5rem);
+  --section-gap: clamp(1.5rem, 3vw, 2.75rem);
+  --header-gap: clamp(0.75rem, 2vw, 1.25rem);
 }
 
 /* Base document defaults */
@@ -49,8 +56,26 @@ body {
   color: var(--text-on-dark);
   font-family: var(--font-sans);
   font-weight: 400;
+  font-size: clamp(0.95rem, 0.9rem + 0.3vw, 1.05rem);
+  line-height: 1.6;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
 a {
@@ -65,7 +90,7 @@ a:hover {
 
 .map-container {
   width: 100%;
-  height: 400px; /* or 100%, but all parents must have a height too */
+  height: 100%;
 }
 
 /* County panel override to ensure deterministic layout regardless of tailwind purge/JIT */
@@ -122,28 +147,71 @@ a:hover {
 
   /* High-level app layout styles */
   .main-content {
-    max-width: 900px;
-    margin: 2.5rem auto 0 auto;
-    padding: 0 1.5rem;
+    width: min(100%, var(--content-max));
+    margin: clamp(1.5rem, 3vw, 2.5rem) auto 0 auto;
+    padding: 0 var(--content-padding) clamp(2rem, 4vw, 3rem);
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: var(--section-gap);
+  }
+
+  .page-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--section-gap);
+  }
+
+  .lede {
+    color: var(--text-muted);
+    font-size: clamp(1rem, 0.95rem + 0.4vw, 1.15rem);
+    max-width: 60ch;
   }
   
   .page-header {
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--border-subtle);
     text-align: left;
   }
     .page-header h1 {
-      font-size: 2.25rem;
+      font-size: clamp(1.85rem, 3.2vw, 2.75rem);
       font-weight: 800;
       color: var(--text-on-dark);
       margin: 0;
       letter-spacing: -0.02em;
       line-height: 1.1;
+      text-wrap: balance;
     }
+
+  .table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.75rem;
+    background: var(--surface-2);
+    box-shadow: var(--shadow-1);
+  }
+
+  .data-table {
+    width: 100%;
+    min-width: 40rem;
+    border-collapse: collapse;
+  }
+
+  .data-table th,
+  .data-table td {
+    border: 1px solid var(--border-subtle);
+    padding: 0.65rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .data-table th {
+    background: var(--surface-1);
+    color: var(--text-on-dark);
+    font-weight: 600;
+  }
 
 
   /* Panel typography and utility styles */
@@ -205,6 +273,14 @@ a:hover {
     max-width: calc(100% - 1rem);
     border-radius: 0.5rem;
   }
+
+  .map-container .county-panel-content {
+    top: 0.5rem;
+    left: 0.5rem;
+    width: min(20rem, 92vw);
+    min-width: auto;
+    max-height: calc(100% - 1rem);
+  }
 }
 /* BaseLayout high-level styles */
 .site-header {
@@ -213,14 +289,19 @@ a:hover {
   box-shadow: 0 2px 10px rgba(0,0,0,0.20);
 }
 .site-header-inner {
-  max-width: 72rem;
+  width: min(100%, var(--content-max));
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
+  gap: var(--header-gap);
+  padding: clamp(0.75rem, 2vw, 1.25rem) var(--content-padding);
+  flex-wrap: wrap;
 }
 .site-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   font-size: 1.15rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -231,28 +312,48 @@ a:hover {
 .site-title:hover {
   opacity: 0.9;
 }
+.site-logo {
+  height: clamp(3rem, 8vw, 4.75rem);
+  width: auto;
+}
 .site-nav {
   display: flex;
-  gap: 1.25rem;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
   font-size: 0.95rem;
   color: var(--text-muted);
+  align-items: center;
+  margin-left: auto;
+  flex-wrap: wrap;
 }
 .site-nav-link {
   color: var(--text-muted);
   text-decoration: none;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  line-height: 1.2;
+  font: inherit;
+  cursor: pointer;
   transition: color 0.15s;
 }
 .site-nav-link:hover {
   color: var(--text-on-dark);
+}
+.site-nav-link:focus-visible {
+  outline: none;
+  border-color: var(--atl-blue);
+  box-shadow: 0 0 0 3px rgba(66, 128, 196, 0.35);
 }
 .site-footer {
   border-top: 1px solid var(--border-subtle);
   background: var(--surface-2);
   font-size: 0.95rem;
   color: var(--text-muted);
-  padding: 1.5rem;
-  max-width: 72rem;
-  margin: 0 auto;
+  padding: clamp(1.25rem, 2.5vw, 2rem) var(--content-padding);
+  width: min(100%, var(--content-max));
+  margin: clamp(2rem, 4vw, 3rem) auto 0;
+  text-align: center;
 }
 .skip-link {
   position: absolute;
@@ -283,16 +384,16 @@ a:hover {
 
 /* Methodology page styles */
 .methodology-container {
-  max-width: 700px;
-  margin: 2.5rem auto 0 auto;
-  padding: 0 1.5rem;
+  width: min(100%, var(--content-narrow));
+  margin: clamp(1.5rem, 3vw, 2.5rem) auto 0;
+  padding: 0 var(--content-padding);
 }
 .methodology-article {
   background: var(--surface-2);
   border: 1px solid var(--border-subtle);
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   box-shadow: var(--shadow-1);
-  padding: 2rem 2rem 1.5rem 2rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
   color: var(--text-muted);
   font-family: var(--font-serif);
 }
@@ -305,4 +406,39 @@ a:hover {
 }
 .methodology-article li {
   margin-bottom: 0.5rem;
+}
+
+@media (max-width: 720px) {
+  .site-header-inner {
+    align-items: flex-start;
+  }
+
+  .site-nav {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .main-content {
+    margin-top: 1.25rem;
+  }
+
+  .table-scroll {
+    border-radius: 0.5rem;
+  }
+
+  .data-table {
+    min-width: 32rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .data-table {
+    min-width: 28rem;
+  }
 }

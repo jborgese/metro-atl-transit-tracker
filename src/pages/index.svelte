@@ -13,11 +13,11 @@ function handleCountySelected(event: CustomEvent<{ geoid: string | null }>) {
 </script>
 
 <BaseLayout>
-  <section class="main-content">
+  <section class="page-stack">
     <div class="page-header">
       <h1>Metro Atlanta Interface for Transit Advocacy Intelligence</h1>
     </div>
-    <p>
+    <p class="lede">
       A public, data-driven hub for understanding transit goals, agencies, and advocacy efforts across Metro Atlanta.
       Use this site as a jumping-off point for deeper sources and how to take action.
     </p>
@@ -25,14 +25,3 @@ function handleCountySelected(event: CustomEvent<{ geoid: string | null }>) {
     <GoalsTable {goals} {projects} {selectedCounty} />
   </section>
 </BaseLayout>
-
-<style>
-.main-content {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
-.page-header {
-  margin-bottom: 1.5rem;
-}
-</style>

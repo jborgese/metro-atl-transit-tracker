@@ -29,7 +29,7 @@
   export let title = "Metro Atlanta map";
   export const subtitle =
     "Interactive county/region map will load here (MapLibre next).";
-  export let height = "520px";
+  export let height = "clamp(18rem, 45vh, 34rem)";
 
   // IMPORTANT: this element is the MapLibre container
   let mapEl: HTMLDivElement | null = null;
@@ -374,7 +374,7 @@
         {/if}
         {#if selectedCounty}
           <aside bind:this={panelEl} class="map-panel-wrapper absolute top-4 left-4 z-50">
-            <button bind:this={closeBtn} aria-label="Close county panel" class="ml-2 text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2" on:click={closePanel}>✕</button>
+            <button bind:this={closeBtn} aria-label="Close county panel" class="ml-2 text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2" on:click={closePanel}>&times;</button>
             <MetroCountyPanel county={selectedCounty} />
           </aside>
         {/if}

@@ -37,26 +37,28 @@
     {#each Object.entries(grouped) as [org, orgProjects]}
       <div class="org-group">
         <h2>{org}</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Project</th>
-              <th>Status</th>
-              <th>Summary</th>
-              <th>Modes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each orgProjects as project}
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
               <tr>
-                <td>{project.title}</td>
-                <td>{statusLabel(project.status)}</td>
-                <td>{project.summary}</td>
-                <td>{project.modes ? project.modes.join(', ') : ''}</td>
+                <th>Project</th>
+                <th>Status</th>
+                <th>Summary</th>
+                <th>Modes</th>
               </tr>
-            {/each}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {#each orgProjects as project}
+                <tr>
+                  <td>{project.title}</td>
+                  <td>{statusLabel(project.status)}</td>
+                  <td>{project.summary}</td>
+                  <td>{project.modes ? project.modes.join(', ') : ''}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
       </div>
     {/each}
   {/if}
@@ -68,19 +70,5 @@
 }
 .org-group {
   margin-bottom: 2.5rem;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 1rem;
-}
-th, td {
-  border: 1px solid var(--border-subtle);
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-}
-th {
-  background: var(--surface-1);
-  color: var(--text-on-dark);
 }
 </style>

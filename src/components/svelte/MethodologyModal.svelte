@@ -40,7 +40,7 @@
           <h2>Definitions</h2>
           <ul>
             <li>
-              <strong>Metro Atlanta</strong>: county GEOIDs — Fulton (13121), DeKalb (13089), Cobb (13067), and Gwinnett (13135) — used to highlight, select, and compute bounds.
+              <strong>Metro Atlanta</strong>: county GEOIDs &mdash; Fulton (13121), DeKalb (13089), Cobb (13067), and Gwinnett (13135) &mdash; used to highlight, select, and compute bounds.
             </li>
             <li>
               <strong>GEOID</strong>: a U.S. Census Bureau's geographic identifier that uniquely identifies a county or other census geography, used in TIGER/Line and Census data for reliable matching.
@@ -76,13 +76,12 @@
 
 .modal-content {
   position: relative;
-  max-width: 800px;
-  width: 100%;
+  width: min(100%, 52rem);
   max-height: 90vh;
   overflow-y: auto;
-  background: #18181b;
-  border-radius: 0.5rem;
-  padding: 2rem;
+  background: var(--surface-2);
+  border-radius: 0.75rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
@@ -136,5 +135,25 @@
 
 .methodology-article strong {
   color: #fff;
+}
+
+@media (max-width: 600px) {
+  .modal-content {
+    border-radius: 0.5rem;
+    max-height: 92vh;
+  }
+
+  .modal-close {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+
+  .methodology-article h1 {
+    font-size: 1.6rem;
+  }
+
+  .methodology-article h2 {
+    font-size: 1.1rem;
+  }
 }
 </style>

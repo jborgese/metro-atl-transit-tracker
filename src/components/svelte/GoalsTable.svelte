@@ -104,7 +104,8 @@
         {#if countyGoals.length === 0}
           <p class="no-goals-message">No goal information is available for this county.</p>
         {:else}
-          <table>
+          <div class="table-scroll">
+            <table class="data-table">
             <thead>
               <tr>
                 <th>Goal</th>
@@ -146,7 +147,7 @@
                   <td class="nested-cell" colspan="4">
                     <div class="project-card" style="--status-color: {getStatusColor(project.status)}">
                       <div class="project-header">
-                        <span class="project-indicator">↳</span>
+                        <span class="project-indicator">&rarr;</span>
                         <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
                           {project.title}
                         </a>
@@ -169,7 +170,8 @@
               {/each}
             {/each}
           </tbody>
-        </table>
+            </table>
+          </div>
         {/if}
       </div>
     {/each}
@@ -177,7 +179,8 @@
     <!-- County selected: show single table with header -->
     <div class="county-section">
       <h2 class="county-header">{getCountyName(selectedCounty)}</h2>
-      <table>
+      <div class="table-scroll">
+        <table class="data-table">
         <thead>
           <tr>
             <th>Goal</th>
@@ -219,7 +222,7 @@
                 <td class="nested-cell" colspan="4">
                   <div class="project-card" style="--status-color: {getStatusColor(project.status)}">
                     <div class="project-header">
-                      <span class="project-indicator">↳</span>
+                      <span class="project-indicator">&rarr;</span>
                       <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
                         {project.title}
                       </a>
@@ -242,7 +245,8 @@
             {/each}
           {/each}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   {/if}
 </div>
@@ -269,21 +273,6 @@
   background: rgba(255, 255, 255, 0.03);
   border-radius: 6px;
   border: 1px dashed var(--border-subtle, #334155);
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 1rem;
-}
-th, td {
-  border: 1px solid var(--border-subtle);
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  vertical-align: top;
-}
-th {
-  background: var(--surface-1);
-  color: var(--text-on-dark);
 }
 td a {
   color: var(--link-color, #0066cc);
@@ -377,5 +366,24 @@ td a:hover {
   display: block;
   font-size: 0.85em;
   color: var(--text-muted, #666);
+}
+
+@media (max-width: 720px) {
+  .county-header {
+    font-size: 1.2rem;
+  }
+
+  .nested-cell {
+    padding-left: 0.75rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  .project-card {
+    margin-left: 0;
+  }
+
+  .project-header {
+    align-items: flex-start;
+  }
 }
 </style>
