@@ -56,6 +56,42 @@
           <p>
             Not affiliated with MARTA, ARC, GDOT, or any governing body. This site does not advocate highway expansion and strives to be non-partisan.
           </p>
+          <h2>Project Status Colors</h2>
+          <p>Project cards are color-coded by status using a palette inspired by the 1996 Atlanta Summer Olympics:</p>
+          <table class="status-table">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Color</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="status-badge" style="background: #4280c4">Planning</span></td>
+                <td>Olympic Blue</td>
+              </tr>
+              <tr>
+                <td><span class="status-badge" style="background: #8a62b0">Public Outreach</span></td>
+                <td>Olympic Purple</td>
+              </tr>
+              <tr>
+                <td><span class="status-badge" style="background: #a32f65">Funding Application</span></td>
+                <td>Olympic Magenta</td>
+              </tr>
+              <tr>
+                <td><span class="status-badge" style="background: #c4a042">Implementation</span></td>
+                <td>Gold</td>
+              </tr>
+              <tr>
+                <td><span class="status-badge" style="background: #2d8659">Completed</span></td>
+                <td>Forest Green</td>
+              </tr>
+              <tr>
+                <td><span class="status-badge" style="background: #a73a32">Ongoing</span></td>
+                <td>Olympic Terracotta</td>
+              </tr>
+            </tbody>
+          </table>
         </article>
       </div>
     </div>
@@ -135,6 +171,40 @@
 
 .methodology-article strong {
   color: #fff;
+}
+
+.status-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.status-table th,
+.status-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-table th {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e0e7ef;
+  font-weight: 600;
+}
+
+.status-table td {
+  color: #d1d5db;
+}
+
+.status-badge {
+  display: inline-block;
+  color: #fff;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 @media (max-width: 600px) {
