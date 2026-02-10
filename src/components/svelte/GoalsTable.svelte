@@ -21,13 +21,22 @@
 
   $: countyLookup = { ...defaultCountyNames, ...countyNames };
 
-  // Filter goals by selected county
+  // Determine if a goal is "Regional" (has no specific county - empty related_counties)
+  function isRegionalGoal(goal: Goal): boolean {
+    return !goal.related_counties || goal.related_counties.length === 0;
+  }
+
+  // Get regional goals (goals with no specific county)
+  $: regionalGoals = goals.filter(isRegionalGoal);
+
+  // Filter goals by selected county (excludes regional goals to avoid duplication)
   $: filtered = selectedCounty
-    ? goals.filter((g) => g.related_counties && g.related_counties.includes(selectedCounty))
+    ? goals.filter((g) => g.related_counties && g.related_counties.includes(selectedCounty) && !isRegionalGoal(g))
     : goals;
 
   // Group goals by county (only used when no county is selected)
   // Includes all counties, even those without goals
+  // Excludes regional goals (they're shown separately)
   $: groupedByCounty = !selectedCounty ? groupGoalsByCounty(goals) : null;
 
   function groupGoalsByCounty(goalsList: Goal[]): Map<string, Goal[]> {
@@ -38,8 +47,11 @@
       grouped.set(countyId, []);
     }
     
-    // Populate with goals
+    // Populate with goals (only non-regional goals)
     for (const goal of goalsList) {
+      // Skip regional goals - they're displayed separately
+      if (isRegionalGoal(goal)) continue;
+      
       // Add goal to each county it's related to
       if (goal.related_counties) {
         for (const countyId of goal.related_counties) {
@@ -91,13 +103,87 @@
 </script>
 
 <div class="goals-table">
-  {#if selectedCounty && filtered.length === 0}
+  {#if groupedByCounty}
+    <!-- No county selected: show Regional first, then grouped by county -->
+    
+    <!-- Regional Section (at top when no county selected) -->
     <div class="county-section">
-      <h2 class="county-header">{getCountyName(selectedCounty)}</h2>
-      <p class="no-goals-message">No goal information is available for this county.</p>
+      <h2 class="county-header">Regional</h2>
+      {#if regionalGoals.length === 0}
+        <p class="no-goals-message">No regional goal information is available.</p>
+      {:else}
+        <div class="table-scroll">
+          <table class="data-table">
+          <thead>
+            <tr>
+              <th>Goal</th>
+              <th>Status/Related Projects</th>
+              <th>Actions to take in support of the Goal</th>
+              <th>Related Orgs</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each regionalGoals as goal}
+              <tr class="goal-row">
+                <td>{goal.goal}</td>
+              <td>
+                {#if goal.status_related_projects}
+                  {goal.status_related_projects}
+                {/if}
+              </td>
+              <td>{goal.actions || ''}</td>
+              <td>
+                {#if goal.related_orgs && goal.related_orgs.length > 0}
+                  {#each goal.related_orgs as org}
+                    <div class="related-org">
+                      {#if org.url}
+                        <a href={org.url} target="_blank" rel="noopener noreferrer">{org.name}</a>
+                      {:else}
+                        <span>{org.name}</span>
+                      {/if}
+                      {#if org.contact_info}
+                        <span class="contact-info">({org.contact_info})</span>
+                      {/if}
+                    </div>
+                  {/each}
+                {/if}
+              </td>
+            </tr>
+            <!-- Nested project rows -->
+            {#each getRelatedProjects(goal) as project}
+              <tr class="project-row">
+                <td class="nested-cell" colspan="4">
+                  <div class="project-card" style="--status-color: {getStatusColor(project.status)}">
+                    <div class="project-header">
+                      <span class="project-indicator">&rarr;</span>
+                      <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
+                        {project.title}
+                      </a>
+                      <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
+                    </div>
+                    <p class="project-summary">{project.summary}</p>
+                    {#if project.lead_org}
+                      <div class="project-org">
+                        <span class="org-label">Lead:</span>
+                        {#if project.lead_org.url}
+                          <a href={project.lead_org.url} target="_blank" rel="noopener noreferrer">{project.lead_org.name}</a>
+                        {:else}
+                          <span>{project.lead_org.name}</span>
+                        {/if}
+                      </div>
+                    {/if}
+                  </div>
+                </td>
+              </tr>
+            {/each}
+          {/each}
+        </tbody>
+          </table>
+        </div>
+      {/if}
     </div>
-  {:else if groupedByCounty}
-    <!-- No county selected: show grouped by county -->
+    
+    <!-- County Sections -->
     {#each [...groupedByCounty.entries()] as [countyId, countyGoals]}
       <div class="county-section">
         <h2 class="county-header">{getCountyName(countyId)}</h2>
@@ -176,23 +262,103 @@
       </div>
     {/each}
   {:else}
-    <!-- County selected: show single table with header -->
+    <!-- County selected: show county goals first, then Regional section -->
     <div class="county-section">
       <h2 class="county-header">{getCountyName(selectedCounty)}</h2>
-      <div class="table-scroll">
-        <table class="data-table">
-        <thead>
-          <tr>
-            <th>Goal</th>
-            <th>Status/Related Projects</th>
-            <th>Actions to take in support of the Goal</th>
-            <th>Related Orgs</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each filtered as goal}
-            <tr class="goal-row">
-              <td>{goal.goal}</td>
+      {#if filtered.length === 0}
+        <p class="no-goals-message">No goal information is available for this county.</p>
+      {:else}
+        <div class="table-scroll">
+          <table class="data-table">
+          <thead>
+            <tr>
+              <th>Goal</th>
+              <th>Status/Related Projects</th>
+              <th>Actions to take in support of the Goal</th>
+              <th>Related Orgs</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each filtered as goal}
+              <tr class="goal-row">
+                <td>{goal.goal}</td>
+                <td>
+                  {#if goal.status_related_projects}
+                    {goal.status_related_projects}
+                  {/if}
+                </td>
+                <td>{goal.actions || ''}</td>
+                <td>
+                  {#if goal.related_orgs && goal.related_orgs.length > 0}
+                    {#each goal.related_orgs as org}
+                      <div class="related-org">
+                        {#if org.url}
+                          <a href={org.url} target="_blank" rel="noopener noreferrer">{org.name}</a>
+                        {:else}
+                          <span>{org.name}</span>
+                        {/if}
+                        {#if org.contact_info}
+                          <span class="contact-info">({org.contact_info})</span>
+                        {/if}
+                      </div>
+                    {/each}
+                  {/if}
+                </td>
+              </tr>
+              <!-- Nested project rows -->
+              {#each getRelatedProjects(goal) as project}
+                <tr class="project-row">
+                  <td class="nested-cell" colspan="4">
+                    <div class="project-card" style="--status-color: {getStatusColor(project.status)}">
+                      <div class="project-header">
+                        <span class="project-indicator">&rarr;</span>
+                        <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
+                          {project.title}
+                        </a>
+                        <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
+                      </div>
+                      <p class="project-summary">{project.summary}</p>
+                      {#if project.lead_org}
+                        <div class="project-org">
+                          <span class="org-label">Lead:</span>
+                          {#if project.lead_org.url}
+                            <a href={project.lead_org.url} target="_blank" rel="noopener noreferrer">{project.lead_org.name}</a>
+                          {:else}
+                            <span>{project.lead_org.name}</span>
+                          {/if}
+                        </div>
+                      {/if}
+                    </div>
+                  </td>
+                </tr>
+              {/each}
+            {/each}
+          </tbody>
+          </table>
+        </div>
+      {/if}
+    </div>
+    
+    <!-- Regional Section (below selected county) -->
+    <div class="county-section">
+      <h2 class="county-header">Regional</h2>
+      {#if regionalGoals.length === 0}
+        <p class="no-goals-message">No regional goal information is available.</p>
+      {:else}
+        <div class="table-scroll">
+          <table class="data-table">
+          <thead>
+            <tr>
+              <th>Goal</th>
+              <th>Status/Related Projects</th>
+              <th>Actions to take in support of the Goal</th>
+              <th>Related Orgs</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each regionalGoals as goal}
+              <tr class="goal-row">
+                <td>{goal.goal}</td>
               <td>
                 {#if goal.status_related_projects}
                   {goal.status_related_projects}
@@ -245,8 +411,9 @@
             {/each}
           {/each}
         </tbody>
-        </table>
-      </div>
+          </table>
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

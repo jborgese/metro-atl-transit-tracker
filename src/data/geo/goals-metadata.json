@@ -1,8 +1,60 @@
 [
   {
+    "id": "regional-outer-metro-passenger-rail",
+    "goal": "Frequent passenger rail service in the outer metro ATL counties.",
+    "status_related_projects": "",
+    "actions": "",
+    "related_orgs": [],
+    "related_project_ids": [],
+    "related_counties": [],
+    "provenance": { "created_at": "2026-02-07T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-07T00:00:00Z", "license": "CC-BY-4.0" }
+  },
+  {
+    "id": "regional-beltline-rail",
+    "goal": "Immediate work on as much beltline rail as possible (and its supporting infrastructure).",
+    "status_related_projects": "Progress has been halted since a secret vote on the project occurred in May of 2025.",
+    "actions": "Pressure on the mayor to follow through on infill stations.",
+    "related_orgs": [
+      {
+        "name": "Beltline Rail Now",
+        "url": "https://beltlinerailnow.com/",
+        "contact_info": ""
+      }
+    ],
+    "related_project_ids": [],
+    "related_counties": [],
+    "provenance": { "created_at": "2026-02-07T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-07T00:00:00Z", "license": "CC-BY-4.0" }
+  },
+  {
+    "id": "regional-amtrak-intercity-rail",
+    "goal": "Additional Amtrak (or any inter city rail provider) frequency and coverage out of Atlanta. As well as improving the infrastructure of the station and its surrounding area.",
+    "status_related_projects": "The mayors of Birmingham, AL and Chattanooga, TN have publicly voiced their interest in rail services to Atlanta. The Chattanooga plan is detailed here: https://www.sunbeltatlanticrailroad.com",
+    "actions": "",
+    "related_orgs": [],
+    "related_project_ids": [],
+    "related_counties": [],
+    "provenance": { "created_at": "2026-02-07T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-07T00:00:00Z", "license": "CC-BY-4.0" }
+  },
+  {
+    "id": "regional-hub-spoke-network",
+    "goal": "Move away from our current \"hub and spoke\" network setup.",
+    "status_related_projects": "The proposed 285 peach pass lanes would allow for transit service buses to operate in the lanes at no charge. https://i285topendexpresslanes-gdot.hub.arcgis.com/",
+    "actions": "",
+    "related_orgs": [
+      {
+        "name": "ATL (Atlanta-region Transit Link Authority)",
+        "url": "https://atltransit.ga.gov/",
+        "contact_info": ""
+      }
+    ],
+    "related_project_ids": [],
+    "related_counties": [],
+    "provenance": { "created_at": "2026-02-07T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-07T00:00:00Z", "license": "CC-BY-4.0" }
+  },
+  {
     "id": "cobb-support-regional-transit",
     "goal": "Support broader regional transit goals.",
-    "status_related_projects": "Link back to the Metro Atlanta region page",
+    "status_related_projects": "More information under the Regional section",
     "actions": "",
     "related_orgs": [],
     "related_project_ids": ["arc-transportation-index"],
@@ -60,26 +112,10 @@
   {
     "id": "marta-support-regional-transit",
     "goal": "Support broader regional transit goals.",
-    "status_related_projects": "Link back to the Metro Atlanta region page",
+    "status_related_projects": "More information under the Regional section",
     "actions": "",
     "related_orgs": [],
     "related_project_ids": ["arc-transportation-index"],
-    "related_counties": ["13121", "13089"],
-    "provenance": { "created_at": "2026-02-04T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-04T00:00:00Z", "license": "CC-BY-4.0" }
-  },
-  {
-    "id": "marta-beltline-rail",
-    "goal": "Immediate work on as much beltline rail as possible (and its supporting infrastructure).",
-    "status_related_projects": "Progress has been halted since a secret vote on the project occurred in May of 2025.",
-    "actions": "Pressure on the mayor to follow through on infill stations.",
-    "related_orgs": [
-      {
-        "name": "Beltline Rail Now",
-        "url": "https://beltlinerailnow.com/",
-        "contact_info": ""
-      }
-    ],
-    "related_project_ids": [],
     "related_counties": ["13121", "13089"],
     "provenance": { "created_at": "2026-02-04T00:00:00Z", "created_by": "metro-atl-transit-tracker", "updated_at": "2026-02-04T00:00:00Z", "license": "CC-BY-4.0" }
   },
