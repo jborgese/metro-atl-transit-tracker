@@ -16,7 +16,7 @@
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { initMetroMap } from "../../lib/map/initMetroMap";
-  import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
+  import { env } from '$env/dynamic/public';
 
   import { createLogger } from "../../utils/logger"; // adjust if needed
   import { metroCountyGeoids } from "../../lib/map/countyStyles";
@@ -173,7 +173,7 @@
           return;
         }
 
-        const key = PUBLIC_MAPTILER_KEY;
+        const key = env.PUBLIC_MAPTILER_KEY;
         if (!key) {
           log.error("maptiler:key-missing (set PUBLIC_MAPTILER_KEY)");
           return;

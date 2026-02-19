@@ -14,6 +14,14 @@
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) close();
   }
+
+  function handleBackdropKeydown(e: KeyboardEvent) {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      close();
+    }
+  }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -23,6 +31,8 @@
     <div
       class="modal-backdrop"
       on:click={handleBackdropClick}
+      on:keydown={handleBackdropKeydown}
+      tabindex="-1"
       role="dialog"
       aria-modal="true"
       aria-labelledby="methodology-title"
