@@ -1,9 +1,4 @@
-declare module '*?url' {
-  const url: string;
-  export default url;
-}
-
 declare module '*.json' {
-  const value: any;
+  const value: unknown;
   export default value;
 }

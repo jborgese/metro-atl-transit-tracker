@@ -12,14 +12,12 @@ export async function loadCountyMetadata(url = '/data/geo/counties-metadata.json
     return { countyMetadata: [], countyMetadataMap: {}, error: e };
   }
 }
-
-import projectsUrl from '../../data/geo/projects-metadata.json?url';
-
-export async function loadProjectsMetadata(url: string = projectsUrl) {
+export async function loadProjectsMetadata(url = '/api/projects') {
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`projects fetch ${res.status}`);
-    const projectsMetadata = await res.json();
+    const payload = await res.json();
+    const projectsMetadata = Array.isArray(payload) ? payload : payload?.data ?? [];
     return { projectsMetadata };
   } catch (e) {
     return { projectsMetadata: [], error: e };

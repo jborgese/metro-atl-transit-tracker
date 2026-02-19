@@ -30,6 +30,8 @@
       <img src="/mai-tai-logo.png" alt="MAI TAI" class="site-logo" />
     </a>
     <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav-link" href="/history">History</a>
+      <a class="site-nav-link" href="/admin">Admin</a>
       <button class="site-nav-link" on:click={() => methodologyOpen = true}>Methodology</button>
     </nav>
   </div>

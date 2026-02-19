@@ -2,8 +2,18 @@
 import BaseLayout from '../layouts/BaseLayout.svelte';
 import MetroMap from '../components/svelte/MetroMap.svelte';
 import GoalsTable from '../components/svelte/GoalsTable.svelte';
-import { projects, goals } from '../data/geo/loadProjects';
-import type { Project, Goal } from '../components/svelte/types';
+import type { Goal, Project } from '@/types/content';
+
+export let data: {
+  projects: Project[];
+  goals: Goal[];
+};
+
+let projects: Project[] = [];
+let goals: Goal[] = [];
+
+$: projects = data?.projects ?? [];
+$: goals = data?.goals ?? [];
 
 let selectedCounty: string | null = null;
 
