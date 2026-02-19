@@ -8,7 +8,7 @@ This repository contains a lightweight, static GeoJSON-powered map built with Sv
 
 **Quick links:**
 - Map code: [src/lib/map](src/lib/map)
-- Svelte map island: [src/svelte/MetroMap.svelte](src/svelte/MetroMap.svelte)
+- Svelte map component: [src/components/svelte/MetroMap.svelte](src/components/svelte/MetroMap.svelte)
 - GeoJSON data: [src/data/geo/ga_counties.geojson](src/data/geo/ga_counties.geojson)
 
 ## Tech stack
@@ -96,8 +96,8 @@ Build a stable, product-grade, web-based map visualization focused on Metro Atla
 
 ## 🧱 Current Stack & Architecture
 
-- **Framework:** Astro
-- **Interactive islands:** Svelte (`client:visible`) ✅
+- **Framework:** SvelteKit
+- **UI framework:** Svelte ✅
 - **Map rendering:** MapLibre GL JS
 - **Basemap:** MapTiler Streets (set via `PUBLIC_MAPTILER_KEY` env var)
 - **Styling:** Tailwind CSS + `src/styles/global.css` overrides
@@ -180,8 +180,8 @@ npm run preview
 - `src/lib/map/addGeoJsonLayer.ts` — Adds county layers and styling
 - `src/lib/map/countyStyles.ts` — County color and outline constants
 - `src/data/geo/ga_counties.geojson` — Simplified county geometries
-- `src/svelte/MetroMap.svelte` — Svelte island that mounts the map
-- `src/pages/index.astro` — App shell and landing page
+- `src/components/svelte/MetroMap.svelte` — Svelte component that mounts the map
+- `src/routes/+page.svelte` — Route entry point and landing page
 - `src/utils/logger.ts` — scoped logger helper
 
 ---

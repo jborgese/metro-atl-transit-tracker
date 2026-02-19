@@ -2,7 +2,7 @@ import type { Config } from 'tailwindcss'
 import typography from '@tailwindcss/typography'
 
 const config: Config = {
-  content: ['./src/**/*.{astro,html,js,jsx,svelte,ts,tsx}'],
+  content: ['./src/**/*.{html,js,jsx,svelte,ts,tsx}'],
   theme: {
     extend: {
       colors: {
