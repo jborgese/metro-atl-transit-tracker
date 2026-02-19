@@ -13,7 +13,7 @@
   import { onMount, tick, createEventDispatcher } from "svelte";
     // Svelte event dispatcher for parent communication
     const dispatch = createEventDispatcher();
-  import maplibregl from "maplibre-gl";
+  import maplibregl, { type StyleSpecification } from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { initMetroMap } from "../../lib/map/initMetroMap";
   import { env } from '$env/dynamic/public';
@@ -30,6 +30,18 @@
   export const subtitle =
     "Interactive county/region map will load here (MapLibre next).";
   export let height = "clamp(18rem, 45vh, 34rem)";
+
+  const fallbackStyle: StyleSpecification = {
+    version: 8,
+    sources: {},
+    layers: [
+      {
+        id: "background",
+        type: "background",
+        paint: { "background-color": "#0b1d23" },
+      },
+    ],
+  };
 
   // IMPORTANT: this element is the MapLibre container
   let mapEl: HTMLDivElement | null = null;
@@ -173,20 +185,27 @@
           return;
         }
 
-        const key = env.PUBLIC_MAPTILER_KEY;
-        if (!key) {
-          log.error("maptiler:key-missing (set PUBLIC_MAPTILER_KEY)");
-          return;
+        const key = env.PUBLIC_MAPTILER_KEY?.trim();
+        const hasMaptilerKey = Boolean(key);
+        const style = hasMaptilerKey
+          ? `https://api.maptiler.com/maps/streets/style.json?key=${key}`
+          : fallbackStyle;
+        if (!hasMaptilerKey) {
+          log.warn("maptiler:key-missing; using fallback style");
         }
-
-        const styleUrl = `https://api.maptiler.com/maps/streets/style.json?key=${key}`;
 
         map = initMetroMap({
           container: mapEl,
-          styleUrl,
+          style,
           center: [-84.388, 33.749],
           zoom: 9,
           attributionControl: false,
+          customAttribution: hasMaptilerKey
+            ? [
+                "Map tiles (c) MapTiler",
+                "County boundaries (c) US Census Bureau (TIGER/Line)",
+              ]
+            : ["County boundaries (c) US Census Bureau (TIGER/Line)"],
           onLoad: async (mapInstance) => {
             log.info("map:load (Atlanta)");
             safeResize();

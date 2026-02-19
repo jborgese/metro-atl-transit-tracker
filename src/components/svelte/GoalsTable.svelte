@@ -100,6 +100,65 @@
       default: return '#4280c4';
     }
   }
+
+  type StatusContentPart =
+    | { type: 'text'; value: string }
+    | { type: 'url'; href: string; label: string };
+
+  function buildLinkLabel(url: string): string {
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.replace(/^www\./, '');
+      const pathSegments = parsed.pathname.split('/').filter(Boolean);
+
+      if (pathSegments.length === 0) return host;
+      if (pathSegments.length === 1) return `${host}/${pathSegments[0]}`;
+
+      return `${host}/${pathSegments[0]}/...`;
+    } catch {
+      return url;
+    }
+  }
+
+  function parseStatusContent(input?: string): StatusContentPart[] {
+    if (!input) return [];
+
+    const urlRegex = /https?:\/\/[^\s]+/g;
+    const trailingPunctuationRegex = /[),.;!?]+$/;
+    const parts: StatusContentPart[] = [];
+    let lastIndex = 0;
+
+    for (const match of input.matchAll(urlRegex)) {
+      const rawUrl = match[0];
+      const start = match.index ?? 0;
+
+      if (start > lastIndex) {
+        parts.push({ type: 'text', value: input.slice(lastIndex, start) });
+      }
+
+      const trailingMatch = rawUrl.match(trailingPunctuationRegex);
+      const trailing = trailingMatch ? trailingMatch[0] : '';
+      const cleanUrl = trailing ? rawUrl.slice(0, rawUrl.length - trailing.length) : rawUrl;
+
+      parts.push({
+        type: 'url',
+        href: cleanUrl,
+        label: buildLinkLabel(cleanUrl)
+      });
+
+      if (trailing) {
+        parts.push({ type: 'text', value: trailing });
+      }
+
+      lastIndex = start + rawUrl.length;
+    }
+
+    if (lastIndex < input.length) {
+      parts.push({ type: 'text', value: input.slice(lastIndex) });
+    }
+
+    return parts;
+  }
 </script>
 
 <div class="goals-table">
@@ -128,7 +187,13 @@
                 <td>{goal.goal}</td>
               <td>
                 {#if goal.status_related_projects}
-                  {goal.status_related_projects}
+                  {#each parseStatusContent(goal.status_related_projects) as part}
+                    {#if part.type === 'url'}
+                      <a href={part.href} target="_blank" rel="noopener noreferrer">{part.label}</a>
+                    {:else}
+                      {part.value}
+                    {/if}
+                  {/each}
                 {/if}
               </td>
               <td>{goal.actions || ''}</td>
@@ -206,7 +271,13 @@
                   <td>{goal.goal}</td>
                 <td>
                   {#if goal.status_related_projects}
-                    {goal.status_related_projects}
+                    {#each parseStatusContent(goal.status_related_projects) as part}
+                      {#if part.type === 'url'}
+                        <a href={part.href} target="_blank" rel="noopener noreferrer">{part.label}</a>
+                      {:else}
+                        {part.value}
+                      {/if}
+                    {/each}
                   {/if}
                 </td>
                 <td>{goal.actions || ''}</td>
@@ -284,7 +355,13 @@
                 <td>{goal.goal}</td>
                 <td>
                   {#if goal.status_related_projects}
-                    {goal.status_related_projects}
+                    {#each parseStatusContent(goal.status_related_projects) as part}
+                      {#if part.type === 'url'}
+                        <a href={part.href} target="_blank" rel="noopener noreferrer">{part.label}</a>
+                      {:else}
+                        {part.value}
+                      {/if}
+                    {/each}
                   {/if}
                 </td>
                 <td>{goal.actions || ''}</td>
@@ -361,7 +438,13 @@
                 <td>{goal.goal}</td>
               <td>
                 {#if goal.status_related_projects}
-                  {goal.status_related_projects}
+                  {#each parseStatusContent(goal.status_related_projects) as part}
+                    {#if part.type === 'url'}
+                      <a href={part.href} target="_blank" rel="noopener noreferrer">{part.label}</a>
+                    {:else}
+                      {part.value}
+                    {/if}
+                  {/each}
                 {/if}
               </td>
               <td>{goal.actions || ''}</td>

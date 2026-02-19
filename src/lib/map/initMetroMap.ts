@@ -1,11 +1,12 @@
-import maplibregl from "maplibre-gl";
+import maplibregl, { type StyleSpecification } from "maplibre-gl";
 
 export interface InitMetroMapOptions {
   container: HTMLDivElement;
-  styleUrl: string;
+  style: string | StyleSpecification;
   center?: [number, number];
   zoom?: number;
   attributionControl?: boolean;
+  customAttribution?: string | string[];
   onLoad?: (map: maplibregl.Map) => void;
   onError?: (error: any) => void;
 }
@@ -16,28 +17,26 @@ export interface InitMetroMapOptions {
  */
 export function initMetroMap({
   container,
-  styleUrl,
+  style,
   center = [-84.388, 33.749], // Atlanta, GA
   zoom = 9,
   attributionControl = false,
+  customAttribution = ["County boundaries (c) US Census Bureau (TIGER/Line)"],
   onLoad,
   onError,
 }: InitMetroMapOptions): maplibregl.Map {
   const map = new maplibregl.Map({
     container,
-    style: styleUrl,
+    style,
     center,
     zoom,
-    attributionControl: false,
+    attributionControl: attributionControl ? {} : false,
   });
 
   map.addControl(
     new maplibregl.AttributionControl({
       compact: true,
-      customAttribution: [
-        "Map tiles © MapTiler",
-        "County boundaries © US Census Bureau (TIGER/Line)",
-      ],
+      customAttribution,
     }),
     "bottom-right"
   );
