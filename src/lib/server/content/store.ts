@@ -1,6 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import contentProjectsSeed from '../../../../data/content/projects.json';
+import contentGoalsSeed from '../../../../data/content/goals.json';
+import contentHistorySeed from '../../../../data/content/history.json';
+import legacyProjectsSeed from '../../../data/geo/projects-metadata.json';
+import legacyGoalsSeed from '../../../data/geo/goals-metadata.json';
 import type {
   ContentEntityType,
   ContentHistoryEvent,
@@ -15,6 +20,20 @@ const HISTORY_PATH = path.join(CONTENT_ROOT, 'history.json');
 
 const LEGACY_PROJECTS_PATH = path.resolve(process.cwd(), 'src', 'data', 'geo', 'projects-metadata.json');
 const LEGACY_GOALS_PATH = path.resolve(process.cwd(), 'src', 'data', 'geo', 'goals-metadata.json');
+const IS_CLOUDFLARE_WORKER =
+  typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair !== 'undefined';
+
+const inMemoryStore: {
+  initialized: boolean;
+  projects: Project[];
+  goals: Goal[];
+  history: ContentHistoryEvent[];
+} = {
+  initialized: false,
+  projects: [],
+  goals: [],
+  history: [],
+};
 
 let initPromise: Promise<void> | null = null;
 let writeQueue: Promise<void> = Promise.resolve();
@@ -54,6 +73,65 @@ function cloneRecord<T extends Record<string, unknown>>(value: T): T {
   return structuredClone(value);
 }
 
+function asSeedArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? structuredClone(value as T[]) : [];
+}
+
+function ensureInMemoryStoreReady() {
+  if (inMemoryStore.initialized) {
+    return;
+  }
+
+  const seededProjects = asSeedArray<Project>(contentProjectsSeed);
+  const seededGoals = asSeedArray<Goal>(contentGoalsSeed);
+
+  inMemoryStore.projects =
+    seededProjects.length > 0 ? seededProjects : asSeedArray<Project>(legacyProjectsSeed);
+  inMemoryStore.goals = seededGoals.length > 0 ? seededGoals : asSeedArray<Goal>(legacyGoalsSeed);
+  inMemoryStore.history = asSeedArray<ContentHistoryEvent>(contentHistorySeed);
+  inMemoryStore.initialized = true;
+}
+
+function readInMemoryArray<T>(filePath: string): T[] {
+  ensureInMemoryStoreReady();
+
+  if (filePath === PROJECTS_PATH) {
+    return structuredClone(inMemoryStore.projects as T[]);
+  }
+
+  if (filePath === GOALS_PATH) {
+    return structuredClone(inMemoryStore.goals as T[]);
+  }
+
+  if (filePath === HISTORY_PATH) {
+    return structuredClone(inMemoryStore.history as T[]);
+  }
+
+  throw new ContentStoreError(500, `unknown content path: ${filePath}`);
+}
+
+function writeInMemoryArray(filePath: string, data: unknown[]) {
+  ensureInMemoryStoreReady();
+  const next = structuredClone(data);
+
+  if (filePath === PROJECTS_PATH) {
+    inMemoryStore.projects = next as Project[];
+    return;
+  }
+
+  if (filePath === GOALS_PATH) {
+    inMemoryStore.goals = next as Goal[];
+    return;
+  }
+
+  if (filePath === HISTORY_PATH) {
+    inMemoryStore.history = next as ContentHistoryEvent[];
+    return;
+  }
+
+  throw new ContentStoreError(500, `unknown content path: ${filePath}`);
+}
+
 function withWriteLock<T>(work: () => Promise<T>): Promise<T> {
   const run = writeQueue.then(work, work);
   writeQueue = run.then(
@@ -90,6 +168,11 @@ async function ensureSeedFile(filePath: string, fallbackPath?: string) {
 }
 
 async function ensureStoreReady() {
+  if (IS_CLOUDFLARE_WORKER) {
+    ensureInMemoryStoreReady();
+    return;
+  }
+
   if (!initPromise) {
     initPromise = (async () => {
       await ensureSeedFile(PROJECTS_PATH, LEGACY_PROJECTS_PATH);
@@ -101,6 +184,14 @@ async function ensureStoreReady() {
 }
 
 async function readJsonArray<T>(filePath: string, label: string): Promise<T[]> {
+  if (IS_CLOUDFLARE_WORKER) {
+    const memoryItems = readInMemoryArray<T>(filePath);
+    if (!Array.isArray(memoryItems)) {
+      throw new ContentStoreError(500, `${label} store is invalid`);
+    }
+    return memoryItems;
+  }
+
   await ensureStoreReady();
   const raw = await fs.readFile(filePath, 'utf8');
   const parsed = JSON.parse(raw);
@@ -111,6 +202,11 @@ async function readJsonArray<T>(filePath: string, label: string): Promise<T[]> {
 }
 
 async function writeJsonArray(filePath: string, data: unknown[]) {
+  if (IS_CLOUDFLARE_WORKER) {
+    writeInMemoryArray(filePath, data);
+    return;
+  }
+
   const tempPath = `${filePath}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`;
   const payload = `${JSON.stringify(data, null, 2)}\n`;
   await fs.writeFile(tempPath, payload, 'utf8');

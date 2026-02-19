@@ -92,4 +92,6 @@ npm run preview
 
 Current write persistence uses filesystem JSON (`data/content/*`), which is best for local/single-instance hosting.
 
-For Cloudflare production, next step is replacing the file store with a D1-backed store while keeping the same `/api/*` contract and history schema.
+Cloudflare Worker deploys use an in-memory content store seeded from repository JSON (read endpoints work, write changes are non-durable).
+
+For durable Cloudflare production writes, next step is replacing the content store with a D1-backed store while keeping the same `/api/*` contract and history schema.

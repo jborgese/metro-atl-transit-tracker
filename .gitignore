@@ -9,6 +9,7 @@ build/
 
 # SvelteKit output
 .svelte-kit/
+.wrangler/
 
 # TypeScript
 *.tsbuildinfo
