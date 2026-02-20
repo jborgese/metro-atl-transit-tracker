@@ -1,17 +1,48 @@
 {
-  "name": "metro-atl-transit-tracker",
-  "compatibility_date": "2026-02-19",
-  "compatibility_flags": ["nodejs_compat"],
-  "vars": {
-    "CF_ACCESS_TEAM_DOMAIN": "frootsnoops.cloudflareaccess.com",
-    "CF_ACCESS_AUD": "96f0e12e20cbdf4fd6f78aaecf0129add7fbc21883156fc4b2f703c4cccc3638",
-    "WRITE_RATE_LIMIT_ENABLED": "true",
-    "WRITE_RATE_LIMIT_REQUESTS": "30",
-    "WRITE_RATE_LIMIT_WINDOW_SECONDS": "60"
-  },
-  "main": ".svelte-kit/cloudflare/_worker.js",
-  "assets": {
-    "binding": "ASSETS",
-    "directory": ".svelte-kit/cloudflare"
-  }
+	"name": "metro-atl-transit-tracker",
+	"compatibility_date": "2026-02-19",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"vars": {
+		"CF_ACCESS_TEAM_DOMAIN": "frootsnoops.cloudflareaccess.com",
+		"CF_ACCESS_AUD": "96f0e12e20cbdf4fd6f78aaecf0129add7fbc21883156fc4b2f703c4cccc3638",
+		"WRITE_RATE_LIMIT_ENABLED": "true",
+		"WRITE_RATE_LIMIT_REQUESTS": "30",
+		"WRITE_RATE_LIMIT_WINDOW_SECONDS": "60"
+	},
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "metro-atl-transit-prod",
+			"database_id": "043e7490-6a07-44a7-b235-285cd36ba7c8",
+			"migrations_dir": "migrations/d1",
+			"migrations_table": "d1_migrations"
+		}
+	],
+	"env": {
+		"staging": {
+			"vars": {
+				"CF_ACCESS_TEAM_DOMAIN": "frootsnoops.cloudflareaccess.com",
+				"CF_ACCESS_AUD": "96f0e12e20cbdf4fd6f78aaecf0129add7fbc21883156fc4b2f703c4cccc3638",
+				"WRITE_RATE_LIMIT_ENABLED": "true",
+				"WRITE_RATE_LIMIT_REQUESTS": "30",
+				"WRITE_RATE_LIMIT_WINDOW_SECONDS": "60"
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "metro-atl-transit-staging",
+					"database_id": "990bf4ea-cfc8-487d-b3db-b027176f4129",
+					"migrations_dir": "migrations/d1",
+					"migrations_table": "d1_migrations"
+				}
+			]
+		}
+	}
 }

@@ -8,12 +8,12 @@ import {
 import { parseIncludeArchived, toHttpError } from '$lib/server/content/http';
 import type { ApiItemResponse, Project } from '@/types/content';
 
-export const GET: RequestHandler = async ({ params, url }) => {
+export const GET: RequestHandler = async (event) => {
   try {
-    const includeArchivedParam = url.searchParams.get('includeArchived');
+    const includeArchivedParam = event.url.searchParams.get('includeArchived');
     const includeArchived =
       includeArchivedParam === null ? true : parseIncludeArchived(includeArchivedParam);
-    const project = await getProjectById(params.id, { includeArchived });
+    const project = await getProjectById(event, event.params.id, { includeArchived });
 
     const response: ApiItemResponse<Project> = { data: project };
     return json(response);
@@ -26,7 +26,7 @@ export const PATCH: RequestHandler = async (event) => {
   try {
     const actor = await requireEditorActor(event);
     const payload = await event.request.json();
-    const updated = await updateProject(event.params.id, payload, actor);
+    const updated = await updateProject(event, event.params.id, payload, actor);
 
     const response: ApiItemResponse<Project> = { data: updated };
     return json(response);
@@ -38,7 +38,7 @@ export const PATCH: RequestHandler = async (event) => {
 export const DELETE: RequestHandler = async (event) => {
   try {
     const actor = await requireEditorActor(event);
-    const archived = await archiveProject(event.params.id, actor);
+    const archived = await archiveProject(event, event.params.id, actor);
 
     const response: ApiItemResponse<Project> = { data: archived };
     return json(response);

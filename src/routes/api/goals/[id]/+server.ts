@@ -4,12 +4,12 @@ import { archiveGoal, getGoalById, updateGoal } from '$lib/server/content/store'
 import { parseIncludeArchived, toHttpError } from '$lib/server/content/http';
 import type { ApiItemResponse, Goal } from '@/types/content';
 
-export const GET: RequestHandler = async ({ params, url }) => {
+export const GET: RequestHandler = async (event) => {
   try {
-    const includeArchivedParam = url.searchParams.get('includeArchived');
+    const includeArchivedParam = event.url.searchParams.get('includeArchived');
     const includeArchived =
       includeArchivedParam === null ? true : parseIncludeArchived(includeArchivedParam);
-    const goal = await getGoalById(params.id, { includeArchived });
+    const goal = await getGoalById(event, event.params.id, { includeArchived });
 
     const response: ApiItemResponse<Goal> = { data: goal };
     return json(response);
@@ -22,7 +22,7 @@ export const PATCH: RequestHandler = async (event) => {
   try {
     const actor = await requireEditorActor(event);
     const payload = await event.request.json();
-    const updated = await updateGoal(event.params.id, payload, actor);
+    const updated = await updateGoal(event, event.params.id, payload, actor);
 
     const response: ApiItemResponse<Goal> = { data: updated };
     return json(response);
@@ -34,7 +34,7 @@ export const PATCH: RequestHandler = async (event) => {
 export const DELETE: RequestHandler = async (event) => {
   try {
     const actor = await requireEditorActor(event);
-    const archived = await archiveGoal(event.params.id, actor);
+    const archived = await archiveGoal(event, event.params.id, actor);
 
     const response: ApiItemResponse<Goal> = { data: archived };
     return json(response);

@@ -7,22 +7,22 @@ Public, data-driven map and content hub for transit advocacy in Metro Atlanta.
 - SvelteKit + Svelte 5
 - MapLibre GL
 - Tailwind CSS
-- JSON-backed content API (server routes)
+- D1-backed content API (server routes)
 
 ## What Changed
 
 This repo now has a first-pass admin-ready content architecture:
 
 - Public pages read projects/goals through `/api/*` instead of direct JSON imports.
-- Content is persisted in `data/content/`.
+- Content is persisted in Cloudflare D1 (`projects`, `goals`, `content_history`).
 - Archive/restore is soft-delete (`is_archived`, `archived_at`, `archived_by`).
-- Every write appends an immutable event to `data/content/history.json`.
+- Every write appends an immutable history event in D1.
 - `/history` is a public, browsable change log.
 - `/admin` provides a lightweight JSON editor for projects/goals.
 
 ## Content Files
 
-Canonical writable store:
+Seed/bootstrap data files:
 
 - `data/content/projects.json`
 - `data/content/goals.json`
@@ -139,8 +139,10 @@ npm run preview
 
 ## Cloudflare Note
 
-Current write persistence uses filesystem JSON (`data/content/*`), which is best for local/single-instance hosting.
+`/api/*` read/write routes now require a `DB` D1 binding at runtime.
 
-Cloudflare Worker deploys use an in-memory content store seeded from repository JSON (read endpoints work, write changes are non-durable).
-
-For durable Cloudflare production writes, next step is replacing the content store with a D1-backed store while keeping the same `/api/*` contract and history schema.
+- Local D1 dev: `npx wrangler dev --local`
+- Remote D1 dev: `npx wrangler dev --remote`
+- Apply migrations:
+  - staging: `npx wrangler d1 migrations apply metro-atl-transit-staging --env staging --remote`
+  - prod: `npx wrangler d1 migrations apply metro-atl-transit-prod --remote`

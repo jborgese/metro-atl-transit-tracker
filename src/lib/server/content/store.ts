@@ -1,5 +1,3 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import contentProjectsSeed from '../../../../data/content/projects.json';
@@ -14,33 +12,239 @@ import type {
   Project,
 } from '@/types/content';
 
-const CONTENT_ROOT = path.resolve(process.cwd(), 'data', 'content');
-const PROJECTS_PATH = path.join(CONTENT_ROOT, 'projects.json');
-const GOALS_PATH = path.join(CONTENT_ROOT, 'goals.json');
-const HISTORY_PATH = path.join(CONTENT_ROOT, 'history.json');
-
-const LEGACY_PROJECTS_PATH = path.resolve(process.cwd(), 'src', 'data', 'geo', 'projects-metadata.json');
-const LEGACY_GOALS_PATH = path.resolve(process.cwd(), 'src', 'data', 'geo', 'goals-metadata.json');
-const IS_CLOUDFLARE_WORKER =
-  typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair !== 'undefined';
-
-const inMemoryStore: {
-  initialized: boolean;
-  projects: Project[];
-  goals: Goal[];
-  history: ContentHistoryEvent[];
-} = {
-  initialized: false,
-  projects: [],
-  goals: [],
-  history: [],
+type StoreEvent = {
+  platform?: {
+    env?: Record<string, unknown>;
+  };
 };
 
-let initPromise: Promise<void> | null = null;
-let writeQueue: Promise<void> = Promise.resolve();
+type D1ResultSet<T> = {
+  results: T[];
+};
 
-const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+type D1PreparedStatement = {
+  bind(...values: unknown[]): D1PreparedStatement;
+  first<T = Record<string, unknown>>(): Promise<T | null>;
+  all<T = Record<string, unknown>>(): Promise<D1ResultSet<T>>;
+  run<T = unknown>(): Promise<T>;
+};
+
+type D1Database = {
+  prepare(query: string): D1PreparedStatement;
+  batch(statements: D1PreparedStatement[]): Promise<unknown[]>;
+};
+
+type StoredEntityRow = {
+  id: string;
+  payload_json: string;
+  is_archived: number | string;
+  archived_at: string | null;
+  archived_by: string | null;
+  created_at: string;
+  created_by: string;
+  updated_at: string;
+  updated_by: string;
+};
+
+type StoredHistoryRow = {
+  id: string;
+  entity_type: ContentEntityType;
+  entity_id: string;
+  action: ContentHistoryEvent['action'];
+  actor: string;
+  timestamp: string;
+  before_json: string | null;
+  after_json: string | null;
+};
+
+type StoredCountsRow = {
+  project_count: number | string | null;
+  goal_count: number | string | null;
+  history_count: number | string | null;
+};
+
+type StoredEntityWrite = {
+  entity: Record<string, unknown>;
+  payloadJson: string;
+  isArchived: number;
+  archivedAt: string | null;
+  archivedBy: string | null;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
+};
+
+const DB_BINDING_NAME = 'DB';
+const SEED_ACTOR = 'seed';
+const SEED_BATCH_SIZE = 50;
 const FORBIDDEN_MUTATION_FIELDS = new Set(['is_archived', 'archived_at', 'archived_by']);
+const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+
+const SELECT_ENTITY_COLUMNS =
+  'id, payload_json, is_archived, archived_at, archived_by, created_at, created_by, updated_at, updated_by';
+
+const INSERT_PROJECT_SQL = `
+INSERT INTO projects (
+  id,
+  payload_json,
+  is_archived,
+  archived_at,
+  archived_by,
+  created_at,
+  created_by,
+  updated_at,
+  updated_by
+)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+`;
+
+const INSERT_GOAL_SQL = `
+INSERT INTO goals (
+  id,
+  payload_json,
+  is_archived,
+  archived_at,
+  archived_by,
+  created_at,
+  created_by,
+  updated_at,
+  updated_by
+)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+`;
+
+const INSERT_HISTORY_SQL = `
+INSERT INTO content_history (
+  id,
+  entity_type,
+  entity_id,
+  action,
+  actor,
+  timestamp,
+  before_json,
+  after_json
+)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+`;
+
+const CREATE_PROJECT_WITH_HISTORY_SQL = `
+WITH inserted AS (
+  INSERT INTO projects (
+    id,
+    payload_json,
+    is_archived,
+    archived_at,
+    archived_by,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by
+  )
+  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+  RETURNING id
+)
+INSERT INTO content_history (
+  id,
+  entity_type,
+  entity_id,
+  action,
+  actor,
+  timestamp,
+  before_json,
+  after_json
+)
+SELECT ?10, 'project', ?1, 'create', ?11, ?12, NULL, ?13
+FROM inserted
+`;
+
+const CREATE_GOAL_WITH_HISTORY_SQL = `
+WITH inserted AS (
+  INSERT INTO goals (
+    id,
+    payload_json,
+    is_archived,
+    archived_at,
+    archived_by,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by
+  )
+  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+  RETURNING id
+)
+INSERT INTO content_history (
+  id,
+  entity_type,
+  entity_id,
+  action,
+  actor,
+  timestamp,
+  before_json,
+  after_json
+)
+SELECT ?10, 'goal', ?1, 'create', ?11, ?12, NULL, ?13
+FROM inserted
+`;
+
+const UPDATE_PROJECT_WITH_HISTORY_SQL = `
+WITH updated AS (
+  UPDATE projects
+  SET
+    payload_json = ?1,
+    is_archived = ?2,
+    archived_at = ?3,
+    archived_by = ?4,
+    created_at = ?5,
+    created_by = ?6,
+    updated_at = ?7,
+    updated_by = ?8
+  WHERE id = ?9
+  RETURNING id
+)
+INSERT INTO content_history (
+  id,
+  entity_type,
+  entity_id,
+  action,
+  actor,
+  timestamp,
+  before_json,
+  after_json
+)
+SELECT ?10, 'project', ?9, ?11, ?12, ?13, ?14, ?15
+FROM updated
+`;
+
+const UPDATE_GOAL_WITH_HISTORY_SQL = `
+WITH updated AS (
+  UPDATE goals
+  SET
+    payload_json = ?1,
+    is_archived = ?2,
+    archived_at = ?3,
+    archived_by = ?4,
+    created_at = ?5,
+    created_by = ?6,
+    updated_at = ?7,
+    updated_by = ?8
+  WHERE id = ?9
+  RETURNING id
+)
+INSERT INTO content_history (
+  id,
+  entity_type,
+  entity_id,
+  action,
+  actor,
+  timestamp,
+  before_json,
+  after_json
+)
+SELECT ?10, 'goal', ?9, ?11, ?12, ?13, ?14, ?15
+FROM updated
+`;
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const idSchema = nonEmptyStringSchema
@@ -109,6 +313,8 @@ const goalCreateSchema = z
 
 const goalPatchSchema = goalCreateSchema.partial();
 
+let seedPromise: Promise<void> | null = null;
+
 export class ContentStoreError extends Error {
   status: number;
 
@@ -133,6 +339,19 @@ function cloneRecord<T extends Record<string, unknown>>(value: T): T {
 
 function asSeedArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? structuredClone(value as T[]) : [];
+}
+
+function parseIntSafe(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return 0;
 }
 
 function zodErrorToMessage(err: z.ZodError) {
@@ -163,142 +382,6 @@ function assertNoForbiddenWriteFields(payload: Record<string, unknown>, label: s
       );
     }
   }
-}
-
-function ensureInMemoryStoreReady() {
-  if (inMemoryStore.initialized) {
-    return;
-  }
-
-  const seededProjects = asSeedArray<Project>(contentProjectsSeed);
-  const seededGoals = asSeedArray<Goal>(contentGoalsSeed);
-
-  inMemoryStore.projects =
-    seededProjects.length > 0 ? seededProjects : asSeedArray<Project>(legacyProjectsSeed);
-  inMemoryStore.goals = seededGoals.length > 0 ? seededGoals : asSeedArray<Goal>(legacyGoalsSeed);
-  inMemoryStore.history = asSeedArray<ContentHistoryEvent>(contentHistorySeed);
-  inMemoryStore.initialized = true;
-}
-
-function readInMemoryArray<T>(filePath: string): T[] {
-  ensureInMemoryStoreReady();
-
-  if (filePath === PROJECTS_PATH) {
-    return structuredClone(inMemoryStore.projects as T[]);
-  }
-
-  if (filePath === GOALS_PATH) {
-    return structuredClone(inMemoryStore.goals as T[]);
-  }
-
-  if (filePath === HISTORY_PATH) {
-    return structuredClone(inMemoryStore.history as T[]);
-  }
-
-  throw new ContentStoreError(500, `unknown content path: ${filePath}`);
-}
-
-function writeInMemoryArray(filePath: string, data: unknown[]) {
-  ensureInMemoryStoreReady();
-  const next = structuredClone(data);
-
-  if (filePath === PROJECTS_PATH) {
-    inMemoryStore.projects = next as Project[];
-    return;
-  }
-
-  if (filePath === GOALS_PATH) {
-    inMemoryStore.goals = next as Goal[];
-    return;
-  }
-
-  if (filePath === HISTORY_PATH) {
-    inMemoryStore.history = next as ContentHistoryEvent[];
-    return;
-  }
-
-  throw new ContentStoreError(500, `unknown content path: ${filePath}`);
-}
-
-function withWriteLock<T>(work: () => Promise<T>): Promise<T> {
-  const run = writeQueue.then(work, work);
-  writeQueue = run.then(
-    () => undefined,
-    () => undefined
-  );
-  return run;
-}
-
-async function ensureSeedFile(filePath: string, fallbackPath?: string) {
-  try {
-    await fs.access(filePath);
-    return;
-  } catch {
-    // expected when file does not exist
-  }
-
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-
-  let seed: unknown[] = [];
-  if (fallbackPath) {
-    try {
-      const raw = await fs.readFile(fallbackPath, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        seed = parsed;
-      }
-    } catch {
-      seed = [];
-    }
-  }
-
-  await writeJsonArray(filePath, seed);
-}
-
-async function ensureStoreReady() {
-  if (IS_CLOUDFLARE_WORKER) {
-    ensureInMemoryStoreReady();
-    return;
-  }
-
-  if (!initPromise) {
-    initPromise = (async () => {
-      await ensureSeedFile(PROJECTS_PATH, LEGACY_PROJECTS_PATH);
-      await ensureSeedFile(GOALS_PATH, LEGACY_GOALS_PATH);
-      await ensureSeedFile(HISTORY_PATH);
-    })();
-  }
-  await initPromise;
-}
-
-async function readJsonArray<T>(filePath: string, label: string): Promise<T[]> {
-  if (IS_CLOUDFLARE_WORKER) {
-    const memoryItems = readInMemoryArray<T>(filePath);
-    if (!Array.isArray(memoryItems)) {
-      throw new ContentStoreError(500, `${label} store is invalid`);
-    }
-    return memoryItems;
-  }
-
-  await ensureStoreReady();
-  const raw = await fs.readFile(filePath, 'utf8');
-  const parsed = JSON.parse(raw);
-  if (!Array.isArray(parsed)) {
-    throw new ContentStoreError(500, `${label} store is invalid`);
-  }
-  return parsed as T[];
-}
-
-async function writeJsonArray(filePath: string, data: unknown[]) {
-  if (IS_CLOUDFLARE_WORKER) {
-    writeInMemoryArray(filePath, data);
-    return;
-  }
-
-  const tempPath = `${filePath}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`;
-  const payload = `${JSON.stringify(data, null, 2)}\n`;
-  await fs.writeFile(tempPath, payload, 'utf8');
-  await fs.rename(tempPath, filePath);
 }
 
 function ensureProvenance(
@@ -346,6 +429,145 @@ function applyArchiveFields(
   }
 }
 
+function parseJsonObject(raw: string, label: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(raw);
+    if (isRecord(parsed)) {
+      return parsed;
+    }
+  } catch {
+    // fall through
+  }
+
+  throw new ContentStoreError(500, `${label} payload is invalid JSON`);
+}
+
+function normalizeEntityForStorage(
+  entityInput: Record<string, unknown>,
+  actor: string,
+  timestamp: string,
+  isCreate: boolean
+): StoredEntityWrite {
+  const id = typeof entityInput.id === 'string' && entityInput.id.trim().length > 0 ? entityInput.id : null;
+  if (!id) {
+    throw new ContentStoreError(500, 'entity id is missing');
+  }
+
+  const provenance = ensureProvenance(entityInput.provenance, actor, timestamp, isCreate);
+  const createdAt = typeof provenance.created_at === 'string' ? provenance.created_at : timestamp;
+  const createdBy = typeof provenance.created_by === 'string' ? provenance.created_by : actor;
+  const updatedAt = typeof provenance.updated_at === 'string' ? provenance.updated_at : timestamp;
+  const updatedBy = typeof provenance.updated_by === 'string' ? provenance.updated_by : actor;
+
+  const archived = entityInput.is_archived === true;
+  const archivedAt =
+    archived && typeof entityInput.archived_at === 'string' ? entityInput.archived_at : archived ? timestamp : null;
+  const archivedBy =
+    archived && typeof entityInput.archived_by === 'string' ? entityInput.archived_by : archived ? actor : null;
+
+  const normalized: Record<string, unknown> = {
+    ...entityInput,
+    id,
+    is_archived: archived,
+    archived_at: archivedAt,
+    archived_by: archivedBy,
+    provenance: {
+      ...provenance,
+      created_at: createdAt,
+      created_by: createdBy,
+      updated_at: updatedAt,
+      updated_by: updatedBy,
+    },
+  };
+
+  return {
+    entity: normalized,
+    payloadJson: JSON.stringify(normalized),
+    isArchived: archived ? 1 : 0,
+    archivedAt,
+    archivedBy,
+    createdAt,
+    createdBy,
+    updatedAt,
+    updatedBy,
+  };
+}
+
+function rowToProject(row: StoredEntityRow): Project {
+  const payload = parseJsonObject(row.payload_json, `project ${row.id}`);
+  payload.id = row.id;
+  payload.is_archived = parseIntSafe(row.is_archived) === 1;
+  payload.archived_at = row.archived_at;
+  payload.archived_by = row.archived_by;
+
+  const provenance = isRecord(payload.provenance) ? { ...payload.provenance } : {};
+  provenance.created_at = row.created_at;
+  provenance.created_by = row.created_by;
+  provenance.updated_at = row.updated_at;
+  provenance.updated_by = row.updated_by;
+  payload.provenance = provenance;
+
+  return payload as Project;
+}
+
+function rowToGoal(row: StoredEntityRow): Goal {
+  const payload = parseJsonObject(row.payload_json, `goal ${row.id}`);
+  payload.id = row.id;
+  payload.is_archived = parseIntSafe(row.is_archived) === 1;
+  payload.archived_at = row.archived_at;
+  payload.archived_by = row.archived_by;
+
+  const provenance = isRecord(payload.provenance) ? { ...payload.provenance } : {};
+  provenance.created_at = row.created_at;
+  provenance.created_by = row.created_by;
+  provenance.updated_at = row.updated_at;
+  provenance.updated_by = row.updated_by;
+  payload.provenance = provenance;
+
+  return payload as Goal;
+}
+
+function rowToHistoryEvent(row: StoredHistoryRow): ContentHistoryEvent {
+  const before = row.before_json ? parseJsonObject(row.before_json, `history ${row.id} before`) : null;
+  const after = row.after_json ? parseJsonObject(row.after_json, `history ${row.id} after`) : null;
+
+  return {
+    id: row.id,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id,
+    action: row.action,
+    actor: row.actor,
+    timestamp: row.timestamp,
+    before,
+    after,
+  };
+}
+
+function toHistoryJson(value: Record<string, unknown> | null | undefined) {
+  return value ? JSON.stringify(value) : null;
+}
+
+function buildHistoryEvent(params: {
+  entityType: ContentEntityType;
+  entityId: string;
+  action: ContentHistoryEvent['action'];
+  actor: string;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  timestamp: string;
+}): ContentHistoryEvent {
+  return {
+    id: randomUUID(),
+    entity_type: params.entityType,
+    entity_id: params.entityId,
+    action: params.action,
+    actor: params.actor,
+    timestamp: params.timestamp,
+    before: params.before ?? null,
+    after: params.after ?? null,
+  };
+}
+
 function toProjectCreate(input: unknown): Project {
   const payload = parseSchema(projectCreateSchema, input, 'project');
   const summary = typeof payload.summary === 'string' ? payload.summary : '';
@@ -380,410 +602,892 @@ function toGoalPatch(input: unknown): Record<string, unknown> {
   return payload;
 }
 
-function buildHistoryEvent(params: {
-  entityType: ContentEntityType;
-  entityId: string;
-  action: ContentHistoryEvent['action'];
-  actor: string;
-  before?: Record<string, unknown> | null;
-  after?: Record<string, unknown> | null;
-  timestamp: string;
-}): ContentHistoryEvent {
+function toProjectSeed(input: unknown): Project {
+  const payload = parseSchema(projectCreateSchema, input, 'project seed');
+  const summary = typeof payload.summary === 'string' ? payload.summary : '';
+  const status = typeof payload.status === 'string' ? payload.status : 'planning';
   return {
-    id: randomUUID(),
-    entity_type: params.entityType,
-    entity_id: params.entityId,
-    action: params.action,
-    actor: params.actor,
-    timestamp: params.timestamp,
-    before: params.before ?? null,
-    after: params.after ?? null,
+    ...payload,
+    summary,
+    status,
+  } as Project;
+}
+
+function toGoalSeed(input: unknown): Goal {
+  const payload = parseSchema(goalCreateSchema, input, 'goal seed');
+  return {
+    ...payload,
+  } as Goal;
+}
+
+function toSeedHistoryEvent(input: unknown): ContentHistoryEvent {
+  if (!isRecord(input)) {
+    throw new ContentStoreError(500, 'history seed entry is invalid');
+  }
+
+  const entityType =
+    input.entity_type === 'project' || input.entity_type === 'goal' ? input.entity_type : null;
+  const action =
+    input.action === 'create' ||
+    input.action === 'update' ||
+    input.action === 'archive' ||
+    input.action === 'restore'
+      ? input.action
+      : null;
+  const entityId = typeof input.entity_id === 'string' ? input.entity_id : null;
+  const actor = typeof input.actor === 'string' && input.actor.trim().length > 0 ? input.actor.trim() : SEED_ACTOR;
+  const timestamp =
+    typeof input.timestamp === 'string' && input.timestamp.trim().length > 0 ? input.timestamp : nowIso();
+  const id = typeof input.id === 'string' && input.id.trim().length > 0 ? input.id.trim() : randomUUID();
+
+  if (!entityType || !action || !entityId) {
+    throw new ContentStoreError(500, 'history seed entry is missing required fields');
+  }
+
+  return {
+    id,
+    entity_type: entityType,
+    entity_id: entityId,
+    action,
+    actor,
+    timestamp,
+    before: isRecord(input.before) ? cloneRecord(input.before) : null,
+    after: isRecord(input.after) ? cloneRecord(input.after) : null,
   };
 }
 
-async function appendHistory(event: ContentHistoryEvent) {
-  const history = await readJsonArray<ContentHistoryEvent>(HISTORY_PATH, 'history');
-  history.push(event);
-  await writeJsonArray(HISTORY_PATH, history);
-}
-
-function includeByArchiveState<T extends { is_archived?: boolean }>(
-  items: T[],
-  includeArchived: boolean
-) {
-  if (includeArchived) {
-    return items;
+function getDb(event: StoreEvent): D1Database {
+  const candidate = event.platform?.env?.[DB_BINDING_NAME];
+  if (!candidate || !isRecord(candidate)) {
+    throw new ContentStoreError(
+      503,
+      'D1 binding "DB" is not available for this request. Use wrangler dev/deploy with D1 bindings configured.'
+    );
   }
-  return items.filter((item) => item.is_archived !== true);
+
+  const prepare = (candidate as { prepare?: unknown }).prepare;
+  const batch = (candidate as { batch?: unknown }).batch;
+  if (typeof prepare !== 'function' || typeof batch !== 'function') {
+    throw new ContentStoreError(503, 'D1 binding "DB" is invalid');
+  }
+
+  return candidate as unknown as D1Database;
 }
 
-export async function listProjects(options: { includeArchived?: boolean } = {}) {
+async function executeInBatches(db: D1Database, statements: D1PreparedStatement[]) {
+  for (let index = 0; index < statements.length; index += SEED_BATCH_SIZE) {
+    const chunk = statements.slice(index, index + SEED_BATCH_SIZE);
+    if (chunk.length > 0) {
+      await db.batch(chunk);
+    }
+  }
+}
+
+function selectProjectSeeds() {
+  const canonical = asSeedArray<Project>(contentProjectsSeed);
+  if (canonical.length > 0) {
+    return canonical;
+  }
+  return asSeedArray<Project>(legacyProjectsSeed);
+}
+
+function selectGoalSeeds() {
+  const canonical = asSeedArray<Goal>(contentGoalsSeed);
+  if (canonical.length > 0) {
+    return canonical;
+  }
+  return asSeedArray<Goal>(legacyGoalsSeed);
+}
+
+function isUniqueConstraintError(err: unknown) {
+  if (!(err instanceof Error)) {
+    return false;
+  }
+  return /unique|constraint/i.test(err.message);
+}
+
+function extractRunChanges(result: unknown): number | null {
+  if (!isRecord(result)) {
+    return null;
+  }
+  const meta = result.meta;
+  if (!isRecord(meta)) {
+    return null;
+  }
+  const changes = meta.changes;
+  return typeof changes === 'number' ? changes : null;
+}
+
+async function ensureSeeded(db: D1Database) {
+  if (seedPromise) {
+    await seedPromise;
+    return;
+  }
+
+  seedPromise = (async () => {
+    const counts = await db
+      .prepare(
+        `
+SELECT
+  (SELECT COUNT(*) FROM projects) AS project_count,
+  (SELECT COUNT(*) FROM goals) AS goal_count,
+  (SELECT COUNT(*) FROM content_history) AS history_count
+`
+      )
+      .first<StoredCountsRow>();
+
+    const projectCount = parseIntSafe(counts?.project_count);
+    const goalCount = parseIntSafe(counts?.goal_count);
+    const historyCount = parseIntSafe(counts?.history_count);
+
+    const statements: D1PreparedStatement[] = [];
+
+    if (projectCount === 0) {
+      const seedTimestamp = nowIso();
+      for (const seed of selectProjectSeeds()) {
+        const seedRecord = seed as unknown as Record<string, unknown>;
+        const project = toProjectSeed(seed);
+        const archived = seedRecord.is_archived === true;
+        const seededEntity: Project = {
+          ...project,
+          is_archived: archived,
+          archived_at:
+            archived && typeof seedRecord.archived_at === 'string'
+              ? seedRecord.archived_at
+              : archived
+                ? seedTimestamp
+                : null,
+          archived_by:
+            archived && typeof seedRecord.archived_by === 'string'
+              ? seedRecord.archived_by
+              : archived
+                ? SEED_ACTOR
+                : null,
+          provenance: ensureProvenance(seedRecord.provenance ?? project.provenance, SEED_ACTOR, seedTimestamp, true),
+        };
+        const stored = normalizeEntityForStorage(
+          seededEntity as unknown as Record<string, unknown>,
+          SEED_ACTOR,
+          seedTimestamp,
+          true
+        );
+        statements.push(
+          db
+            .prepare(INSERT_PROJECT_SQL)
+            .bind(
+              seededEntity.id,
+              stored.payloadJson,
+              stored.isArchived,
+              stored.archivedAt,
+              stored.archivedBy,
+              stored.createdAt,
+              stored.createdBy,
+              stored.updatedAt,
+              stored.updatedBy
+            )
+        );
+      }
+    }
+
+    if (goalCount === 0) {
+      const seedTimestamp = nowIso();
+      for (const seed of selectGoalSeeds()) {
+        const seedRecord = seed as unknown as Record<string, unknown>;
+        const goal = toGoalSeed(seed);
+        const archived = seedRecord.is_archived === true;
+        const seededEntity: Goal = {
+          ...goal,
+          is_archived: archived,
+          archived_at:
+            archived && typeof seedRecord.archived_at === 'string'
+              ? seedRecord.archived_at
+              : archived
+                ? seedTimestamp
+                : null,
+          archived_by:
+            archived && typeof seedRecord.archived_by === 'string'
+              ? seedRecord.archived_by
+              : archived
+                ? SEED_ACTOR
+                : null,
+          provenance: ensureProvenance(seedRecord.provenance ?? goal.provenance, SEED_ACTOR, seedTimestamp, true),
+        };
+        const stored = normalizeEntityForStorage(
+          seededEntity as unknown as Record<string, unknown>,
+          SEED_ACTOR,
+          seedTimestamp,
+          true
+        );
+        statements.push(
+          db
+            .prepare(INSERT_GOAL_SQL)
+            .bind(
+              seededEntity.id,
+              stored.payloadJson,
+              stored.isArchived,
+              stored.archivedAt,
+              stored.archivedBy,
+              stored.createdAt,
+              stored.createdBy,
+              stored.updatedAt,
+              stored.updatedBy
+            )
+        );
+      }
+    }
+
+    if (historyCount === 0) {
+      for (const seed of asSeedArray<ContentHistoryEvent>(contentHistorySeed)) {
+        const event = toSeedHistoryEvent(seed);
+        statements.push(
+          db
+            .prepare(INSERT_HISTORY_SQL)
+            .bind(
+              event.id,
+              event.entity_type,
+              event.entity_id,
+              event.action,
+              event.actor,
+              event.timestamp,
+              toHistoryJson(event.before),
+              toHistoryJson(event.after)
+            )
+        );
+      }
+    }
+
+    if (statements.length > 0) {
+      await executeInBatches(db, statements);
+    }
+  })();
+
+  try {
+    await seedPromise;
+  } catch (err) {
+    seedPromise = null;
+    throw err;
+  }
+}
+
+async function findProjectRow(db: D1Database, id: string) {
+  return await db
+    .prepare(`SELECT ${SELECT_ENTITY_COLUMNS} FROM projects WHERE id = ?1`)
+    .bind(id)
+    .first<StoredEntityRow>();
+}
+
+async function findGoalRow(db: D1Database, id: string) {
+  return await db
+    .prepare(`SELECT ${SELECT_ENTITY_COLUMNS} FROM goals WHERE id = ?1`)
+    .bind(id)
+    .first<StoredEntityRow>();
+}
+
+export async function listProjects(event: StoreEvent, options: { includeArchived?: boolean } = {}) {
+  const db = getDb(event);
+  await ensureSeeded(db);
+
   const includeArchived = options.includeArchived === true;
-  const projects = await readJsonArray<Project>(PROJECTS_PATH, 'projects');
-  return includeByArchiveState(projects, includeArchived);
+  const sql = includeArchived
+    ? `SELECT ${SELECT_ENTITY_COLUMNS} FROM projects ORDER BY rowid`
+    : `SELECT ${SELECT_ENTITY_COLUMNS} FROM projects WHERE is_archived = 0 ORDER BY rowid`;
+
+  const rows = await db.prepare(sql).all<StoredEntityRow>();
+  return rows.results.map((row) => rowToProject(row));
 }
 
-export async function listGoals(options: { includeArchived?: boolean } = {}) {
+export async function listGoals(event: StoreEvent, options: { includeArchived?: boolean } = {}) {
+  const db = getDb(event);
+  await ensureSeeded(db);
+
   const includeArchived = options.includeArchived === true;
-  const goals = await readJsonArray<Goal>(GOALS_PATH, 'goals');
-  return includeByArchiveState(goals, includeArchived);
+  const sql = includeArchived
+    ? `SELECT ${SELECT_ENTITY_COLUMNS} FROM goals ORDER BY rowid`
+    : `SELECT ${SELECT_ENTITY_COLUMNS} FROM goals WHERE is_archived = 0 ORDER BY rowid`;
+
+  const rows = await db.prepare(sql).all<StoredEntityRow>();
+  return rows.results.map((row) => rowToGoal(row));
 }
 
-export async function getProjectById(id: string, options: { includeArchived?: boolean } = {}) {
+export async function getProjectById(
+  event: StoreEvent,
+  id: string,
+  options: { includeArchived?: boolean } = {}
+) {
+  const db = getDb(event);
+  await ensureSeeded(db);
+
   const includeArchived = options.includeArchived !== false;
-  const projects = await readJsonArray<Project>(PROJECTS_PATH, 'projects');
-  const project = projects.find((item) => item.id === id);
-  if (!project || (!includeArchived && project.is_archived === true)) {
+  const row = await findProjectRow(db, id);
+  if (!row) {
     throw new ContentStoreError(404, `project ${id} not found`);
   }
+
+  const project = rowToProject(row);
+  if (!includeArchived && project.is_archived === true) {
+    throw new ContentStoreError(404, `project ${id} not found`);
+  }
+
   return project;
 }
 
-export async function getGoalById(id: string, options: { includeArchived?: boolean } = {}) {
+export async function getGoalById(event: StoreEvent, id: string, options: { includeArchived?: boolean } = {}) {
+  const db = getDb(event);
+  await ensureSeeded(db);
+
   const includeArchived = options.includeArchived !== false;
-  const goals = await readJsonArray<Goal>(GOALS_PATH, 'goals');
-  const goal = goals.find((item) => item.id === id);
-  if (!goal || (!includeArchived && goal.is_archived === true)) {
+  const row = await findGoalRow(db, id);
+  if (!row) {
     throw new ContentStoreError(404, `goal ${id} not found`);
   }
+
+  const goal = rowToGoal(row);
+  if (!includeArchived && goal.is_archived === true) {
+    throw new ContentStoreError(404, `goal ${id} not found`);
+  }
+
   return goal;
 }
 
-export async function createProject(input: unknown, actor: string) {
+export async function createProject(event: StoreEvent, input: unknown, actor: string) {
+  const db = getDb(event);
+  await ensureSeeded(db);
+
   const candidate = toProjectCreate(input);
+  const existing = await findProjectRow(db, candidate.id);
+  if (existing) {
+    throw new ContentStoreError(409, `project ${candidate.id} already exists`);
+  }
+
   const timestamp = nowIso();
+  const created: Project = {
+    ...candidate,
+    is_archived: false,
+    archived_at: null,
+    archived_by: null,
+    provenance: ensureProvenance(candidate.provenance, actor, timestamp, true),
+  };
+  const stored = normalizeEntityForStorage(created as unknown as Record<string, unknown>, actor, timestamp, true);
+  const history = buildHistoryEvent({
+    entityType: 'project',
+    entityId: created.id,
+    action: 'create',
+    actor,
+    timestamp,
+    before: null,
+    after: cloneRecord(stored.entity),
+  });
 
-  return withWriteLock(async () => {
-    const projects = await readJsonArray<Project>(PROJECTS_PATH, 'projects');
-    if (projects.some((item) => item.id === candidate.id)) {
-      throw new ContentStoreError(409, `project ${candidate.id} already exists`);
-    }
-
-    const created: Project = {
-      ...candidate,
-      is_archived: false,
-      archived_at: null,
-      archived_by: null,
-      provenance: ensureProvenance(candidate.provenance, actor, timestamp, true),
-    };
-
-    projects.push(created);
-    await writeJsonArray(PROJECTS_PATH, projects);
-
-    await appendHistory(
-      buildHistoryEvent({
-        entityType: 'project',
-        entityId: created.id,
-        action: 'create',
+  try {
+    await db
+      .prepare(CREATE_PROJECT_WITH_HISTORY_SQL)
+      .bind(
+        created.id,
+        stored.payloadJson,
+        stored.isArchived,
+        stored.archivedAt,
+        stored.archivedBy,
+        stored.createdAt,
+        stored.createdBy,
+        stored.updatedAt,
+        stored.updatedBy,
+        history.id,
         actor,
         timestamp,
-        before: null,
-        after: cloneRecord(created as Record<string, unknown>),
-      })
-    );
+        toHistoryJson(history.after)
+      )
+      .run();
+  } catch (err) {
+    if (isUniqueConstraintError(err)) {
+      throw new ContentStoreError(409, `project ${created.id} already exists`);
+    }
+    throw err;
+  }
 
-    return created;
-  });
+  return stored.entity as Project;
 }
 
-export async function createGoal(input: unknown, actor: string) {
+export async function createGoal(event: StoreEvent, input: unknown, actor: string) {
+  const db = getDb(event);
+  await ensureSeeded(db);
+
   const candidate = toGoalCreate(input);
+  const existing = await findGoalRow(db, candidate.id);
+  if (existing) {
+    throw new ContentStoreError(409, `goal ${candidate.id} already exists`);
+  }
+
   const timestamp = nowIso();
+  const created: Goal = {
+    ...candidate,
+    is_archived: false,
+    archived_at: null,
+    archived_by: null,
+    provenance: ensureProvenance(candidate.provenance, actor, timestamp, true),
+  };
+  const stored = normalizeEntityForStorage(created as unknown as Record<string, unknown>, actor, timestamp, true);
+  const history = buildHistoryEvent({
+    entityType: 'goal',
+    entityId: created.id,
+    action: 'create',
+    actor,
+    timestamp,
+    before: null,
+    after: cloneRecord(stored.entity),
+  });
 
-  return withWriteLock(async () => {
-    const goals = await readJsonArray<Goal>(GOALS_PATH, 'goals');
-    if (goals.some((item) => item.id === candidate.id)) {
-      throw new ContentStoreError(409, `goal ${candidate.id} already exists`);
-    }
-
-    const created: Goal = {
-      ...candidate,
-      is_archived: false,
-      archived_at: null,
-      archived_by: null,
-      provenance: ensureProvenance(candidate.provenance, actor, timestamp, true),
-    };
-
-    goals.push(created);
-    await writeJsonArray(GOALS_PATH, goals);
-
-    await appendHistory(
-      buildHistoryEvent({
-        entityType: 'goal',
-        entityId: created.id,
-        action: 'create',
+  try {
+    await db
+      .prepare(CREATE_GOAL_WITH_HISTORY_SQL)
+      .bind(
+        created.id,
+        stored.payloadJson,
+        stored.isArchived,
+        stored.archivedAt,
+        stored.archivedBy,
+        stored.createdAt,
+        stored.createdBy,
+        stored.updatedAt,
+        stored.updatedBy,
+        history.id,
         actor,
         timestamp,
-        before: null,
-        after: cloneRecord(created as Record<string, unknown>),
-      })
-    );
+        toHistoryJson(history.after)
+      )
+      .run();
+  } catch (err) {
+    if (isUniqueConstraintError(err)) {
+      throw new ContentStoreError(409, `goal ${created.id} already exists`);
+    }
+    throw err;
+  }
 
-    return created;
-  });
+  return stored.entity as Goal;
 }
 
-export async function updateProject(id: string, patchInput: unknown, actor: string) {
+export async function updateProject(event: StoreEvent, id: string, patchInput: unknown, actor: string) {
+  const db = getDb(event);
+  await ensureSeeded(db);
+
   const patch = toProjectPatch(patchInput);
+  if (typeof patch.id === 'string' && patch.id !== id) {
+    throw new ContentStoreError(400, 'project id in payload does not match route id');
+  }
+
+  const existing = await findProjectRow(db, id);
+  if (!existing) {
+    throw new ContentStoreError(404, `project ${id} not found`);
+  }
+
+  const previous = rowToProject(existing) as unknown as Record<string, unknown>;
+  const previousArchived = previous.is_archived === true;
+  const before = cloneRecord(previous);
   const timestamp = nowIso();
 
-  return withWriteLock(async () => {
-    const projects = await readJsonArray<Project>(PROJECTS_PATH, 'projects');
-    const index = projects.findIndex((item) => item.id === id);
-    if (index === -1) {
-      throw new ContentStoreError(404, `project ${id} not found`);
-    }
+  const merged: Record<string, unknown> = {
+    ...previous,
+    ...patch,
+    id,
+  };
+  merged.provenance = ensureProvenance(merged.provenance, actor, timestamp, false);
+  applyArchiveFields(merged, actor, timestamp, previousArchived);
 
-    if (typeof patch.id === 'string' && patch.id !== id) {
-      throw new ContentStoreError(400, 'project id in payload does not match route id');
-    }
-
-    const previous = projects[index] as Record<string, unknown>;
-    const previousArchived = previous.is_archived === true;
-    const before = cloneRecord(previous);
-
-    const merged: Record<string, unknown> = {
-      ...previous,
-      ...patch,
-      id,
-    };
-
-    merged.provenance = ensureProvenance(merged.provenance, actor, timestamp, false);
-    applyArchiveFields(merged, actor, timestamp, previousArchived);
-
-    projects[index] = merged as Project;
-    await writeJsonArray(PROJECTS_PATH, projects);
-
-    await appendHistory(
-      buildHistoryEvent({
-        entityType: 'project',
-        entityId: id,
-        action: 'update',
-        actor,
-        timestamp,
-        before,
-        after: cloneRecord(merged),
-      })
-    );
-
-    return projects[index];
+  const stored = normalizeEntityForStorage(merged, actor, timestamp, false);
+  const after = cloneRecord(stored.entity);
+  const history = buildHistoryEvent({
+    entityType: 'project',
+    entityId: id,
+    action: 'update',
+    actor,
+    timestamp,
+    before,
+    after,
   });
+
+  const runResult = await db
+    .prepare(UPDATE_PROJECT_WITH_HISTORY_SQL)
+    .bind(
+      stored.payloadJson,
+      stored.isArchived,
+      stored.archivedAt,
+      stored.archivedBy,
+      stored.createdAt,
+      stored.createdBy,
+      stored.updatedAt,
+      stored.updatedBy,
+      id,
+      history.id,
+      history.action,
+      actor,
+      timestamp,
+      toHistoryJson(history.before),
+      toHistoryJson(history.after)
+    )
+    .run();
+
+  const changes = extractRunChanges(runResult);
+  if (changes === 0) {
+    throw new ContentStoreError(404, `project ${id} not found`);
+  }
+
+  return stored.entity as Project;
 }
 
-export async function updateGoal(id: string, patchInput: unknown, actor: string) {
+export async function updateGoal(event: StoreEvent, id: string, patchInput: unknown, actor: string) {
+  const db = getDb(event);
+  await ensureSeeded(db);
+
   const patch = toGoalPatch(patchInput);
+  if (typeof patch.id === 'string' && patch.id !== id) {
+    throw new ContentStoreError(400, 'goal id in payload does not match route id');
+  }
+
+  const existing = await findGoalRow(db, id);
+  if (!existing) {
+    throw new ContentStoreError(404, `goal ${id} not found`);
+  }
+
+  const previous = rowToGoal(existing) as unknown as Record<string, unknown>;
+  const previousArchived = previous.is_archived === true;
+  const before = cloneRecord(previous);
   const timestamp = nowIso();
 
-  return withWriteLock(async () => {
-    const goals = await readJsonArray<Goal>(GOALS_PATH, 'goals');
-    const index = goals.findIndex((item) => item.id === id);
-    if (index === -1) {
-      throw new ContentStoreError(404, `goal ${id} not found`);
-    }
+  const merged: Record<string, unknown> = {
+    ...previous,
+    ...patch,
+    id,
+  };
+  merged.provenance = ensureProvenance(merged.provenance, actor, timestamp, false);
+  applyArchiveFields(merged, actor, timestamp, previousArchived);
 
-    if (typeof patch.id === 'string' && patch.id !== id) {
-      throw new ContentStoreError(400, 'goal id in payload does not match route id');
-    }
+  const stored = normalizeEntityForStorage(merged, actor, timestamp, false);
+  const after = cloneRecord(stored.entity);
+  const history = buildHistoryEvent({
+    entityType: 'goal',
+    entityId: id,
+    action: 'update',
+    actor,
+    timestamp,
+    before,
+    after,
+  });
 
-    const previous = goals[index] as Record<string, unknown>;
-    const previousArchived = previous.is_archived === true;
-    const before = cloneRecord(previous);
-
-    const merged: Record<string, unknown> = {
-      ...previous,
-      ...patch,
+  const runResult = await db
+    .prepare(UPDATE_GOAL_WITH_HISTORY_SQL)
+    .bind(
+      stored.payloadJson,
+      stored.isArchived,
+      stored.archivedAt,
+      stored.archivedBy,
+      stored.createdAt,
+      stored.createdBy,
+      stored.updatedAt,
+      stored.updatedBy,
       id,
-    };
+      history.id,
+      history.action,
+      actor,
+      timestamp,
+      toHistoryJson(history.before),
+      toHistoryJson(history.after)
+    )
+    .run();
 
-    merged.provenance = ensureProvenance(merged.provenance, actor, timestamp, false);
-    applyArchiveFields(merged, actor, timestamp, previousArchived);
+  const changes = extractRunChanges(runResult);
+  if (changes === 0) {
+    throw new ContentStoreError(404, `goal ${id} not found`);
+  }
 
-    goals[index] = merged as Goal;
-    await writeJsonArray(GOALS_PATH, goals);
-
-    await appendHistory(
-      buildHistoryEvent({
-        entityType: 'goal',
-        entityId: id,
-        action: 'update',
-        actor,
-        timestamp,
-        before,
-        after: cloneRecord(merged),
-      })
-    );
-
-    return goals[index];
-  });
+  return stored.entity as Goal;
 }
 
-export async function archiveProject(id: string, actor: string) {
-  return withWriteLock(async () => {
-    const projects = await readJsonArray<Project>(PROJECTS_PATH, 'projects');
-    const index = projects.findIndex((item) => item.id === id);
-    if (index === -1) {
-      throw new ContentStoreError(404, `project ${id} not found`);
-    }
+export async function archiveProject(event: StoreEvent, id: string, actor: string) {
+  const db = getDb(event);
+  await ensureSeeded(db);
 
-    const timestamp = nowIso();
-    const before = cloneRecord(projects[index] as Record<string, unknown>);
-    const updated: Project = {
-      ...projects[index],
-      is_archived: true,
-      archived_at: timestamp,
-      archived_by: actor,
-      provenance: ensureProvenance(projects[index].provenance, actor, timestamp, false),
-    };
+  const existing = await findProjectRow(db, id);
+  if (!existing) {
+    throw new ContentStoreError(404, `project ${id} not found`);
+  }
 
-    projects[index] = updated;
-    await writeJsonArray(PROJECTS_PATH, projects);
+  const previous = rowToProject(existing) as unknown as Record<string, unknown>;
+  const before = cloneRecord(previous);
+  const timestamp = nowIso();
 
-    await appendHistory(
-      buildHistoryEvent({
-        entityType: 'project',
-        entityId: id,
-        action: 'archive',
-        actor,
-        timestamp,
-        before,
-        after: cloneRecord(updated as Record<string, unknown>),
-      })
-    );
+  const updated: Record<string, unknown> = {
+    ...previous,
+    is_archived: true,
+    archived_at: timestamp,
+    archived_by: actor,
+    provenance: ensureProvenance(previous.provenance, actor, timestamp, false),
+  };
 
-    return updated;
+  const stored = normalizeEntityForStorage(updated, actor, timestamp, false);
+  const history = buildHistoryEvent({
+    entityType: 'project',
+    entityId: id,
+    action: 'archive',
+    actor,
+    timestamp,
+    before,
+    after: cloneRecord(stored.entity),
   });
+
+  const runResult = await db
+    .prepare(UPDATE_PROJECT_WITH_HISTORY_SQL)
+    .bind(
+      stored.payloadJson,
+      stored.isArchived,
+      stored.archivedAt,
+      stored.archivedBy,
+      stored.createdAt,
+      stored.createdBy,
+      stored.updatedAt,
+      stored.updatedBy,
+      id,
+      history.id,
+      history.action,
+      actor,
+      timestamp,
+      toHistoryJson(history.before),
+      toHistoryJson(history.after)
+    )
+    .run();
+
+  const changes = extractRunChanges(runResult);
+  if (changes === 0) {
+    throw new ContentStoreError(404, `project ${id} not found`);
+  }
+
+  return stored.entity as Project;
 }
 
-export async function restoreProject(id: string, actor: string) {
-  return withWriteLock(async () => {
-    const projects = await readJsonArray<Project>(PROJECTS_PATH, 'projects');
-    const index = projects.findIndex((item) => item.id === id);
-    if (index === -1) {
-      throw new ContentStoreError(404, `project ${id} not found`);
-    }
+export async function restoreProject(event: StoreEvent, id: string, actor: string) {
+  const db = getDb(event);
+  await ensureSeeded(db);
 
-    const timestamp = nowIso();
-    const before = cloneRecord(projects[index] as Record<string, unknown>);
-    const updated: Project = {
-      ...projects[index],
-      is_archived: false,
-      archived_at: null,
-      archived_by: null,
-      provenance: ensureProvenance(projects[index].provenance, actor, timestamp, false),
-    };
+  const existing = await findProjectRow(db, id);
+  if (!existing) {
+    throw new ContentStoreError(404, `project ${id} not found`);
+  }
 
-    projects[index] = updated;
-    await writeJsonArray(PROJECTS_PATH, projects);
+  const previous = rowToProject(existing) as unknown as Record<string, unknown>;
+  const before = cloneRecord(previous);
+  const timestamp = nowIso();
 
-    await appendHistory(
-      buildHistoryEvent({
-        entityType: 'project',
-        entityId: id,
-        action: 'restore',
-        actor,
-        timestamp,
-        before,
-        after: cloneRecord(updated as Record<string, unknown>),
-      })
-    );
+  const updated: Record<string, unknown> = {
+    ...previous,
+    is_archived: false,
+    archived_at: null,
+    archived_by: null,
+    provenance: ensureProvenance(previous.provenance, actor, timestamp, false),
+  };
 
-    return updated;
+  const stored = normalizeEntityForStorage(updated, actor, timestamp, false);
+  const history = buildHistoryEvent({
+    entityType: 'project',
+    entityId: id,
+    action: 'restore',
+    actor,
+    timestamp,
+    before,
+    after: cloneRecord(stored.entity),
   });
+
+  const runResult = await db
+    .prepare(UPDATE_PROJECT_WITH_HISTORY_SQL)
+    .bind(
+      stored.payloadJson,
+      stored.isArchived,
+      stored.archivedAt,
+      stored.archivedBy,
+      stored.createdAt,
+      stored.createdBy,
+      stored.updatedAt,
+      stored.updatedBy,
+      id,
+      history.id,
+      history.action,
+      actor,
+      timestamp,
+      toHistoryJson(history.before),
+      toHistoryJson(history.after)
+    )
+    .run();
+
+  const changes = extractRunChanges(runResult);
+  if (changes === 0) {
+    throw new ContentStoreError(404, `project ${id} not found`);
+  }
+
+  return stored.entity as Project;
 }
 
-export async function archiveGoal(id: string, actor: string) {
-  return withWriteLock(async () => {
-    const goals = await readJsonArray<Goal>(GOALS_PATH, 'goals');
-    const index = goals.findIndex((item) => item.id === id);
-    if (index === -1) {
-      throw new ContentStoreError(404, `goal ${id} not found`);
-    }
+export async function archiveGoal(event: StoreEvent, id: string, actor: string) {
+  const db = getDb(event);
+  await ensureSeeded(db);
 
-    const timestamp = nowIso();
-    const before = cloneRecord(goals[index] as Record<string, unknown>);
-    const updated: Goal = {
-      ...goals[index],
-      is_archived: true,
-      archived_at: timestamp,
-      archived_by: actor,
-      provenance: ensureProvenance(goals[index].provenance, actor, timestamp, false),
-    };
+  const existing = await findGoalRow(db, id);
+  if (!existing) {
+    throw new ContentStoreError(404, `goal ${id} not found`);
+  }
 
-    goals[index] = updated;
-    await writeJsonArray(GOALS_PATH, goals);
+  const previous = rowToGoal(existing) as unknown as Record<string, unknown>;
+  const before = cloneRecord(previous);
+  const timestamp = nowIso();
 
-    await appendHistory(
-      buildHistoryEvent({
-        entityType: 'goal',
-        entityId: id,
-        action: 'archive',
-        actor,
-        timestamp,
-        before,
-        after: cloneRecord(updated as Record<string, unknown>),
-      })
-    );
+  const updated: Record<string, unknown> = {
+    ...previous,
+    is_archived: true,
+    archived_at: timestamp,
+    archived_by: actor,
+    provenance: ensureProvenance(previous.provenance, actor, timestamp, false),
+  };
 
-    return updated;
+  const stored = normalizeEntityForStorage(updated, actor, timestamp, false);
+  const history = buildHistoryEvent({
+    entityType: 'goal',
+    entityId: id,
+    action: 'archive',
+    actor,
+    timestamp,
+    before,
+    after: cloneRecord(stored.entity),
   });
+
+  const runResult = await db
+    .prepare(UPDATE_GOAL_WITH_HISTORY_SQL)
+    .bind(
+      stored.payloadJson,
+      stored.isArchived,
+      stored.archivedAt,
+      stored.archivedBy,
+      stored.createdAt,
+      stored.createdBy,
+      stored.updatedAt,
+      stored.updatedBy,
+      id,
+      history.id,
+      history.action,
+      actor,
+      timestamp,
+      toHistoryJson(history.before),
+      toHistoryJson(history.after)
+    )
+    .run();
+
+  const changes = extractRunChanges(runResult);
+  if (changes === 0) {
+    throw new ContentStoreError(404, `goal ${id} not found`);
+  }
+
+  return stored.entity as Goal;
 }
 
-export async function restoreGoal(id: string, actor: string) {
-  return withWriteLock(async () => {
-    const goals = await readJsonArray<Goal>(GOALS_PATH, 'goals');
-    const index = goals.findIndex((item) => item.id === id);
-    if (index === -1) {
-      throw new ContentStoreError(404, `goal ${id} not found`);
-    }
+export async function restoreGoal(event: StoreEvent, id: string, actor: string) {
+  const db = getDb(event);
+  await ensureSeeded(db);
 
-    const timestamp = nowIso();
-    const before = cloneRecord(goals[index] as Record<string, unknown>);
-    const updated: Goal = {
-      ...goals[index],
-      is_archived: false,
-      archived_at: null,
-      archived_by: null,
-      provenance: ensureProvenance(goals[index].provenance, actor, timestamp, false),
-    };
+  const existing = await findGoalRow(db, id);
+  if (!existing) {
+    throw new ContentStoreError(404, `goal ${id} not found`);
+  }
 
-    goals[index] = updated;
-    await writeJsonArray(GOALS_PATH, goals);
+  const previous = rowToGoal(existing) as unknown as Record<string, unknown>;
+  const before = cloneRecord(previous);
+  const timestamp = nowIso();
 
-    await appendHistory(
-      buildHistoryEvent({
-        entityType: 'goal',
-        entityId: id,
-        action: 'restore',
-        actor,
-        timestamp,
-        before,
-        after: cloneRecord(updated as Record<string, unknown>),
-      })
-    );
+  const updated: Record<string, unknown> = {
+    ...previous,
+    is_archived: false,
+    archived_at: null,
+    archived_by: null,
+    provenance: ensureProvenance(previous.provenance, actor, timestamp, false),
+  };
 
-    return updated;
+  const stored = normalizeEntityForStorage(updated, actor, timestamp, false);
+  const history = buildHistoryEvent({
+    entityType: 'goal',
+    entityId: id,
+    action: 'restore',
+    actor,
+    timestamp,
+    before,
+    after: cloneRecord(stored.entity),
   });
+
+  const runResult = await db
+    .prepare(UPDATE_GOAL_WITH_HISTORY_SQL)
+    .bind(
+      stored.payloadJson,
+      stored.isArchived,
+      stored.archivedAt,
+      stored.archivedBy,
+      stored.createdAt,
+      stored.createdBy,
+      stored.updatedAt,
+      stored.updatedBy,
+      id,
+      history.id,
+      history.action,
+      actor,
+      timestamp,
+      toHistoryJson(history.before),
+      toHistoryJson(history.after)
+    )
+    .run();
+
+  const changes = extractRunChanges(runResult);
+  if (changes === 0) {
+    throw new ContentStoreError(404, `goal ${id} not found`);
+  }
+
+  return stored.entity as Goal;
 }
 
-export async function listHistory(options: {
-  entityType?: ContentEntityType;
-  entityId?: string;
-  limit?: number;
-} = {}) {
+export async function listHistory(
+  event: StoreEvent,
+  options: {
+    entityType?: ContentEntityType;
+    entityId?: string;
+    limit?: number;
+  } = {}
+) {
+  const db = getDb(event);
+  await ensureSeeded(db);
+
   const limit = typeof options.limit === 'number' && options.limit > 0 ? Math.floor(options.limit) : 200;
-  const history = await readJsonArray<ContentHistoryEvent>(HISTORY_PATH, 'history');
+  const predicates: string[] = [];
+  const values: unknown[] = [];
 
-  let filtered = history;
   if (options.entityType) {
-    filtered = filtered.filter((event) => event.entity_type === options.entityType);
+    predicates.push('entity_type = ?');
+    values.push(options.entityType);
   }
 
   if (options.entityId) {
-    filtered = filtered.filter((event) => event.entity_id === options.entityId);
+    predicates.push('entity_id = ?');
+    values.push(options.entityId);
   }
 
-  return filtered
-    .slice()
-    .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
-    .slice(0, limit);
+  let sql = `
+SELECT
+  id,
+  entity_type,
+  entity_id,
+  action,
+  actor,
+  timestamp,
+  before_json,
+  after_json
+FROM content_history
+`;
+  if (predicates.length > 0) {
+    sql += ` WHERE ${predicates.join(' AND ')}`;
+  }
+  sql += ' ORDER BY timestamp DESC LIMIT ?';
+  values.push(limit);
+
+  const rows = await db.prepare(sql).bind(...values).all<StoredHistoryRow>();
+  return rows.results.map((row) => rowToHistoryEvent(row));
 }
