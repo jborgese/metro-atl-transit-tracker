@@ -128,122 +128,32 @@ INSERT INTO content_history (
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
 `;
 
-const CREATE_PROJECT_WITH_HISTORY_SQL = `
-WITH inserted AS (
-  INSERT INTO projects (
-    id,
-    payload_json,
-    is_archived,
-    archived_at,
-    archived_by,
-    created_at,
-    created_by,
-    updated_at,
-    updated_by
-  )
-  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-  RETURNING id
-)
-INSERT INTO content_history (
-  id,
-  entity_type,
-  entity_id,
-  action,
-  actor,
-  timestamp,
-  before_json,
-  after_json
-)
-SELECT ?10, 'project', ?1, 'create', ?11, ?12, NULL, ?13
-FROM inserted
+const UPDATE_PROJECT_SQL = `
+UPDATE projects
+SET
+  payload_json = ?1,
+  is_archived = ?2,
+  archived_at = ?3,
+  archived_by = ?4,
+  created_at = ?5,
+  created_by = ?6,
+  updated_at = ?7,
+  updated_by = ?8
+WHERE id = ?9
 `;
 
-const CREATE_GOAL_WITH_HISTORY_SQL = `
-WITH inserted AS (
-  INSERT INTO goals (
-    id,
-    payload_json,
-    is_archived,
-    archived_at,
-    archived_by,
-    created_at,
-    created_by,
-    updated_at,
-    updated_by
-  )
-  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-  RETURNING id
-)
-INSERT INTO content_history (
-  id,
-  entity_type,
-  entity_id,
-  action,
-  actor,
-  timestamp,
-  before_json,
-  after_json
-)
-SELECT ?10, 'goal', ?1, 'create', ?11, ?12, NULL, ?13
-FROM inserted
-`;
-
-const UPDATE_PROJECT_WITH_HISTORY_SQL = `
-WITH updated AS (
-  UPDATE projects
-  SET
-    payload_json = ?1,
-    is_archived = ?2,
-    archived_at = ?3,
-    archived_by = ?4,
-    created_at = ?5,
-    created_by = ?6,
-    updated_at = ?7,
-    updated_by = ?8
-  WHERE id = ?9
-  RETURNING id
-)
-INSERT INTO content_history (
-  id,
-  entity_type,
-  entity_id,
-  action,
-  actor,
-  timestamp,
-  before_json,
-  after_json
-)
-SELECT ?10, 'project', ?9, ?11, ?12, ?13, ?14, ?15
-FROM updated
-`;
-
-const UPDATE_GOAL_WITH_HISTORY_SQL = `
-WITH updated AS (
-  UPDATE goals
-  SET
-    payload_json = ?1,
-    is_archived = ?2,
-    archived_at = ?3,
-    archived_by = ?4,
-    created_at = ?5,
-    created_by = ?6,
-    updated_at = ?7,
-    updated_by = ?8
-  WHERE id = ?9
-  RETURNING id
-)
-INSERT INTO content_history (
-  id,
-  entity_type,
-  entity_id,
-  action,
-  actor,
-  timestamp,
-  before_json,
-  after_json
-)
-SELECT ?10, 'goal', ?9, ?11, ?12, ?13, ?14, ?15
-FROM updated
+const UPDATE_GOAL_SQL = `
+UPDATE goals
+SET
+  payload_json = ?1,
+  is_archived = ?2,
+  archived_at = ?3,
+  archived_by = ?4,
+  created_at = ?5,
+  created_by = ?6,
+  updated_at = ?7,
+  updated_by = ?8
+WHERE id = ?9
 `;
 
 const nonEmptyStringSchema = z.string().trim().min(1);
@@ -979,24 +889,33 @@ export async function createProject(event: StoreEvent, input: unknown, actor: st
   });
 
   try {
-    await db
-      .prepare(CREATE_PROJECT_WITH_HISTORY_SQL)
-      .bind(
-        created.id,
-        stored.payloadJson,
-        stored.isArchived,
-        stored.archivedAt,
-        stored.archivedBy,
-        stored.createdAt,
-        stored.createdBy,
-        stored.updatedAt,
-        stored.updatedBy,
-        history.id,
-        actor,
-        timestamp,
-        toHistoryJson(history.after)
-      )
-      .run();
+    await db.batch([
+      db
+        .prepare(INSERT_PROJECT_SQL)
+        .bind(
+          created.id,
+          stored.payloadJson,
+          stored.isArchived,
+          stored.archivedAt,
+          stored.archivedBy,
+          stored.createdAt,
+          stored.createdBy,
+          stored.updatedAt,
+          stored.updatedBy
+        ),
+      db
+        .prepare(INSERT_HISTORY_SQL)
+        .bind(
+          history.id,
+          'project',
+          created.id,
+          history.action,
+          actor,
+          timestamp,
+          null,
+          toHistoryJson(history.after)
+        ),
+    ]);
   } catch (err) {
     if (isUniqueConstraintError(err)) {
       throw new ContentStoreError(409, `project ${created.id} already exists`);
@@ -1037,24 +956,33 @@ export async function createGoal(event: StoreEvent, input: unknown, actor: strin
   });
 
   try {
-    await db
-      .prepare(CREATE_GOAL_WITH_HISTORY_SQL)
-      .bind(
-        created.id,
-        stored.payloadJson,
-        stored.isArchived,
-        stored.archivedAt,
-        stored.archivedBy,
-        stored.createdAt,
-        stored.createdBy,
-        stored.updatedAt,
-        stored.updatedBy,
-        history.id,
-        actor,
-        timestamp,
-        toHistoryJson(history.after)
-      )
-      .run();
+    await db.batch([
+      db
+        .prepare(INSERT_GOAL_SQL)
+        .bind(
+          created.id,
+          stored.payloadJson,
+          stored.isArchived,
+          stored.archivedAt,
+          stored.archivedBy,
+          stored.createdAt,
+          stored.createdBy,
+          stored.updatedAt,
+          stored.updatedBy
+        ),
+      db
+        .prepare(INSERT_HISTORY_SQL)
+        .bind(
+          history.id,
+          'goal',
+          created.id,
+          history.action,
+          actor,
+          timestamp,
+          null,
+          toHistoryJson(history.after)
+        ),
+    ]);
   } catch (err) {
     if (isUniqueConstraintError(err)) {
       throw new ContentStoreError(409, `goal ${created.id} already exists`);
@@ -1104,28 +1032,35 @@ export async function updateProject(event: StoreEvent, id: string, patchInput: u
     after,
   });
 
-  const runResult = await db
-    .prepare(UPDATE_PROJECT_WITH_HISTORY_SQL)
-    .bind(
-      stored.payloadJson,
-      stored.isArchived,
-      stored.archivedAt,
-      stored.archivedBy,
-      stored.createdAt,
-      stored.createdBy,
-      stored.updatedAt,
-      stored.updatedBy,
-      id,
-      history.id,
-      history.action,
-      actor,
-      timestamp,
-      toHistoryJson(history.before),
-      toHistoryJson(history.after)
-    )
-    .run();
+  const results = await db.batch([
+    db
+      .prepare(UPDATE_PROJECT_SQL)
+      .bind(
+        stored.payloadJson,
+        stored.isArchived,
+        stored.archivedAt,
+        stored.archivedBy,
+        stored.createdAt,
+        stored.createdBy,
+        stored.updatedAt,
+        stored.updatedBy,
+        id
+      ),
+    db
+      .prepare(INSERT_HISTORY_SQL)
+      .bind(
+        history.id,
+        'project',
+        id,
+        history.action,
+        actor,
+        timestamp,
+        toHistoryJson(history.before),
+        toHistoryJson(history.after)
+      ),
+  ]);
 
-  const changes = extractRunChanges(runResult);
+  const changes = extractRunChanges(results[0]);
   if (changes === 0) {
     throw new ContentStoreError(404, `project ${id} not found`);
   }
@@ -1172,28 +1107,35 @@ export async function updateGoal(event: StoreEvent, id: string, patchInput: unkn
     after,
   });
 
-  const runResult = await db
-    .prepare(UPDATE_GOAL_WITH_HISTORY_SQL)
-    .bind(
-      stored.payloadJson,
-      stored.isArchived,
-      stored.archivedAt,
-      stored.archivedBy,
-      stored.createdAt,
-      stored.createdBy,
-      stored.updatedAt,
-      stored.updatedBy,
-      id,
-      history.id,
-      history.action,
-      actor,
-      timestamp,
-      toHistoryJson(history.before),
-      toHistoryJson(history.after)
-    )
-    .run();
+  const results = await db.batch([
+    db
+      .prepare(UPDATE_GOAL_SQL)
+      .bind(
+        stored.payloadJson,
+        stored.isArchived,
+        stored.archivedAt,
+        stored.archivedBy,
+        stored.createdAt,
+        stored.createdBy,
+        stored.updatedAt,
+        stored.updatedBy,
+        id
+      ),
+    db
+      .prepare(INSERT_HISTORY_SQL)
+      .bind(
+        history.id,
+        'goal',
+        id,
+        history.action,
+        actor,
+        timestamp,
+        toHistoryJson(history.before),
+        toHistoryJson(history.after)
+      ),
+  ]);
 
-  const changes = extractRunChanges(runResult);
+  const changes = extractRunChanges(results[0]);
   if (changes === 0) {
     throw new ContentStoreError(404, `goal ${id} not found`);
   }
@@ -1233,28 +1175,35 @@ export async function archiveProject(event: StoreEvent, id: string, actor: strin
     after: cloneRecord(stored.entity),
   });
 
-  const runResult = await db
-    .prepare(UPDATE_PROJECT_WITH_HISTORY_SQL)
-    .bind(
-      stored.payloadJson,
-      stored.isArchived,
-      stored.archivedAt,
-      stored.archivedBy,
-      stored.createdAt,
-      stored.createdBy,
-      stored.updatedAt,
-      stored.updatedBy,
-      id,
-      history.id,
-      history.action,
-      actor,
-      timestamp,
-      toHistoryJson(history.before),
-      toHistoryJson(history.after)
-    )
-    .run();
+  const results = await db.batch([
+    db
+      .prepare(UPDATE_PROJECT_SQL)
+      .bind(
+        stored.payloadJson,
+        stored.isArchived,
+        stored.archivedAt,
+        stored.archivedBy,
+        stored.createdAt,
+        stored.createdBy,
+        stored.updatedAt,
+        stored.updatedBy,
+        id
+      ),
+    db
+      .prepare(INSERT_HISTORY_SQL)
+      .bind(
+        history.id,
+        'project',
+        id,
+        history.action,
+        actor,
+        timestamp,
+        toHistoryJson(history.before),
+        toHistoryJson(history.after)
+      ),
+  ]);
 
-  const changes = extractRunChanges(runResult);
+  const changes = extractRunChanges(results[0]);
   if (changes === 0) {
     throw new ContentStoreError(404, `project ${id} not found`);
   }
@@ -1294,28 +1243,35 @@ export async function restoreProject(event: StoreEvent, id: string, actor: strin
     after: cloneRecord(stored.entity),
   });
 
-  const runResult = await db
-    .prepare(UPDATE_PROJECT_WITH_HISTORY_SQL)
-    .bind(
-      stored.payloadJson,
-      stored.isArchived,
-      stored.archivedAt,
-      stored.archivedBy,
-      stored.createdAt,
-      stored.createdBy,
-      stored.updatedAt,
-      stored.updatedBy,
-      id,
-      history.id,
-      history.action,
-      actor,
-      timestamp,
-      toHistoryJson(history.before),
-      toHistoryJson(history.after)
-    )
-    .run();
+  const results = await db.batch([
+    db
+      .prepare(UPDATE_PROJECT_SQL)
+      .bind(
+        stored.payloadJson,
+        stored.isArchived,
+        stored.archivedAt,
+        stored.archivedBy,
+        stored.createdAt,
+        stored.createdBy,
+        stored.updatedAt,
+        stored.updatedBy,
+        id
+      ),
+    db
+      .prepare(INSERT_HISTORY_SQL)
+      .bind(
+        history.id,
+        'project',
+        id,
+        history.action,
+        actor,
+        timestamp,
+        toHistoryJson(history.before),
+        toHistoryJson(history.after)
+      ),
+  ]);
 
-  const changes = extractRunChanges(runResult);
+  const changes = extractRunChanges(results[0]);
   if (changes === 0) {
     throw new ContentStoreError(404, `project ${id} not found`);
   }
@@ -1355,28 +1311,35 @@ export async function archiveGoal(event: StoreEvent, id: string, actor: string) 
     after: cloneRecord(stored.entity),
   });
 
-  const runResult = await db
-    .prepare(UPDATE_GOAL_WITH_HISTORY_SQL)
-    .bind(
-      stored.payloadJson,
-      stored.isArchived,
-      stored.archivedAt,
-      stored.archivedBy,
-      stored.createdAt,
-      stored.createdBy,
-      stored.updatedAt,
-      stored.updatedBy,
-      id,
-      history.id,
-      history.action,
-      actor,
-      timestamp,
-      toHistoryJson(history.before),
-      toHistoryJson(history.after)
-    )
-    .run();
+  const results = await db.batch([
+    db
+      .prepare(UPDATE_GOAL_SQL)
+      .bind(
+        stored.payloadJson,
+        stored.isArchived,
+        stored.archivedAt,
+        stored.archivedBy,
+        stored.createdAt,
+        stored.createdBy,
+        stored.updatedAt,
+        stored.updatedBy,
+        id
+      ),
+    db
+      .prepare(INSERT_HISTORY_SQL)
+      .bind(
+        history.id,
+        'goal',
+        id,
+        history.action,
+        actor,
+        timestamp,
+        toHistoryJson(history.before),
+        toHistoryJson(history.after)
+      ),
+  ]);
 
-  const changes = extractRunChanges(runResult);
+  const changes = extractRunChanges(results[0]);
   if (changes === 0) {
     throw new ContentStoreError(404, `goal ${id} not found`);
   }
@@ -1416,28 +1379,35 @@ export async function restoreGoal(event: StoreEvent, id: string, actor: string) 
     after: cloneRecord(stored.entity),
   });
 
-  const runResult = await db
-    .prepare(UPDATE_GOAL_WITH_HISTORY_SQL)
-    .bind(
-      stored.payloadJson,
-      stored.isArchived,
-      stored.archivedAt,
-      stored.archivedBy,
-      stored.createdAt,
-      stored.createdBy,
-      stored.updatedAt,
-      stored.updatedBy,
-      id,
-      history.id,
-      history.action,
-      actor,
-      timestamp,
-      toHistoryJson(history.before),
-      toHistoryJson(history.after)
-    )
-    .run();
+  const results = await db.batch([
+    db
+      .prepare(UPDATE_GOAL_SQL)
+      .bind(
+        stored.payloadJson,
+        stored.isArchived,
+        stored.archivedAt,
+        stored.archivedBy,
+        stored.createdAt,
+        stored.createdBy,
+        stored.updatedAt,
+        stored.updatedBy,
+        id
+      ),
+    db
+      .prepare(INSERT_HISTORY_SQL)
+      .bind(
+        history.id,
+        'goal',
+        id,
+        history.action,
+        actor,
+        timestamp,
+        toHistoryJson(history.before),
+        toHistoryJson(history.after)
+      ),
+  ]);
 
-  const changes = extractRunChanges(runResult);
+  const changes = extractRunChanges(results[0]);
   if (changes === 0) {
     throw new ContentStoreError(404, `goal ${id} not found`);
   }

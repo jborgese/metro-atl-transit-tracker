@@ -7,6 +7,9 @@
     "build": "svelte-kit sync && vite build",
     "deploy": "wrangler deploy",
     "preview": "vite preview",
+    "test:smoke": "node scripts/smoke-content-api.mjs",
+    "test:integration": "node scripts/integration-content-api.mjs",
+    "test:all": "npm run test:smoke && npm run test:integration",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "build:org-logos": "node scripts/build-org-logos.js"
