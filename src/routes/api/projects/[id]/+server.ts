@@ -24,7 +24,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
 export const PATCH: RequestHandler = async (event) => {
   try {
-    const actor = requireEditorActor(event);
+    const actor = await requireEditorActor(event);
     const payload = await event.request.json();
     const updated = await updateProject(event.params.id, payload, actor);
 
@@ -37,7 +37,7 @@ export const PATCH: RequestHandler = async (event) => {
 
 export const DELETE: RequestHandler = async (event) => {
   try {
-    const actor = requireEditorActor(event);
+    const actor = await requireEditorActor(event);
     const archived = await archiveProject(event.params.id, actor);
 
     const response: ApiItemResponse<Project> = { data: archived };

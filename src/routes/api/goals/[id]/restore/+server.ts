@@ -6,7 +6,7 @@ import type { ApiItemResponse, Goal } from '@/types/content';
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const actor = requireEditorActor(event);
+    const actor = await requireEditorActor(event);
     const restored = await restoreGoal(event.params.id, actor);
 
     const response: ApiItemResponse<Goal> = { data: restored };

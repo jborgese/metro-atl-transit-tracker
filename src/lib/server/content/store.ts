@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import contentProjectsSeed from '../../../../data/content/projects.json';
 import contentGoalsSeed from '../../../../data/content/goals.json';
 import contentHistorySeed from '../../../../data/content/history.json';
@@ -38,6 +39,76 @@ const inMemoryStore: {
 let initPromise: Promise<void> | null = null;
 let writeQueue: Promise<void> = Promise.resolve();
 
+const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+const FORBIDDEN_MUTATION_FIELDS = new Set(['is_archived', 'archived_at', 'archived_by']);
+
+const nonEmptyStringSchema = z.string().trim().min(1);
+const idSchema = nonEmptyStringSchema
+  .max(120)
+  .regex(ID_PATTERN, 'must use lowercase letters, numbers, and hyphens only');
+const nullableDateStringSchema = z.union([nonEmptyStringSchema.max(120), z.null()]);
+const provenanceSchema = z.record(z.string(), z.unknown());
+const genericRecordSchema = z.record(z.string(), z.unknown());
+
+const organizationRefSchema = z
+  .object({
+    name: nonEmptyStringSchema.max(160),
+    url: z.string().trim().url().optional(),
+  })
+  .passthrough();
+
+const relatedOrgSchema = z
+  .object({
+    name: nonEmptyStringSchema.max(160),
+    url: z.string().trim().url().optional(),
+    contact_info: z.string().max(600).optional(),
+  })
+  .passthrough();
+
+const contentSourceSchema = z
+  .object({
+    label: nonEmptyStringSchema.max(200),
+    url: z.string().trim().url(),
+    last_verified: nonEmptyStringSchema.max(120).optional(),
+  })
+  .passthrough();
+
+const projectCreateSchema = z
+  .object({
+    id: idSchema,
+    title: nonEmptyStringSchema.max(240),
+    summary: z.string().max(5000).optional(),
+    status: nonEmptyStringSchema.max(120).optional(),
+    lead_org: organizationRefSchema.optional(),
+    partners: z.array(organizationRefSchema).optional(),
+    start_date: nullableDateStringSchema.optional(),
+    end_date: nullableDateStringSchema.optional(),
+    milestones: z.array(genericRecordSchema).optional(),
+    geo_scope: nonEmptyStringSchema.max(160).optional(),
+    modes: z.array(nonEmptyStringSchema.max(120)).optional(),
+    related_counties: z.array(nonEmptyStringSchema.max(120)).optional(),
+    sources: z.array(contentSourceSchema).optional(),
+    provenance: provenanceSchema.optional(),
+  })
+  .passthrough();
+
+const projectPatchSchema = projectCreateSchema.partial();
+
+const goalCreateSchema = z
+  .object({
+    id: idSchema,
+    goal: nonEmptyStringSchema.max(2000),
+    status_related_projects: z.string().max(5000).optional(),
+    actions: z.string().max(5000).optional(),
+    related_orgs: z.array(relatedOrgSchema).optional(),
+    related_project_ids: z.array(idSchema).optional(),
+    related_counties: z.array(nonEmptyStringSchema.max(120)).optional(),
+    provenance: provenanceSchema.optional(),
+  })
+  .passthrough();
+
+const goalPatchSchema = goalCreateSchema.partial();
+
 export class ContentStoreError extends Error {
   status: number;
 
@@ -56,25 +127,42 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function assertRecord(value: unknown, message: string): asserts value is Record<string, unknown> {
-  if (!isRecord(value)) {
-    throw new ContentStoreError(400, message);
-  }
-}
-
-function asNonEmptyString(value: unknown, field: string) {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new ContentStoreError(400, `${field} must be a non-empty string`);
-  }
-  return value.trim();
-}
-
 function cloneRecord<T extends Record<string, unknown>>(value: T): T {
   return structuredClone(value);
 }
 
 function asSeedArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? structuredClone(value as T[]) : [];
+}
+
+function zodErrorToMessage(err: z.ZodError) {
+  if (err.issues.length === 0) {
+    return 'invalid payload';
+  }
+
+  const firstIssue = err.issues[0];
+  const path = firstIssue.path.length > 0 ? firstIssue.path.join('.') : 'payload';
+  return `${path}: ${firstIssue.message}`;
+}
+
+function parseSchema<T>(schema: z.ZodType<T>, input: unknown, label: string): T {
+  const parsed = schema.safeParse(input);
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  throw new ContentStoreError(400, `${label} validation failed - ${zodErrorToMessage(parsed.error)}`);
+}
+
+function assertNoForbiddenWriteFields(payload: Record<string, unknown>, label: string) {
+  for (const field of FORBIDDEN_MUTATION_FIELDS) {
+    if (field in payload) {
+      throw new ContentStoreError(
+        400,
+        `${label} contains server-managed field "${field}". Use archive/restore endpoints instead.`
+      );
+    }
+  }
 }
 
 function ensureInMemoryStoreReady() {
@@ -259,36 +347,37 @@ function applyArchiveFields(
 }
 
 function toProjectCreate(input: unknown): Project {
-  assertRecord(input, 'project payload must be an object');
-  const id = asNonEmptyString(input.id, 'id');
-  const title = asNonEmptyString(input.title, 'title');
-  const summary = typeof input.summary === 'string' ? input.summary : '';
-  const status = typeof input.status === 'string' && input.status.trim() ? input.status.trim() : 'planning';
+  const payload = parseSchema(projectCreateSchema, input, 'project');
+  const summary = typeof payload.summary === 'string' ? payload.summary : '';
+  const status = typeof payload.status === 'string' ? payload.status : 'planning';
+  assertNoForbiddenWriteFields(payload, 'project payload');
 
   return {
-    ...input,
-    id,
-    title,
+    ...payload,
     summary,
     status,
   } as Project;
 }
 
 function toGoalCreate(input: unknown): Goal {
-  assertRecord(input, 'goal payload must be an object');
-  const id = asNonEmptyString(input.id, 'id');
-  const goal = asNonEmptyString(input.goal, 'goal');
+  const payload = parseSchema(goalCreateSchema, input, 'goal');
+  assertNoForbiddenWriteFields(payload, 'goal payload');
 
   return {
-    ...input,
-    id,
-    goal,
+    ...payload,
   } as Goal;
 }
 
-function toPatch(input: unknown): Record<string, unknown> {
-  assertRecord(input, 'patch payload must be an object');
-  return { ...input };
+function toProjectPatch(input: unknown): Record<string, unknown> {
+  const payload = parseSchema(projectPatchSchema, input, 'project patch');
+  assertNoForbiddenWriteFields(payload, 'project patch');
+  return payload;
+}
+
+function toGoalPatch(input: unknown): Record<string, unknown> {
+  const payload = parseSchema(goalPatchSchema, input, 'goal patch');
+  assertNoForbiddenWriteFields(payload, 'goal patch');
+  return payload;
 }
 
 function buildHistoryEvent(params: {
@@ -435,7 +524,7 @@ export async function createGoal(input: unknown, actor: string) {
 }
 
 export async function updateProject(id: string, patchInput: unknown, actor: string) {
-  const patch = toPatch(patchInput);
+  const patch = toProjectPatch(patchInput);
   const timestamp = nowIso();
 
   return withWriteLock(async () => {
@@ -482,7 +571,7 @@ export async function updateProject(id: string, patchInput: unknown, actor: stri
 }
 
 export async function updateGoal(id: string, patchInput: unknown, actor: string) {
-  const patch = toPatch(patchInput);
+  const patch = toGoalPatch(patchInput);
   const timestamp = nowIso();
 
   return withWriteLock(async () => {

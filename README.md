@@ -54,20 +54,69 @@ Editor write routes:
 - `DELETE /api/goals/:id` (archive)
 - `POST /api/goals/:id/restore`
 
-## Editor Auth (Current)
+## Editor Auth
 
-Write routes are guarded by a shared token:
+Write routes support two auth modes:
+
+- Preferred (production): Cloudflare Access JWT validation.
+- Optional fallback (local/dev/automation): shared editor token.
+
+Cloudflare Access mode:
+
+- Set `CF_ACCESS_TEAM_DOMAIN` (example: `your-team.cloudflareaccess.com`).
+- Set `CF_ACCESS_AUD` (single value or comma-separated audiences).
+- Send Access assertion header `cf-access-jwt-assertion` (typically added by Cloudflare Access).
+- Actor is derived from Access claims (`email`, `common_name`, `name`, then `sub`).
+
+Token fallback mode:
 
 - Set `EDITOR_API_TOKEN` in server environment.
-- Send header `x-editor-token: <token>`.
-- Optional actor header: `x-editor-actor: <name>`.
+- Send header `x-editor-token: <token>` or `Authorization: Bearer <token>`.
+- Optional actor header: `x-editor-actor: <name>` (token mode only).
+
+If both Access and token are configured, Access JWT is validated when present; token auth remains available for non-Access clients.
 
 Example `.env` values:
 
 ```env
 PUBLIC_MAPTILER_KEY=your_maptiler_key_here
 EDITOR_API_TOKEN=replace-with-random-secret
+CF_ACCESS_TEAM_DOMAIN=your-team.cloudflareaccess.com
+CF_ACCESS_AUD=your-access-audience-tag
+WRITE_RATE_LIMIT_ENABLED=true
+WRITE_RATE_LIMIT_REQUESTS=30
+WRITE_RATE_LIMIT_WINDOW_SECONDS=60
 ```
+
+## Write Payload Validation
+
+Create and update payloads for projects and goals are schema-validated server-side before persistence.
+
+- Invalid payloads return `400`.
+- Server-managed archive fields (`is_archived`, `archived_at`, `archived_by`) are rejected on create/update payloads.
+- Archive and restore must go through dedicated endpoints.
+
+## Write Route Rate Limits
+
+All `/api/*` write methods (`POST`, `PUT`, `PATCH`, `DELETE`) are protected by a fixed-window limiter.
+
+- Default policy: `30` requests per `60` seconds per client IP.
+- Limiting is in-memory per runtime instance (best-effort). Use Cloudflare WAF rate limits for global enforcement.
+- 429 responses include `Retry-After`.
+- Write responses include:
+  - `RateLimit-Limit`
+  - `RateLimit-Remaining`
+  - `RateLimit-Reset`
+  - `RateLimit-Policy`
+  - `X-RateLimit-Limit`
+  - `X-RateLimit-Remaining`
+  - `X-RateLimit-Reset`
+
+Environment controls:
+
+- `WRITE_RATE_LIMIT_ENABLED=true|false`
+- `WRITE_RATE_LIMIT_REQUESTS=<positive integer>`
+- `WRITE_RATE_LIMIT_WINDOW_SECONDS=<positive integer>`
 
 ## Admin + History UI
 

@@ -22,7 +22,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const actor = requireEditorActor(event);
+    const actor = await requireEditorActor(event);
     const payload = await event.request.json();
     const created = await createProject(payload, actor);
 

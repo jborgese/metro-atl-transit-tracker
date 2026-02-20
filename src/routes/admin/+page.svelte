@@ -224,7 +224,8 @@
     <header class="admin-header">
       <h1>Admin Portal</h1>
       <p>
-        Editors can publish immediately. Use an editor token (header-based) until a full auth provider is selected.
+        Editors can publish immediately using Cloudflare Access. Editor token fallback remains available for local
+        workflows.
       </p>
       <p>
         Public history is available at <a href="/history">/history</a>.
@@ -237,7 +238,7 @@
         <input bind:value={token} type="password" autocomplete="off" />
       </label>
       <label>
-        Actor
+        Actor (token mode)
         <input bind:value={actor} type="text" autocomplete="off" />
       </label>
       <button on:click={loadData} disabled={loading}>Refresh</button>
