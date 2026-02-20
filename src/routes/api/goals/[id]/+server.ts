@@ -20,7 +20,7 @@ export const GET: RequestHandler = async (event) => {
 
 export const PATCH: RequestHandler = async (event) => {
   try {
-    const actor = await requireEditorActor(event);
+    const actor = await requireEditorActor(event, 'content:edit');
     const payload = await event.request.json();
     const updated = await updateGoal(event, event.params.id, payload, actor);
 
@@ -33,7 +33,7 @@ export const PATCH: RequestHandler = async (event) => {
 
 export const DELETE: RequestHandler = async (event) => {
   try {
-    const actor = await requireEditorActor(event);
+    const actor = await requireEditorActor(event, 'content:archive');
     const archived = await archiveGoal(event, event.params.id, actor);
 
     const response: ApiItemResponse<Goal> = { data: archived };

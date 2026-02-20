@@ -76,6 +76,8 @@ type StoredEntityWrite = {
 };
 
 const DB_BINDING_NAME = 'DB';
+const D1_LOCAL_MIGRATION_CMD =
+  'npx wrangler d1 migrations apply metro-atl-transit-prod --local';
 const SEED_ACTOR = 'seed';
 const SEED_BATCH_SIZE = 50;
 const FORBIDDEN_MUTATION_FIELDS = new Set(['is_archived', 'archived_at', 'archived_by']);
@@ -262,6 +264,13 @@ function parseIntSafe(value: unknown) {
     }
   }
   return 0;
+}
+
+function isMissingTableError(err: unknown) {
+  if (!(err instanceof Error)) {
+    return false;
+  }
+  return /no such table|SQLITE_ERROR/i.test(err.message);
 }
 
 function zodErrorToMessage(err: z.ZodError) {
@@ -571,7 +580,7 @@ function getDb(event: StoreEvent): D1Database {
   if (!candidate || !isRecord(candidate)) {
     throw new ContentStoreError(
       503,
-      'D1 binding "DB" is not available for this request. Use wrangler dev/deploy with D1 bindings configured.'
+      `D1 binding "${DB_BINDING_NAME}" is not available for this request. In local dev, make sure adapter-cloudflare platform proxy points at wrangler.jsonc and restart \`npm run dev\`.`
     );
   }
 
@@ -635,16 +644,27 @@ async function ensureSeeded(db: D1Database) {
   }
 
   seedPromise = (async () => {
-    const counts = await db
-      .prepare(
-        `
+    let counts: StoredCountsRow | null = null;
+    try {
+      counts = await db
+        .prepare(
+          `
 SELECT
   (SELECT COUNT(*) FROM projects) AS project_count,
   (SELECT COUNT(*) FROM goals) AS goal_count,
   (SELECT COUNT(*) FROM content_history) AS history_count
 `
-      )
-      .first<StoredCountsRow>();
+        )
+        .first<StoredCountsRow>();
+    } catch (err) {
+      if (isMissingTableError(err)) {
+        throw new ContentStoreError(
+          503,
+          `D1 schema is missing. Apply migrations and reload: \`${D1_LOCAL_MIGRATION_CMD}\`.`
+        );
+      }
+      throw err;
+    }
 
     const projectCount = parseIntSafe(counts?.project_count);
     const goalCount = parseIntSafe(counts?.goal_count);

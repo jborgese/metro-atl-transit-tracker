@@ -22,7 +22,7 @@ export const GET: RequestHandler = async (event) => {
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const actor = await requireEditorActor(event);
+    const actor = await requireEditorActor(event, 'content:edit');
     const payload = await event.request.json();
     const created = await createGoal(event, payload, actor);
 

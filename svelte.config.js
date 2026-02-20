@@ -9,7 +9,12 @@ const __dirname = dirname(__filename);
 const config = {
   preprocess: preprocess(),
   kit: {
-    adapter: adapter(),
+    adapter: adapter({
+      config: 'wrangler.jsonc',
+      platformProxy: {
+        configPath: 'wrangler.jsonc'
+      }
+    }),
     alias: {
       '@': resolve(__dirname, 'src')
     }

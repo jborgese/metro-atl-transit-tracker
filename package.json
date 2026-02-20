@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "vite dev",
+    "d1:migrate:local": "wrangler d1 migrations apply metro-atl-transit-prod --local",
     "build": "svelte-kit sync && vite build",
     "deploy": "wrangler deploy",
     "preview": "vite preview",

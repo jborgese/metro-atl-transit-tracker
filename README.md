@@ -56,10 +56,7 @@ Editor write routes:
 
 ## Editor Auth
 
-Write routes support two auth modes:
-
-- Preferred (production): Cloudflare Access JWT validation.
-- Optional fallback (local/dev/automation): shared editor token.
+Write routes require Cloudflare Access JWT validation.
 
 Cloudflare Access mode:
 
@@ -68,21 +65,22 @@ Cloudflare Access mode:
 - Send Access assertion header `cf-access-jwt-assertion` (typically added by Cloudflare Access).
 - Actor is derived from Access claims (`email`, `common_name`, `name`, then `sub`).
 
-Token fallback mode:
+Optional RBAC allowlists (CSV, case-insensitive):
 
-- Set `EDITOR_API_TOKEN` in server environment.
-- Send header `x-editor-token: <token>` or `Authorization: Bearer <token>`.
-- Optional actor header: `x-editor-actor: <name>` (token mode only).
-
-If both Access and token are configured, Access JWT is validated when present; token auth remains available for non-Access clients.
+- `CF_ACCESS_RBAC_EDITORS` grants `content:edit` (create/update).
+- `CF_ACCESS_RBAC_ARCHIVERS` grants `content:archive` (archive/restore).
+- `CF_ACCESS_RBAC_ADMINS` grants all current scopes (`content:edit`, `content:archive`) and reserves `admin:users` for future endpoints.
+- If no RBAC allowlists are set, all authenticated Access users retain existing write permissions.
 
 Example `.env` values:
 
 ```env
 PUBLIC_MAPTILER_KEY=your_maptiler_key_here
-EDITOR_API_TOKEN=replace-with-random-secret
 CF_ACCESS_TEAM_DOMAIN=your-team.cloudflareaccess.com
 CF_ACCESS_AUD=your-access-audience-tag
+CF_ACCESS_RBAC_EDITORS=editor1@example.com,editor2@example.com
+CF_ACCESS_RBAC_ARCHIVERS=archiver1@example.com
+CF_ACCESS_RBAC_ADMINS=admin1@example.com
 WRITE_RATE_LIMIT_ENABLED=true
 WRITE_RATE_LIMIT_REQUESTS=30
 WRITE_RATE_LIMIT_WINDOW_SECONDS=60
@@ -127,6 +125,7 @@ Environment controls:
 
 ```bash
 npm install
+npx wrangler d1 migrations apply metro-atl-transit-prod --local
 npm run dev
 ```
 
@@ -141,8 +140,10 @@ npm run preview
 
 `/api/*` read/write routes now require a `DB` D1 binding at runtime.
 
-- Local D1 dev: `npx wrangler dev --local`
+- `npm run dev` now uses adapter-cloudflare platform emulation with `wrangler.jsonc`, so `/api/*` can read/write D1 in local SvelteKit dev.
+- Local D1 dev with Wrangler Worker runtime: `npx wrangler dev --local`
 - Remote D1 dev: `npx wrangler dev --remote`
 - Apply migrations:
+  - local: `npx wrangler d1 migrations apply metro-atl-transit-prod --local`
   - staging: `npx wrangler d1 migrations apply metro-atl-transit-staging --env staging --remote`
   - prod: `npx wrangler d1 migrations apply metro-atl-transit-prod --remote`
