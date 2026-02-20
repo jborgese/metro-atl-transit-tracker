@@ -4,7 +4,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "CF_ACCESS_TEAM_DOMAIN": "frootsnoops.cloudflareaccess.com",
-    "CF_ACCESS_AUD": "2a916c93540ac4d82b56c3f7fb320b48360d7c7e5d79df2b26ddd24374d624d5",
+    "CF_ACCESS_AUD": "96f0e12e20cbdf4fd6f78aaecf0129add7fbc21883156fc4b2f703c4cccc3638",
     "WRITE_RATE_LIMIT_ENABLED": "true",
     "WRITE_RATE_LIMIT_REQUESTS": "30",
     "WRITE_RATE_LIMIT_WINDOW_SECONDS": "60"
