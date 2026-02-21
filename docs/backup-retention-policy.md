@@ -26,16 +26,65 @@ This policy covers:
 | Asset | Backup Method | Frequency | Retention |
 | --- | --- | --- | --- |
 | `data/content/projects.json`, `data/content/goals.json`, `data/content/history.json` | Snapshot JSON files + SHA256 manifest | On every merge to `main` and nightly at 02:00 UTC | 30 daily, 12 weekly, 12 monthly |
-| `metro-atl-transit-prod` (D1) | SQL export via Wrangler | Nightly at 02:15 UTC | 35 daily, 26 weekly, 12 monthly |
-| `metro-atl-transit-staging` (D1) | SQL export via Wrangler | Nightly at 02:30 UTC | 14 daily, 8 weekly |
+| `metro-atl-transit-prod` (D1) | SQL export via Wrangler | Nightly at 02:00 UTC | 35 daily, 26 weekly, 12 monthly |
+| `metro-atl-transit-staging` (D1) | SQL export via Wrangler | Nightly at 02:00 UTC | 14 daily, 8 weekly |
 | `metro-atl-transit-prod` (D1) | Cloudflare D1 Time Travel | Continuous platform feature | Native 30-day window (platform limit) |
 
 ## Storage and Access Rules
 
-- Store backups in encrypted object storage with versioning enabled.
+- Store backups in encrypted object storage with immutable object-key versioning and retention controls (bucket lock + lifecycle).
 - Restrict backup read access to maintainers responsible for incident response.
 - Keep at least one off-site copy separate from the deployment environment.
 - Do not commit backup artifacts to git history.
+
+## GitHub Actions Automation
+
+Workflow:
+
+- `.github/workflows/backup-snapshots.yml`
+
+Required repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+`CLOUDFLARE_API_TOKEN` should include:
+
+- D1 read access (for `wrangler d1 export`)
+- R2 object write access (for backup uploads)
+- R2 bucket configuration edit access (only needed if using manual governance setup)
+
+Required repository variables:
+
+- `BACKUP_R2_BUCKET` (R2 bucket name for durable off-site backups)
+
+Optional repository variables:
+
+- `BACKUP_R2_PREFIX` (default: `metro-atl-transit-tracker`)
+- `BACKUP_R2_JURISDICTION` (only if your bucket is jurisdiction-bound)
+- `BACKUP_R2_LIFECYCLE_RULE` (default: `backup-expire-400d`)
+- `BACKUP_R2_LIFECYCLE_EXPIRE_DAYS` (default: `400`)
+- `BACKUP_R2_LOCK_RULE` (default: `backup-lock-45d`)
+- `BACKUP_R2_LOCK_RETENTION_DAYS` (default: `45`)
+
+Trigger behavior:
+
+- Nightly schedule (`02:00 UTC`): snapshots `data/content/*` and exports D1 prod/staging.
+- Push to `main`: snapshots `data/content/*` only.
+- Manual dispatch: choose whether to run content snapshots, D1 exports, and one-time R2 governance setup.
+
+### R2 Encryption and Versioning Model
+
+- Encryption: R2 encrypts data at rest by default (no extra workflow configuration required).
+- Versioning: R2 does not expose native S3 bucket versioning APIs; this workflow uses immutable timestamped object keys for each run.
+- Deletion protection: manual workflow mode can enforce bucket lock + lifecycle rules for backup prefixes.
+
+One-time governance setup examples:
+
+```bash
+npx wrangler r2 bucket lifecycle add <bucket-name> backup-expire-400d metro-atl-transit-tracker/ --expire-days 400 --force
+npx wrangler r2 bucket lock add <bucket-name> backup-lock-45d metro-atl-transit-tracker/ --retention-days 45 --force
+```
 
 ## Runbook: Backup Commands
 

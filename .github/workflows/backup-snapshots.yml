@@ -1,0 +1,257 @@
+name: Backup Snapshots
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      run_content_snapshot:
+        description: 'Capture data/content snapshot'
+        required: false
+        default: true
+        type: boolean
+      run_d1_exports:
+        description: 'Run D1 exports (prod + staging)'
+        required: false
+        default: true
+        type: boolean
+      configure_r2_governance:
+        description: 'Ensure R2 lifecycle + lock rules (manual use)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-snapshots-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Backup Content and D1
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BACKUP_R2_BUCKET: ${{ vars.BACKUP_R2_BUCKET }}
+      BACKUP_R2_PREFIX: ${{ vars.BACKUP_R2_PREFIX }}
+      BACKUP_R2_JURISDICTION: ${{ vars.BACKUP_R2_JURISDICTION }}
+      BACKUP_R2_LIFECYCLE_RULE: ${{ vars.BACKUP_R2_LIFECYCLE_RULE }}
+      BACKUP_R2_LOCK_RULE: ${{ vars.BACKUP_R2_LOCK_RULE }}
+      BACKUP_R2_LIFECYCLE_EXPIRE_DAYS: ${{ vars.BACKUP_R2_LIFECYCLE_EXPIRE_DAYS }}
+      BACKUP_R2_LOCK_RETENTION_DAYS: ${{ vars.BACKUP_R2_LOCK_RETENTION_DAYS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Decide backup scope
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "run_content=${{ inputs.run_content_snapshot }}" >> "$GITHUB_OUTPUT"
+            echo "run_d1=${{ inputs.run_d1_exports }}" >> "$GITHUB_OUTPUT"
+            echo "configure_governance=${{ inputs.configure_r2_governance }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${GITHUB_EVENT_NAME}" == "schedule" ]]; then
+            echo "run_content=true" >> "$GITHUB_OUTPUT"
+            echo "run_d1=true" >> "$GITHUB_OUTPUT"
+            echo "configure_governance=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_content=true" >> "$GITHUB_OUTPUT"
+            echo "run_d1=false" >> "$GITHUB_OUTPUT"
+            echo "configure_governance=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Initialize backup paths
+        id: paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          ts="$(date -u +%Y%m%d-%H%M%S)"
+          root="backups/${ts}-run-${GITHUB_RUN_ID}"
+          mkdir -p "$root/content" "$root/d1/prod" "$root/d1/staging"
+          echo "timestamp=$ts" >> "$GITHUB_OUTPUT"
+          echo "backup_root=$root" >> "$GITHUB_OUTPUT"
+
+      - name: Snapshot data/content
+        if: steps.scope.outputs.run_content == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="${{ steps.paths.outputs.backup_root }}"
+          ts="${{ steps.paths.outputs.timestamp }}"
+          tar -czf "$root/content/data-content-${ts}.tgz" data/content
+          find data/content -type f -name '*.json' -print0 | sort -z | xargs -0 sha256sum > "$root/content/data-content-${ts}.sha256"
+
+      - name: Validate Cloudflare and R2 configuration
+        if: steps.scope.outputs.run_content == 'true' || steps.scope.outputs.run_d1 == 'true'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+            echo "Missing required secret: CLOUDFLARE_API_TOKEN" >&2
+            exit 1
+          fi
+          if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+            echo "Missing required secret: CLOUDFLARE_ACCOUNT_ID" >&2
+            exit 1
+          fi
+          if [[ -z "${BACKUP_R2_BUCKET:-}" ]]; then
+            echo "Missing required repository variable: BACKUP_R2_BUCKET" >&2
+            exit 1
+          fi
+
+      - name: Export D1 production
+        if: steps.scope.outputs.run_d1 == 'true'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          root="${{ steps.paths.outputs.backup_root }}"
+          ts="${{ steps.paths.outputs.timestamp }}"
+          npx wrangler d1 export metro-atl-transit-prod \
+            --remote \
+            --output "$root/d1/prod/metro-atl-transit-prod-${ts}.sql"
+
+      - name: Export D1 staging
+        if: steps.scope.outputs.run_d1 == 'true'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          root="${{ steps.paths.outputs.backup_root }}"
+          ts="${{ steps.paths.outputs.timestamp }}"
+          npx wrangler d1 export metro-atl-transit-staging \
+            --env staging \
+            --remote \
+            --output "$root/d1/staging/metro-atl-transit-staging-${ts}.sql"
+
+      - name: Write backup manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="${{ steps.paths.outputs.backup_root }}"
+          find "$root" -type f ! -name 'SHA256SUMS' -print0 | sort -z | xargs -0 sha256sum > "$root/SHA256SUMS"
+
+      - name: Ensure R2 lifecycle and lock rules (manual only)
+        if: steps.scope.outputs.configure_governance == 'true'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          bucket="${BACKUP_R2_BUCKET}"
+          prefix="${BACKUP_R2_PREFIX:-metro-atl-transit-tracker}"
+          prefix="${prefix#/}"
+          prefix="${prefix%/}"
+          lifecycle_rule="${BACKUP_R2_LIFECYCLE_RULE:-backup-expire-400d}"
+          lock_rule="${BACKUP_R2_LOCK_RULE:-backup-lock-45d}"
+          lifecycle_expire_days="${BACKUP_R2_LIFECYCLE_EXPIRE_DAYS:-400}"
+          lock_retention_days="${BACKUP_R2_LOCK_RETENTION_DAYS:-45}"
+          jurisdiction="${BACKUP_R2_JURISDICTION:-}"
+
+          if ! [[ "$lifecycle_expire_days" =~ ^[0-9]+$ ]]; then
+            echo "BACKUP_R2_LIFECYCLE_EXPIRE_DAYS must be an integer." >&2
+            exit 1
+          fi
+          if ! [[ "$lock_retention_days" =~ ^[0-9]+$ ]]; then
+            echo "BACKUP_R2_LOCK_RETENTION_DAYS must be an integer." >&2
+            exit 1
+          fi
+
+          lifecycle_list_cmd=(npx wrangler r2 bucket lifecycle list "$bucket")
+          lifecycle_add_cmd=(npx wrangler r2 bucket lifecycle add "$bucket" "$lifecycle_rule" "$prefix/" --expire-days "$lifecycle_expire_days" --force)
+          lock_list_cmd=(npx wrangler r2 bucket lock list "$bucket")
+          lock_add_cmd=(npx wrangler r2 bucket lock add "$bucket" "$lock_rule" "$prefix/" --retention-days "$lock_retention_days" --force)
+
+          if [[ -n "$jurisdiction" ]]; then
+            lifecycle_list_cmd+=(--jurisdiction "$jurisdiction")
+            lifecycle_add_cmd+=(--jurisdiction "$jurisdiction")
+            lock_list_cmd+=(--jurisdiction "$jurisdiction")
+            lock_add_cmd+=(--jurisdiction "$jurisdiction")
+          fi
+
+          lifecycle_rules="$("${lifecycle_list_cmd[@]}" 2>/dev/null || true)"
+          if grep -Fq "$lifecycle_rule" <<< "$lifecycle_rules"; then
+            echo "Lifecycle rule already present: $lifecycle_rule"
+          else
+            "${lifecycle_add_cmd[@]}"
+          fi
+
+          lock_rules="$("${lock_list_cmd[@]}" 2>/dev/null || true)"
+          if grep -Fq "$lock_rule" <<< "$lock_rules"; then
+            echo "Lock rule already present: $lock_rule"
+          else
+            "${lock_add_cmd[@]}"
+          fi
+
+      - name: Upload backups to R2
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          root="${{ steps.paths.outputs.backup_root }}"
+          timestamp="${{ steps.paths.outputs.timestamp }}"
+          bucket="${BACKUP_R2_BUCKET}"
+          prefix="${BACKUP_R2_PREFIX:-metro-atl-transit-tracker}"
+          jurisdiction="${BACKUP_R2_JURISDICTION:-}"
+
+          prefix="${prefix#/}"
+          prefix="${prefix%/}"
+
+          object_root="${prefix}/${timestamp}-run-${GITHUB_RUN_ID}"
+          uploads_file="$root/R2_UPLOADS.txt"
+          : > "$uploads_file"
+
+          while IFS= read -r -d '' file_path; do
+            rel_path="${file_path#"$root/"}"
+            object_key="${object_root}/${rel_path}"
+
+            put_cmd=(npx wrangler r2 object put "${bucket}/${object_key}" --remote --file "$file_path")
+            if [[ -n "$jurisdiction" ]]; then
+              put_cmd+=(--jurisdiction "$jurisdiction")
+            fi
+
+            "${put_cmd[@]}"
+            echo "${bucket}/${object_key}" >> "$uploads_file"
+          done < <(find "$root" -type f ! -name 'R2_UPLOADS.txt' -print0 | sort -z)
+
+          uploads_object_key="${object_root}/R2_UPLOADS.txt"
+          uploads_put_cmd=(npx wrangler r2 object put "${bucket}/${uploads_object_key}" --remote --file "$uploads_file")
+          if [[ -n "$jurisdiction" ]]; then
+            uploads_put_cmd+=(--jurisdiction "$jurisdiction")
+          fi
+          "${uploads_put_cmd[@]}"
+
+      - name: Upload backup artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-${{ steps.paths.outputs.timestamp }}-run-${{ github.run_id }}
+          path: ${{ steps.paths.outputs.backup_root }}
+          retention-days: 35
+          if-no-files-found: error
