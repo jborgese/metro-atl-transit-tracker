@@ -165,11 +165,13 @@ export function startWranglerDev(options = {}) {
   }
 
   const config = withDefaults(cwd, env);
+  const useProcessGroup = process.platform !== 'win32';
   const child = spawn(NPX_BIN, wranglerArgs, {
     cwd: config.cwd,
     env: config.env,
     stdio: ['ignore', 'pipe', 'pipe'],
     shell: process.platform === 'win32',
+    detached: useProcessGroup,
   });
 
   let output = '';
@@ -208,14 +210,45 @@ export function startWranglerDev(options = {}) {
     }
 
     await new Promise((resolve) => {
-      const onExit = () => resolve();
-      child.once('exit', onExit);
-      child.kill('SIGTERM');
+      let done = false;
+      const finish = () => {
+        if (done) {
+          return;
+        }
+        done = true;
+        resolve();
+      };
+
+      const pid = typeof child.pid === 'number' ? child.pid : null;
+      child.once('exit', finish);
+
+      try {
+        if (useProcessGroup && pid !== null) {
+          process.kill(-pid, 'SIGTERM');
+        } else {
+          child.kill('SIGTERM');
+        }
+      } catch {
+        // Ignore if the process already exited.
+      }
+
       setTimeout(() => {
-        if (child.exitCode === null) {
-          child.kill('SIGKILL');
+        if (child.exitCode !== null) {
+          return;
+        }
+        try {
+          if (useProcessGroup && pid !== null) {
+            process.kill(-pid, 'SIGKILL');
+          } else {
+            child.kill('SIGKILL');
+          }
+        } catch {
+          // Ignore if the process already exited.
         }
       }, 3_000);
+
+      // Avoid hanging forever if process signaling is not supported by the runtime.
+      setTimeout(finish, 8_000);
     });
   }
 
