@@ -172,7 +172,7 @@
         <p class="no-goals-message">No regional goal information is available.</p>
       {:else}
         <div class="table-scroll">
-          <table class="data-table">
+          <table class="data-table goals-data-table">
           <thead>
             <tr>
               <th>Goal</th>
@@ -184,8 +184,8 @@
           <tbody>
             {#each regionalGoals as goal}
               <tr class="goal-row">
-                <td>{goal.goal}</td>
-              <td>
+                <td data-label="Goal">{goal.goal}</td>
+              <td data-label="Status/Related Projects">
                 {#if goal.status_related_projects}
                   {#each parseStatusContent(goal.status_related_projects) as part}
                     {#if part.type === 'url'}
@@ -196,8 +196,8 @@
                   {/each}
                 {/if}
               </td>
-              <td>{goal.actions || ''}</td>
-              <td>
+              <td data-label="Actions to Support the Goal">{goal.actions || ''}</td>
+              <td data-label="Related Orgs">
                 {#if goal.related_orgs && goal.related_orgs.length > 0}
                   {#each goal.related_orgs as org}
                     <div class="related-org">
@@ -256,7 +256,7 @@
           <p class="no-goals-message">No goal information is available for this county.</p>
         {:else}
           <div class="table-scroll">
-            <table class="data-table">
+            <table class="data-table goals-data-table">
             <thead>
               <tr>
                 <th>Goal</th>
@@ -268,8 +268,8 @@
             <tbody>
               {#each countyGoals as goal}
                 <tr class="goal-row">
-                  <td>{goal.goal}</td>
-                <td>
+                  <td data-label="Goal">{goal.goal}</td>
+                <td data-label="Status/Related Projects">
                   {#if goal.status_related_projects}
                     {#each parseStatusContent(goal.status_related_projects) as part}
                       {#if part.type === 'url'}
@@ -280,8 +280,8 @@
                     {/each}
                   {/if}
                 </td>
-                <td>{goal.actions || ''}</td>
-                <td>
+                <td data-label="Actions to Support the Goal">{goal.actions || ''}</td>
+                <td data-label="Related Orgs">
                   {#if goal.related_orgs && goal.related_orgs.length > 0}
                     {#each goal.related_orgs as org}
                       <div class="related-org">
@@ -340,7 +340,7 @@
         <p class="no-goals-message">No goal information is available for this county.</p>
       {:else}
         <div class="table-scroll">
-          <table class="data-table">
+          <table class="data-table goals-data-table">
           <thead>
             <tr>
               <th>Goal</th>
@@ -352,8 +352,8 @@
           <tbody>
             {#each filtered as goal}
               <tr class="goal-row">
-                <td>{goal.goal}</td>
-                <td>
+                <td data-label="Goal">{goal.goal}</td>
+                <td data-label="Status/Related Projects">
                   {#if goal.status_related_projects}
                     {#each parseStatusContent(goal.status_related_projects) as part}
                       {#if part.type === 'url'}
@@ -364,8 +364,8 @@
                     {/each}
                   {/if}
                 </td>
-                <td>{goal.actions || ''}</td>
-                <td>
+                <td data-label="Actions to Support the Goal">{goal.actions || ''}</td>
+                <td data-label="Related Orgs">
                   {#if goal.related_orgs && goal.related_orgs.length > 0}
                     {#each goal.related_orgs as org}
                       <div class="related-org">
@@ -423,7 +423,7 @@
         <p class="no-goals-message">No regional goal information is available.</p>
       {:else}
         <div class="table-scroll">
-          <table class="data-table">
+          <table class="data-table goals-data-table">
           <thead>
             <tr>
               <th>Goal</th>
@@ -435,8 +435,8 @@
           <tbody>
             {#each regionalGoals as goal}
               <tr class="goal-row">
-                <td>{goal.goal}</td>
-              <td>
+                <td data-label="Goal">{goal.goal}</td>
+              <td data-label="Status/Related Projects">
                 {#if goal.status_related_projects}
                   {#each parseStatusContent(goal.status_related_projects) as part}
                     {#if part.type === 'url'}
@@ -447,8 +447,8 @@
                   {/each}
                 {/if}
               </td>
-              <td>{goal.actions || ''}</td>
-              <td>
+              <td data-label="Actions to Support the Goal">{goal.actions || ''}</td>
+              <td data-label="Related Orgs">
                 {#if goal.related_orgs && goal.related_orgs.length > 0}
                   {#each goal.related_orgs as org}
                     <div class="related-org">
@@ -504,12 +504,14 @@
 <style>
 .goals-table {
   margin-top: 2rem;
+  container-type: inline-size;
+  container-name: goals-layout;
 }
 .county-section {
   margin-bottom: 2.5rem;
 }
 .county-header {
-  font-size: 1.4rem;
+  font-size: clamp(1.2rem, 1rem + 1vw, 1.4rem);
   font-weight: 600;
   color: var(--text-primary, #f1f5f9);
   margin: 0 0 1rem 0;
@@ -618,14 +620,88 @@ td a:hover {
   color: var(--text-muted, #666);
 }
 
-@media (max-width: 720px) {
-  .county-header {
-    font-size: 1.2rem;
+@container goals-layout (max-width: 50rem) {
+
+  .table-scroll {
+    overflow-x: visible;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .goals-data-table {
+    width: 100%;
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .goals-data-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .goals-data-table,
+  .goals-data-table tbody,
+  .goals-data-table .goal-row,
+  .goals-data-table .project-row,
+  .goals-data-table .goal-row td,
+  .goals-data-table .project-row td {
+    display: block;
+    width: 100%;
+  }
+
+  .goals-data-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .goals-data-table .goal-row {
+    border: 1px solid var(--border-subtle, #334155);
+    border-radius: 10px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--surface-2, #10201e) 94%, black);
+  }
+
+  .goals-data-table .goal-row td {
+    border: 0;
+    border-bottom: 1px solid var(--border-subtle, #334155);
+    padding: 0.625rem 0.75rem;
+    display: grid;
+    grid-template-columns: minmax(7.5rem, 42%) 1fr;
+    gap: 0.5rem;
+    align-items: start;
+    font-size: 0.92rem;
+  }
+
+  .goals-data-table .goal-row td:last-child {
+    border-bottom: 0;
+  }
+
+  .goals-data-table .goal-row td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-muted, #94a3b8);
+    line-height: 1.35;
+  }
+
+  .goals-data-table .project-row td {
+    border: 0;
+    padding: 0;
   }
 
   .nested-cell {
-    padding-left: 0.75rem !important;
-    padding-right: 0.5rem !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
   }
 
   .project-card {
@@ -634,6 +710,13 @@ td a:hover {
 
   .project-header {
     align-items: flex-start;
+  }
+}
+
+@container goals-layout (max-width: 34rem) {
+  .goals-data-table .goal-row td {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
   }
 }
 </style>

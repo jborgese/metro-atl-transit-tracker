@@ -187,6 +187,7 @@ a:hover {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    container-type: inline-size;
     border: 1px solid var(--border-subtle);
     border-radius: 0.75rem;
     background: var(--surface-2);
@@ -211,6 +212,24 @@ a:hover {
     background: var(--surface-1);
     color: var(--text-on-dark);
     font-weight: 600;
+  }
+
+  @container (max-width: 40rem) {
+    .data-table {
+      min-width: 32rem;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 0.5rem;
+      font-size: 0.9rem;
+    }
+  }
+
+  @container (max-width: 32rem) {
+    .data-table {
+      min-width: 28rem;
+    }
   }
 
 
@@ -420,25 +439,5 @@ a:hover {
 
   .main-content {
     margin-top: 1.25rem;
-  }
-
-  .table-scroll {
-    border-radius: 0.5rem;
-  }
-
-  .data-table {
-    min-width: 32rem;
-  }
-
-  .data-table th,
-  .data-table td {
-    padding: 0.5rem;
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .data-table {
-    min-width: 28rem;
   }
 }
