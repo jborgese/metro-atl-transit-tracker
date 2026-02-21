@@ -3,6 +3,9 @@ import { error, type RequestEvent } from '@sveltejs/kit';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 
 const ACCESS_JWT_HEADER = 'cf-access-jwt-assertion';
+const EDITOR_TOKEN_HEADER = 'x-editor-token';
+const EDITOR_API_TOKEN_ENV = 'EDITOR_API_TOKEN';
+const EDITOR_TOKEN_AUTH_ENABLED_ENV = 'EDITOR_TOKEN_AUTH_ENABLED';
 const RBAC_ADMINS_ENV = 'CF_ACCESS_RBAC_ADMINS';
 const RBAC_EDITORS_ENV = 'CF_ACCESS_RBAC_EDITORS';
 const RBAC_ARCHIVERS_ENV = 'CF_ACCESS_RBAC_ARCHIVERS';
@@ -83,6 +86,15 @@ function parseIdentityCsv(value: string | undefined) {
     .filter((item) => item.length > 0);
 
   return new Set(items);
+}
+
+function isEnabled(value: string | undefined) {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 }
 
 function getRbacConfig(): RbacConfig {
@@ -191,6 +203,16 @@ export async function requireEditorActor(
   event: RequestEvent,
   permission: EditorPermission = 'content:edit'
 ) {
+  const editorTokenAuthEnabled = isEnabled(env[EDITOR_TOKEN_AUTH_ENABLED_ENV]);
+  const editorToken = env[EDITOR_API_TOKEN_ENV]?.trim();
+  if (editorTokenAuthEnabled && editorToken) {
+    const presentedToken = event.request.headers.get(EDITOR_TOKEN_HEADER)?.trim();
+    if (!presentedToken || presentedToken !== editorToken) {
+      throw error(401, 'Unauthorized');
+    }
+    return 'editor-token-user';
+  }
+
   const accessConfig = getAccessConfig();
   if (!accessConfig) {
     throw error(

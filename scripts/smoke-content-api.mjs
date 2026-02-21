@@ -21,14 +21,13 @@ const workerOutput = path.join(repoRoot, '.svelte-kit', 'cloudflare', '_worker.j
 
 async function run() {
   const skipBuild = process.env.SMOKE_SKIP_BUILD === '1';
+  const forceBuild = process.env.SMOKE_FORCE_BUILD === '1';
   if (skipBuild) {
     console.log('[smoke] Skipping build because SMOKE_SKIP_BUILD=1.');
+  } else if (!forceBuild && fs.existsSync(workerOutput)) {
+    console.log('[smoke] Reusing existing build output.');
   } else {
-    if (!fs.existsSync(workerOutput)) {
-      console.log('[smoke] Worker build output missing, building app...');
-    } else {
-      console.log('[smoke] Building app...');
-    }
+    console.log('[smoke] Building app...');
     await runNpm(['run', 'build'], { cwd: repoRoot, timeoutMs: 240_000 });
   }
 
@@ -42,7 +41,7 @@ async function run() {
   const devServer = startWranglerDev({
     cwd: repoRoot,
     port,
-    vars: { EDITOR_API_TOKEN: editorToken },
+    vars: { EDITOR_API_TOKEN: editorToken, EDITOR_TOKEN_AUTH_ENABLED: 'true' },
   });
 
   try {

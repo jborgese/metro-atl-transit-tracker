@@ -28,6 +28,11 @@ Seed/bootstrap data files:
 - `data/content/goals.json`
 - `data/content/history.json`
 
+Backup and retention guidance:
+
+- `docs/backup-retention-policy.md`
+- `docs/ci-gate-policy.md`
+
 Seed/fallback sources:
 
 - `src/data/geo/projects-metadata.json`
@@ -64,6 +69,12 @@ Cloudflare Access mode:
 - Set `CF_ACCESS_AUD` (single value or comma-separated audiences).
 - Send Access assertion header `cf-access-jwt-assertion` (typically added by Cloudflare Access).
 - Actor is derived from Access claims (`email`, `common_name`, `name`, then `sub`).
+
+Local/CI token mode (tests only):
+
+- Set `EDITOR_TOKEN_AUTH_ENABLED=true` and `EDITOR_API_TOKEN=<token>`.
+- Send `x-editor-token: <token>` on write requests.
+- Keep this mode disabled in deployed environments.
 
 Optional RBAC allowlists (CSV, case-insensitive):
 

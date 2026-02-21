@@ -5,7 +5,10 @@ module.exports = [
       'dist/**',
       'public/**',
       'build/**',
-      '.vite/**'
+      '.vite/**',
+      '.svelte-kit/**',
+      '.wrangler/**',
+      'coverage/**'
     ]
   },
   {

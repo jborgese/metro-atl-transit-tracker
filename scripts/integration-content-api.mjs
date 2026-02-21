@@ -70,7 +70,7 @@ async function run() {
   const devServer = startWranglerDev({
     cwd: repoRoot,
     port,
-    vars: { EDITOR_API_TOKEN: editorToken },
+    vars: { EDITOR_API_TOKEN: editorToken, EDITOR_TOKEN_AUTH_ENABLED: 'true' },
   });
 
   try {
