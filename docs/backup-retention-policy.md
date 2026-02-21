@@ -23,12 +23,12 @@ This policy covers:
 
 ## Backup Frequency and Retention
 
-| Asset | Backup Method | Frequency | Retention |
-| --- | --- | --- | --- |
-| `data/content/projects.json`, `data/content/goals.json`, `data/content/history.json` | Snapshot JSON files + SHA256 manifest | On every merge to `main` and nightly at 02:00 UTC | 30 daily, 12 weekly, 12 monthly |
-| `metro-atl-transit-prod` (D1) | SQL export via Wrangler | Nightly at 02:00 UTC | 35 daily, 26 weekly, 12 monthly |
-| `metro-atl-transit-staging` (D1) | SQL export via Wrangler | Nightly at 02:00 UTC | 14 daily, 8 weekly |
-| `metro-atl-transit-prod` (D1) | Cloudflare D1 Time Travel | Continuous platform feature | Native 30-day window (platform limit) |
+| Asset                                                                                | Backup Method                         | Frequency                                         | Retention                             |
+| ------------------------------------------------------------------------------------ | ------------------------------------- | ------------------------------------------------- | ------------------------------------- |
+| `data/content/projects.json`, `data/content/goals.json`, `data/content/history.json` | Snapshot JSON files + SHA256 manifest | On every merge to `main` and nightly at 02:00 UTC | 30 daily, 12 weekly, 12 monthly       |
+| `metro-atl-transit-prod` (D1)                                                        | SQL export via Wrangler               | Nightly at 02:00 UTC                              | 35 daily, 26 weekly, 12 monthly       |
+| `metro-atl-transit-staging` (D1)                                                     | SQL export via Wrangler               | Nightly at 02:00 UTC                              | 14 daily, 8 weekly                    |
+| `metro-atl-transit-prod` (D1)                                                        | Cloudflare D1 Time Travel             | Continuous platform feature                       | Native 30-day window (platform limit) |
 
 ## Storage and Access Rules
 
@@ -43,16 +43,24 @@ Workflow:
 
 - `.github/workflows/backup-snapshots.yml`
 
-Required repository secrets:
+Required repository secrets (single-token mode):
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 
-`CLOUDFLARE_API_TOKEN` should include:
+Optional repository secrets (split-token mode, preferred for least privilege):
 
-- D1 read access (for `wrangler d1 export`)
-- R2 object write access (for backup uploads)
-- R2 bucket configuration edit access (only needed if using manual governance setup)
+- `CLOUDFLARE_D1_API_TOKEN` (falls back to `CLOUDFLARE_API_TOKEN`)
+- `CLOUDFLARE_D1_ACCOUNT_ID` (falls back to `CLOUDFLARE_ACCOUNT_ID`)
+- `CLOUDFLARE_R2_API_TOKEN` (falls back to `CLOUDFLARE_API_TOKEN`)
+- `CLOUDFLARE_R2_ACCOUNT_ID` (falls back to `CLOUDFLARE_ACCOUNT_ID`)
+
+Token scope expectations:
+
+- D1 token: D1 read/export access (for `wrangler d1 export`)
+- R2 token: R2 bucket/object read+write access (for backup uploads)
+- R2 token: R2 bucket configuration edit access (only needed if using manual governance setup)
+- R2 account ID must match the account that owns `BACKUP_R2_BUCKET`
 
 Required repository variables:
 

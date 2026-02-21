@@ -2,24 +2,24 @@ name: Backup Snapshots
 
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
   push:
     branches:
       - main
   workflow_dispatch:
     inputs:
       run_content_snapshot:
-        description: 'Capture data/content snapshot'
+        description: "Capture data/content snapshot"
         required: false
         default: true
         type: boolean
       run_d1_exports:
-        description: 'Run D1 exports (prod + staging)'
+        description: "Run D1 exports (prod + staging)"
         required: false
         default: true
         type: boolean
       configure_r2_governance:
-        description: 'Ensure R2 lifecycle + lock rules (manual use)'
+        description: "Ensure R2 lifecycle + lock rules (manual use)"
         required: false
         default: false
         type: boolean
@@ -44,6 +44,10 @@ jobs:
       BACKUP_R2_LOCK_RULE: ${{ vars.BACKUP_R2_LOCK_RULE }}
       BACKUP_R2_LIFECYCLE_EXPIRE_DAYS: ${{ vars.BACKUP_R2_LIFECYCLE_EXPIRE_DAYS }}
       BACKUP_R2_LOCK_RETENTION_DAYS: ${{ vars.BACKUP_R2_LOCK_RETENTION_DAYS }}
+      CF_D1_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+      CF_D1_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_D1_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CF_R2_API_TOKEN: ${{ secrets.CLOUDFLARE_R2_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+      CF_R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_R2_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -101,29 +105,82 @@ jobs:
         if: steps.scope.outputs.run_content == 'true' || steps.scope.outputs.run_d1 == 'true'
         shell: bash
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_D1_API_TOKEN: ${{ env.CF_D1_API_TOKEN }}
+          CF_D1_ACCOUNT_ID: ${{ env.CF_D1_ACCOUNT_ID }}
+          CF_R2_API_TOKEN: ${{ env.CF_R2_API_TOKEN }}
+          CF_R2_ACCOUNT_ID: ${{ env.CF_R2_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
-            echo "Missing required secret: CLOUDFLARE_API_TOKEN" >&2
-            exit 1
+          run_d1="${{ steps.scope.outputs.run_d1 }}"
+          run_content="${{ steps.scope.outputs.run_content }}"
+
+          if [[ "$run_d1" == "true" ]]; then
+            if [[ -z "${CF_D1_API_TOKEN:-}" ]]; then
+              echo "Missing required secret: CLOUDFLARE_D1_API_TOKEN (or fallback CLOUDFLARE_API_TOKEN)." >&2
+              exit 1
+            fi
+            if [[ -z "${CF_D1_ACCOUNT_ID:-}" ]]; then
+              echo "Missing required secret: CLOUDFLARE_D1_ACCOUNT_ID (or fallback CLOUDFLARE_ACCOUNT_ID)." >&2
+              exit 1
+            fi
           fi
-          if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
-            echo "Missing required secret: CLOUDFLARE_ACCOUNT_ID" >&2
-            exit 1
-          fi
-          if [[ -z "${BACKUP_R2_BUCKET:-}" ]]; then
-            echo "Missing required repository variable: BACKUP_R2_BUCKET" >&2
-            exit 1
+
+          if [[ "$run_content" == "true" || "$run_d1" == "true" ]]; then
+            if [[ -z "${CF_R2_API_TOKEN:-}" ]]; then
+              echo "Missing required secret: CLOUDFLARE_R2_API_TOKEN (or fallback CLOUDFLARE_API_TOKEN)." >&2
+              exit 1
+            fi
+            if [[ -z "${CF_R2_ACCOUNT_ID:-}" ]]; then
+              echo "Missing required secret: CLOUDFLARE_R2_ACCOUNT_ID (or fallback CLOUDFLARE_ACCOUNT_ID)." >&2
+              exit 1
+            fi
+            if [[ -z "${BACKUP_R2_BUCKET:-}" ]]; then
+              echo "Missing required repository variable: BACKUP_R2_BUCKET." >&2
+              exit 1
+            fi
+
+            export CLOUDFLARE_API_TOKEN="$CF_R2_API_TOKEN"
+            export CLOUDFLARE_ACCOUNT_ID="$CF_R2_ACCOUNT_ID"
+
+            jurisdiction="${BACKUP_R2_JURISDICTION:-}"
+            prefix="${BACKUP_R2_PREFIX:-metro-atl-transit-tracker}"
+            prefix="${prefix#/}"
+            prefix="${prefix%/}"
+            probe_file="${{ steps.paths.outputs.backup_root }}/r2-write-probe.txt"
+            probe_key="${prefix}/_healthchecks/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.txt"
+
+            bucket_info_cmd=(npx wrangler r2 bucket info "${BACKUP_R2_BUCKET}")
+            probe_put_cmd=(npx wrangler r2 object put "${BACKUP_R2_BUCKET}/${probe_key}" --remote --file "$probe_file")
+            probe_delete_cmd=(npx wrangler r2 object delete "${BACKUP_R2_BUCKET}/${probe_key}" --remote)
+            if [[ -n "$jurisdiction" ]]; then
+              bucket_info_cmd+=(--jurisdiction "$jurisdiction")
+              probe_put_cmd+=(--jurisdiction "$jurisdiction")
+              probe_delete_cmd+=(--jurisdiction "$jurisdiction")
+            fi
+
+            if ! "${bucket_info_cmd[@]}" >/dev/null 2>&1; then
+              echo "Cannot access R2 bucket '${BACKUP_R2_BUCKET}' with configured account/token." >&2
+              echo "Verify CLOUDFLARE_R2_ACCOUNT_ID (or CLOUDFLARE_ACCOUNT_ID) matches the bucket owner account." >&2
+              exit 1
+            fi
+
+            printf 'r2 write probe for run %s\n' "$GITHUB_RUN_ID" > "$probe_file"
+            if ! "${probe_put_cmd[@]}" >/dev/null 2>&1; then
+              echo "Cannot write to R2 bucket '${BACKUP_R2_BUCKET}' with configured account/token." >&2
+              echo "A 403 here usually means missing R2 write scope or wrong account ID." >&2
+              exit 1
+            fi
+
+            "${probe_delete_cmd[@]}" >/dev/null 2>&1 || true
+            rm -f "$probe_file"
           fi
 
       - name: Export D1 production
         if: steps.scope.outputs.run_d1 == 'true'
         shell: bash
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ env.CF_D1_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_D1_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           root="${{ steps.paths.outputs.backup_root }}"
@@ -136,8 +193,8 @@ jobs:
         if: steps.scope.outputs.run_d1 == 'true'
         shell: bash
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ env.CF_D1_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_D1_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           root="${{ steps.paths.outputs.backup_root }}"
@@ -158,8 +215,8 @@ jobs:
         if: steps.scope.outputs.configure_governance == 'true'
         shell: bash
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ env.CF_R2_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_R2_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           bucket="${BACKUP_R2_BUCKET}"
@@ -210,8 +267,8 @@ jobs:
       - name: Upload backups to R2
         shell: bash
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ env.CF_R2_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_R2_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           root="${{ steps.paths.outputs.backup_root }}"
