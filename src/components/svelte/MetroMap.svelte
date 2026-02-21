@@ -30,6 +30,7 @@
   export const subtitle =
     "Interactive county/region map will load here (MapLibre next).";
   export let height = "clamp(18rem, 45vh, 34rem)";
+  export let desktopHeight = "clamp(22rem, 58vh, 44rem)";
 
   const fallbackStyle: StyleSpecification = {
     version: 8,
@@ -366,8 +367,8 @@
 <section aria-label={title}>
   <div class="relative rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
     <div
-      class="relative w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950"
-      style={`height: ${height};`}
+      class="map-frame relative w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950"
+      style={`--map-height: ${height}; --map-height-desktop: ${desktopHeight};`}
       aria-label="Metro Atlanta map"
     >
       <!-- MapLibre mounts here; .map-container MUST be 100%/100% -->
@@ -407,6 +408,16 @@
   .map-container {
     width: 100%;
     height: 100%;
+  }
+
+  .map-frame {
+    height: var(--map-height);
+  }
+
+  @media (min-width: 1024px) {
+    .map-frame {
+      height: var(--map-height-desktop);
+    }
   }
 
   /* Constrain the floating county panel to the map height and allow scrolling
