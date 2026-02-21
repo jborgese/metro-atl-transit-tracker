@@ -43,3 +43,6 @@ coverage/
 
 # Ignore public artifacts if generated
 public/
+
+# Backup artifacts
+backups/
