@@ -387,7 +387,7 @@
       <div class="header-status">
         <span class:loading={loading} class="status-pill">{loading ? 'Loading' : 'Ready'}</span>
         {#if lastLoadedAt}
-          <span class="last-sync">Last sync: {formatTimestamp(lastLoadedAt)}</span>
+          <span class="last-sync">Last refreshed: {formatTimestamp(lastLoadedAt)}</span>
         {/if}
       </div>
     </header>

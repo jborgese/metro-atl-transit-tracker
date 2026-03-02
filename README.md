@@ -42,6 +42,11 @@ Fallback seed sources (used if canonical seed arrays are empty):
 - `src/data/geo/projects-metadata.json`
 - `src/data/geo/goals-metadata.json`
 
+Important behavior:
+
+- Admin edits at `/admin` write to D1 immediately and do not automatically write back to `data/content/*.json`.
+- This can create intentional drift between live D1 content and repository seed files until you export/sync data manually.
+
 Policies/runbooks:
 
 - `docs/ci-gate-policy.md`
@@ -217,6 +222,12 @@ What it does:
 - Exports D1 prod + staging nightly
 - Uploads artifacts and durable backups to Cloudflare R2
 - Optionally configures R2 lifecycle + object lock rules (manual dispatch mode)
+
+Timing/sync notes:
+
+- R2 is used for backups, not live runtime reads/writes from the app.
+- D1 exports are uploaded to R2 when the backup workflow runs (nightly schedule or manual dispatch when D1 export is enabled), not on each admin edit.
+- A `main` branch push can snapshot `data/content/*` and upload to R2 without exporting D1, so recent admin-only D1 changes may not be reflected in that backup run.
 
 See `docs/backup-retention-policy.md` for:
 

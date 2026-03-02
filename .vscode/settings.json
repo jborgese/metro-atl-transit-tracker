@@ -2,6 +2,7 @@
   "css.lint.unknownAtRules": "ignore",
   "cSpell.words": [
     "abettercobb",
+    "ARCHIVERS",
     "basemap",
     "beltlinerailnow",
     "cloudflareaccess",
@@ -14,6 +15,7 @@
     "maplibre",
     "maplibregl",
     "MAPTILER",
+    "Prereqs",
     "ridegwinnett",
     "vercel"
   ],
