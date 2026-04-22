@@ -267,12 +267,17 @@
     const endpoint = isCreate ? base : `${base}/${encodeURIComponent(selectedId)}`;
     const method = isCreate ? 'POST' : 'PATCH';
 
+    const body = { ...parsed };
+    delete body.is_archived;
+    delete body.archived_at;
+    delete body.archived_by;
+
     loading = true;
     try {
       const res = await fetch(endpoint, {
         method,
         headers: authHeaders(),
-        body: JSON.stringify(parsed),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
