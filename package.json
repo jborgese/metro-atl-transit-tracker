@@ -6,7 +6,7 @@
     "dev": "vite dev",
     "d1:migrate:local": "wrangler d1 migrations apply metro-atl-transit-prod --local",
     "build": "svelte-kit sync && vite build",
-    "deploy": "wrangler deploy",
+    "deploy": "npm run build && wrangler deploy",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "npm run check",
