@@ -10,7 +10,10 @@
       "mcp__cloudflare-bindings__r2_buckets_list",
       "mcp__cloudflare-bindings__d1_database_query",
       "mcp__cloudflare-observability__query_worker_observability",
-      "mcp__cloudflare-bindings__workers_get_worker"
+      "mcp__cloudflare-bindings__workers_get_worker",
+      "mcp__cloudflare-observability__observability_keys",
+      "mcp__cloudflare-observability__observability_values",
+      "mcp__cloudflare-bindings__workers_get_worker_code"
     ]
   }
 }

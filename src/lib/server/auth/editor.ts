@@ -3,6 +3,7 @@ import { error, type RequestEvent } from '@sveltejs/kit';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 
 const ACCESS_JWT_HEADER = 'cf-access-jwt-assertion';
+const ACCESS_JWT_COOKIE = 'CF_Authorization';
 const EDITOR_TOKEN_HEADER = 'x-editor-token';
 const EDITOR_API_TOKEN_ENV = 'EDITOR_API_TOKEN';
 const EDITOR_TOKEN_AUTH_ENABLED_ENV = 'EDITOR_TOKEN_AUTH_ENABLED';
@@ -221,12 +222,16 @@ export async function requireEditorActor(
     );
   }
 
-  const jwtAssertion = event.request.headers.get(ACCESS_JWT_HEADER)?.trim();
+  const headerJwt = event.request.headers.get(ACCESS_JWT_HEADER)?.trim();
+  const cookieJwt = event.cookies.get(ACCESS_JWT_COOKIE)?.trim();
+  const jwtAssertion = headerJwt || cookieJwt;
   if (!jwtAssertion) {
-    console.warn('[editor-auth] 401 missing cf-access-jwt-assertion header', {
+    console.warn('[editor-auth] 401 no Access JWT on request', {
       path: event.url.pathname,
       method: event.request.method,
       permission,
+      hasHeader: Boolean(headerJwt),
+      hasCookie: Boolean(cookieJwt),
     });
     throw error(401, 'Unauthorized');
   }
