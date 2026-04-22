@@ -223,6 +223,11 @@ export async function requireEditorActor(
 
   const jwtAssertion = event.request.headers.get(ACCESS_JWT_HEADER)?.trim();
   if (!jwtAssertion) {
+    console.warn('[editor-auth] 401 missing cf-access-jwt-assertion header', {
+      path: event.url.pathname,
+      method: event.request.method,
+      permission,
+    });
     throw error(401, 'Unauthorized');
   }
 
@@ -237,6 +242,15 @@ export async function requireEditorActor(
     if (typeof err === 'object' && err !== null && 'status' in err && (err as { status?: number }).status === 403) {
       throw err;
     }
+    const reason = err instanceof Error ? err.message : String(err);
+    const code = err instanceof Error && 'code' in err ? (err as { code?: unknown }).code : undefined;
+    console.warn('[editor-auth] 401 JWT verification failed', {
+      path: event.url.pathname,
+      method: event.request.method,
+      permission,
+      reason,
+      code,
+    });
     throw error(401, 'Unauthorized');
   }
 }

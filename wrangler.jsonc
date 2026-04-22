@@ -4,6 +4,9 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	"observability": {
+		"enabled": true
+	},
 	"vars": {
 		"CF_ACCESS_TEAM_DOMAIN": "frootsnoops.cloudflareaccess.com",
 		"CF_ACCESS_AUD": "96f0e12e20cbdf4fd6f78aaecf0129add7fbc21883156fc4b2f703c4cccc3638",
