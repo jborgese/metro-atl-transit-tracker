@@ -10,6 +10,7 @@
   let token = '';
   let actor = 'admin';
   let dataset: EditorEntity = 'project';
+  let selectedDataset: EditorEntity = 'project';
   let projects: Project[] = [];
   let goals: Goal[] = [];
   let history: ContentHistoryEvent[] = [];
@@ -23,6 +24,7 @@
   let dirty = false;
   let editorError = '';
   let lastLoadedAt = '';
+  let now = Date.now();
 
   let activeItems: EntityItem[] = [];
   let filteredItems: EntityItem[] = [];
@@ -64,10 +66,12 @@
       return true;
     }
 
-    const haystack = `${item.id} ${toEntityHeadline(item)} ${toEntitySubline(item)}`.toLowerCase();
+    const haystack = `${item.id} ${toEntityHeadline(item, dataset)} ${toEntitySubline(item, dataset)}`.toLowerCase();
     return haystack.includes(searchTerm);
   });
-  $: selectedEntity = activeItems.find((item) => item.id === selectedId) ?? null;
+  $: selectedEntity = selectedId
+    ? (selectedDataset === 'project' ? projects : goals).find((item) => item.id === selectedId) ?? null
+    : null;
   $: selectedArchived = selectedEntity?.is_archived === true;
 
   function authHeaders() {
@@ -135,6 +139,7 @@
 
   function startNew(mode: EditorEntity) {
     dataset = mode;
+    selectedDataset = mode;
     selectedId = '';
     const template = mode === 'project' ? newProjectTemplate : newGoalTemplate;
     editorJson = `${JSON.stringify(template, null, 2)}\n`;
@@ -142,18 +147,36 @@
     validateEditorJson();
   }
 
-  function selectEntity(id: string) {
-    const entity = activeItems.find((item) => item.id === id);
-    if (!entity) {
-      setMessage(`Could not find ${dataset} ${id}`, 'error');
+  function setDataset(kind: EditorEntity) {
+    if (dataset === kind) {
       return;
     }
+    dataset = kind;
+    searchQuery = '';
+  }
+
+  function selectEntity(id: string, kind: EditorEntity) {
+    const items = kind === 'project' ? projects : goals;
+    const entity = items.find((item) => item.id === id);
+    if (!entity) {
+      setMessage(`Could not find ${kind} ${id}`, 'error');
+      return;
+    }
+    dataset = kind;
+    selectedDataset = kind;
     selectedId = id;
     setEditorFromEntity(entity);
   }
 
-  function toEntityHeadline(item: EntityItem) {
-    if (dataset === 'project') {
+  function closeEditor() {
+    if (dirty && !window.confirm('Discard unsaved changes?')) {
+      return;
+    }
+    startNew(dataset);
+  }
+
+  function toEntityHeadline(item: EntityItem, kind: EditorEntity) {
+    if (kind === 'project') {
       const project = item as Project;
       return project.title?.trim() || project.id;
     }
@@ -161,8 +184,8 @@
     return goal.goal?.trim() || goal.id;
   }
 
-  function toEntitySubline(item: EntityItem) {
-    if (dataset === 'project') {
+  function toEntitySubline(item: EntityItem, kind: EditorEntity) {
+    if (kind === 'project') {
       const project = item as Project;
       return project.status?.trim() || 'status unknown';
     }
@@ -177,6 +200,23 @@
       return value;
     }
     return date.toLocaleString();
+  }
+
+  function formatRelative(value: string, reference = now) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    const diff = reference - date.getTime();
+    const absDiff = Math.abs(diff);
+    const minute = 60_000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    if (absDiff < 45_000) return 'just now';
+    if (absDiff < hour) return `${Math.round(absDiff / minute)} min ago`;
+    if (absDiff < day) return `${Math.round(absDiff / hour)} hr ago`;
+    if (absDiff < 7 * day) return `${Math.round(absDiff / day)} day${Math.round(absDiff / day) === 1 ? '' : 's'} ago`;
+    return date.toLocaleDateString();
   }
 
   function validateEditorJson() {
@@ -213,6 +253,7 @@
   async function loadData(options: { quiet?: boolean } = {}) {
     loading = true;
     const previousSelection = selectedId;
+    const previousSelectedDataset = selectedDataset;
 
     try {
       const [projectData, goalData, historyData] = await Promise.all([
@@ -225,11 +266,15 @@
       goals = goalData;
       history = historyData;
       lastLoadedAt = new Date().toISOString();
+      now = Date.now();
 
       if (previousSelection) {
-        const exists = (dataset === 'project' ? projectData : goalData).some((item) => item.id === previousSelection);
+        const exists =
+          previousSelectedDataset === 'project'
+            ? projectData.some((item) => item.id === previousSelection)
+            : goalData.some((item) => item.id === previousSelection);
         if (exists) {
-          selectEntity(previousSelection);
+          selectEntity(previousSelection, previousSelectedDataset);
         } else {
           startNew(dataset);
         }
@@ -238,7 +283,7 @@
       }
 
       if (!options.quiet) {
-        setMessage('Loaded latest content from D1.', 'success');
+        setMessage('Loaded latest content.', 'success');
       }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Failed to load content.', 'error');
@@ -254,16 +299,18 @@
       return;
     }
 
-    if (!selectedId) {
+    const isCreate = selectedId.length === 0;
+    const targetDataset: EditorEntity = isCreate ? dataset : selectedDataset;
+
+    if (isCreate) {
       const candidateId = parsed.id;
       if (typeof candidateId !== 'string' || candidateId.trim().length === 0) {
-        setMessage(`New ${dataset}s must include a non-empty "id".`, 'error');
+        setMessage(`New ${targetDataset}s must include a non-empty "id".`, 'error');
         return;
       }
     }
 
-    const base = dataset === 'project' ? '/api/projects' : '/api/goals';
-    const isCreate = selectedId.length === 0;
+    const base = targetDataset === 'project' ? '/api/projects' : '/api/goals';
     const endpoint = isCreate ? base : `${base}/${encodeURIComponent(selectedId)}`;
     const method = isCreate ? 'POST' : 'PATCH';
 
@@ -290,10 +337,13 @@
 
       await loadData({ quiet: true });
       if (savedId) {
-        selectEntity(savedId);
+        selectEntity(savedId, targetDataset);
       }
       dirty = false;
-      setMessage(isCreate ? `Created ${dataset} ${savedId}.` : `Updated ${dataset} ${savedId}.`, 'success');
+      setMessage(
+        isCreate ? `Created ${targetDataset} ${savedId}.` : `Updated ${targetDataset} ${savedId}.`,
+        'success',
+      );
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Save failed.', 'error');
     } finally {
@@ -308,19 +358,21 @@
     }
 
     if (selectedArchived) {
-      setMessage(`${entityTitle[dataset]} ${selectedId} is already archived.`, 'info');
+      setMessage(`${entityTitle[selectedDataset]} ${selectedId} is already archived.`, 'info');
       return;
     }
 
-    const proceed = window.confirm(`Archive ${entityTitle[dataset].toLowerCase()} ${selectedId}?`);
+    const targetDataset = selectedDataset;
+    const targetId = selectedId;
+    const proceed = window.confirm(`Archive ${entityTitle[targetDataset].toLowerCase()} ${targetId}?`);
     if (!proceed) {
       return;
     }
 
-    const base = dataset === 'project' ? '/api/projects' : '/api/goals';
+    const base = targetDataset === 'project' ? '/api/projects' : '/api/goals';
     loading = true;
     try {
-      const endpoint = `${base}/${encodeURIComponent(selectedId)}`;
+      const endpoint = `${base}/${encodeURIComponent(targetId)}`;
       const res = await fetch(endpoint, {
         method: 'DELETE',
         headers: authHeaders(),
@@ -329,11 +381,9 @@
         throw new Error(await toResponseErrorMessage(endpoint, res));
       }
       await loadData({ quiet: true });
-      if (selectedId) {
-        selectEntity(selectedId);
-      }
+      selectEntity(targetId, targetDataset);
       dirty = false;
-      setMessage(`Archived ${dataset} ${selectedId}.`, 'success');
+      setMessage(`Archived ${targetDataset} ${targetId}.`, 'success');
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Archive failed.', 'error');
     } finally {
@@ -348,14 +398,16 @@
     }
 
     if (!selectedArchived) {
-      setMessage(`${entityTitle[dataset]} ${selectedId} is already active.`, 'info');
+      setMessage(`${entityTitle[selectedDataset]} ${selectedId} is already active.`, 'info');
       return;
     }
 
-    const base = dataset === 'project' ? '/api/projects' : '/api/goals';
+    const targetDataset = selectedDataset;
+    const targetId = selectedId;
+    const base = targetDataset === 'project' ? '/api/projects' : '/api/goals';
     loading = true;
     try {
-      const endpoint = `${base}/${encodeURIComponent(selectedId)}/restore`;
+      const endpoint = `${base}/${encodeURIComponent(targetId)}/restore`;
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: authHeaders(),
@@ -364,11 +416,9 @@
         throw new Error(await toResponseErrorMessage(endpoint, res));
       }
       await loadData({ quiet: true });
-      if (selectedId) {
-        selectEntity(selectedId);
-      }
+      selectEntity(targetId, targetDataset);
       dirty = false;
-      setMessage(`Restored ${dataset} ${selectedId}.`, 'success');
+      setMessage(`Restored ${targetDataset} ${targetId}.`, 'success');
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Restore failed.', 'error');
     } finally {
@@ -376,7 +426,13 @@
     }
   }
 
-  onMount(loadData);
+  onMount(() => {
+    loadData();
+    const tick = setInterval(() => {
+      now = Date.now();
+    }, 30_000);
+    return () => clearInterval(tick);
+  });
 </script>
 
 <BaseLayout title="Admin Portal | Metro ATL Transit Tracker">
@@ -384,62 +440,75 @@
     <header class="admin-header panel">
       <div class="header-copy">
         <h1>Admin Portal</h1>
-        <p>Edit projects and goals directly in D1. Changes publish immediately to the public site and history feed.</p>
         <p>
-          Public history is available at <a href="/history">/history</a>.
+          Edit projects and goals. Changes go live immediately and are logged to <a href="/history">/history</a>.
         </p>
       </div>
       <div class="header-status">
-        <span class:loading={loading} class="status-pill">{loading ? 'Loading' : 'Ready'}</span>
-        {#if lastLoadedAt}
-          <span class="last-sync">Last refreshed: {formatTimestamp(lastLoadedAt)}</span>
-        {/if}
+        <div class="status-line">
+          <span class:loading class="status-pill">{loading ? 'Loading' : 'Ready'}</span>
+          {#if lastLoadedAt}
+            <span class="last-sync" title={formatTimestamp(lastLoadedAt)}>
+              Refreshed {formatRelative(lastLoadedAt, now)}
+            </span>
+          {/if}
+          <button class="refresh-button" on:click={() => loadData()} disabled={loading}>Refresh</button>
+        </div>
+
+        <details class="token-auth">
+          <summary>Token auth (optional)</summary>
+          <div class="token-auth-body">
+            <label>
+              API token
+              <input
+                bind:value={token}
+                type="password"
+                autocomplete="off"
+                placeholder="Leave blank when signed in via Access"
+              />
+            </label>
+            <label>
+              Actor name
+              <input bind:value={actor} type="text" autocomplete="off" placeholder="admin" />
+              <small>Used when signing in with a token.</small>
+            </label>
+          </div>
+        </details>
       </div>
     </header>
 
-    <section class="auth-bar panel">
-      <label>
-        Editor Token
-        <input bind:value={token} type="password" autocomplete="off" placeholder="Optional in Cloudflare Access mode" />
-      </label>
-      <label>
-        Actor (token mode)
-        <input bind:value={actor} type="text" autocomplete="off" placeholder="admin" />
-      </label>
-      <button on:click={() => loadData()} disabled={loading}>Refresh Data</button>
-    </section>
-
     {#if message}
-      <p class={`message ${messageKind}`}>{message}</p>
+      <p class={`message ${messageKind}`} role="status">{message}</p>
     {/if}
 
     <div class="admin-grid">
       <aside class="entity-list panel">
-        <div class="list-actions">
+        <div class="list-actions" role="tablist" aria-label="Content type">
           <button
+            role="tab"
+            aria-selected={dataset === 'project'}
             class:active={dataset === 'project'}
-            on:click={() => startNew('project')}
+            on:click={() => setDataset('project')}
             disabled={loading}
           >
             Projects ({projects.length})
           </button>
-          <button class:active={dataset === 'goal'} on:click={() => startNew('goal')} disabled={loading}>
+          <button
+            role="tab"
+            aria-selected={dataset === 'goal'}
+            class:active={dataset === 'goal'}
+            on:click={() => setDataset('goal')}
+            disabled={loading}
+          >
             Goals ({goals.length})
           </button>
         </div>
 
-        <div class="list-toolbar">
-          <button class="new-button" on:click={() => startNew(dataset)} disabled={loading}>
-            New {entityTitle[dataset]}
-          </button>
-          <label class="archive-toggle">
-            <input type="checkbox" bind:checked={includeArchived} />
-            Include archived
-          </label>
-        </div>
-
         <label class="search-field">
-          Search
+          <span class="search-label">
+            <span>Search</span>
+            <span class="collection-meta">{filteredItems.length} of {activeItems.length}</span>
+          </span>
           <input
             bind:value={searchQuery}
             type="text"
@@ -448,18 +517,29 @@
           />
         </label>
 
-        <p class="collection-meta">Showing {filteredItems.length} of {activeItems.length}</p>
+        <div class="list-toolbar">
+          <button class="new-button" on:click={() => startNew(dataset)} disabled={loading}>
+            + New {entityTitle[dataset]}
+          </button>
+          <label class="archive-toggle">
+            <input type="checkbox" bind:checked={includeArchived} />
+            Include archived
+          </label>
+        </div>
 
         <ul>
           {#if filteredItems.length === 0}
             <li class="empty-state">No {dataset}s match this filter.</li>
           {:else}
             {#each filteredItems as item (item.id)}
-              <li class:selected={selectedId === item.id}>
-                <button on:click={() => selectEntity(item.id)} disabled={loading}>
-                  <span class="item-headline">{toEntityHeadline(item)}</span>
-                  <span class="item-subline">{toEntitySubline(item)}</span>
-                  <span class="item-id">{item.id}</span>
+              <li class:selected={selectedDataset === dataset && selectedId === item.id}>
+                <button
+                  on:click={() => selectEntity(item.id, dataset)}
+                  disabled={loading}
+                  title={item.id}
+                >
+                  <span class="item-headline">{toEntityHeadline(item, dataset)}</span>
+                  <span class="item-subline">{toEntitySubline(item, dataset)}</span>
                   {#if item.is_archived === true}
                     <span class="badge">archived</span>
                   {/if}
@@ -472,12 +552,47 @@
 
       <section class="editor-pane panel">
         <div class="editor-head">
-          <h2>{selectedId ? `Editing ${entityTitle[dataset]} ${selectedId}` : `Create ${entityTitle[dataset]}`}</h2>
-          <button on:click={formatEditorJson} disabled={loading}>Format JSON</button>
+          <h2>
+            {selectedId
+              ? `Editing ${entityTitle[selectedDataset]} ${selectedId}`
+              : `New ${entityTitle[dataset]}`}
+          </h2>
+          <div class="editor-head-actions">
+            <button on:click={formatEditorJson} disabled={loading}>Format JSON</button>
+            {#if selectedId}
+              <button class="ghost" on:click={closeEditor} disabled={loading} aria-label="Close editor">
+                Close
+              </button>
+            {/if}
+          </div>
         </div>
 
+        {#if selectedEntity}
+          <div class="entity-meta">
+            <span class="meta-pill" class:archived={selectedArchived}>
+              {selectedArchived ? 'Archived' : 'Active'}
+            </span>
+            <span class="meta-text">
+              Updated
+              {#if selectedEntity.provenance?.updated_at}
+                <time
+                  datetime={String(selectedEntity.provenance.updated_at)}
+                  title={formatTimestamp(String(selectedEntity.provenance.updated_at))}
+                >
+                  {formatRelative(String(selectedEntity.provenance.updated_at), now)}
+                </time>
+              {:else}
+                <span class="meta-dim">n/a</span>
+              {/if}
+              {#if selectedEntity.provenance?.updated_by}
+                by <span class="meta-actor">{String(selectedEntity.provenance.updated_by)}</span>
+              {/if}
+            </span>
+          </div>
+        {/if}
+
         <p class="editor-note">
-          Keep server-managed archive fields out of manual edits. Use the Archive and Restore buttons instead.
+          Use Archive/Restore — don't edit <code>is_archived</code> fields by hand.
         </p>
 
         <textarea bind:value={editorJson} spellcheck="false" on:input={handleEditorInput}></textarea>
@@ -486,46 +601,21 @@
           <p class="editor-state error">JSON error: {editorError}</p>
         {:else if dirty}
           <p class="editor-state warning">Unsaved changes.</p>
-        {:else}
-          <p class="editor-state">No unsaved changes.</p>
+        {:else if selectedId}
+          <p class="editor-state">Saved.</p>
         {/if}
 
         <div class="editor-actions">
           <button class="primary" on:click={saveEntity} disabled={loading || editorError.length > 0}>
             {selectedId ? 'Save Changes' : `Create ${entityTitle[dataset]}`}
           </button>
-          <button on:click={archiveSelected} disabled={loading || !selectedId || selectedArchived}>Archive</button>
-          <button on:click={restoreSelected} disabled={loading || !selectedId || !selectedArchived}>Restore</button>
+          <button on:click={archiveSelected} disabled={loading || !selectedId || selectedArchived}>
+            Archive
+          </button>
+          <button on:click={restoreSelected} disabled={loading || !selectedId || !selectedArchived}>
+            Restore
+          </button>
         </div>
-
-        {#if selectedEntity}
-          <dl class="entity-meta">
-            <div>
-              <dt>Status</dt>
-              <dd>{selectedArchived ? 'Archived' : 'Active'}</dd>
-            </div>
-            <div>
-              <dt>Updated</dt>
-              <dd>
-                {#if selectedEntity.provenance?.updated_at}
-                  {formatTimestamp(String(selectedEntity.provenance.updated_at))}
-                {:else}
-                  n/a
-                {/if}
-              </dd>
-            </div>
-            <div>
-              <dt>Actor</dt>
-              <dd>
-                {#if selectedEntity.provenance?.updated_by}
-                  {String(selectedEntity.provenance.updated_by)}
-                {:else}
-                  n/a
-                {/if}
-              </dd>
-            </div>
-          </dl>
-        {/if}
       </section>
     </div>
 
@@ -537,10 +627,23 @@
         <ul>
           {#each history as event (event.id)}
             <li>
-              <span>{formatTimestamp(event.timestamp)}</span>
-              <span>{event.action}</span>
-              <span>{event.entity_type}:{event.entity_id}</span>
-              <span>by {event.actor}</span>
+              <span class={`action-pill action-${event.action}`}>{event.action}</span>
+              <button
+                class="entity-ref"
+                on:click={() => selectEntity(event.entity_id, event.entity_type as EditorEntity)}
+                disabled={loading}
+                title={`Open ${event.entity_type} ${event.entity_id}`}
+              >
+                {event.entity_type}:{event.entity_id}
+              </button>
+              <time
+                class="history-time"
+                datetime={event.timestamp}
+                title={formatTimestamp(event.timestamp)}
+              >
+                {formatRelative(event.timestamp, now)}
+              </time>
+              <span class="history-actor">by {event.actor}</span>
             </li>
           {/each}
         </ul>
@@ -582,9 +685,17 @@
   .header-status {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.4rem;
     align-items: flex-end;
-    min-width: 12rem;
+    min-width: 14rem;
+  }
+
+  .status-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .status-pill {
@@ -609,18 +720,71 @@
     color: var(--text-muted, #c6cbc6);
   }
 
-  .auth-bar {
-    display: grid;
-    grid-template-columns: 1fr 16rem auto;
-    gap: 0.75rem;
-    align-items: end;
+  .refresh-button {
+    border: 1px solid var(--border-subtle, rgba(126, 110, 79, 0.3));
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.08);
+    color: inherit;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.78rem;
+    cursor: pointer;
   }
 
-  .auth-bar label {
+  .refresh-button:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .token-auth {
+    font-size: 0.82rem;
+    color: var(--text-muted, #c6cbc6);
+    align-self: stretch;
+  }
+
+  .token-auth > summary {
+    list-style: none;
+    cursor: pointer;
+    color: var(--text-dim, #9fa7a2);
+    text-align: right;
+    padding: 0.15rem 0;
+    user-select: none;
+  }
+
+  .token-auth > summary::before {
+    content: '▸';
+    display: inline-block;
+    margin-right: 0.35rem;
+    transition: transform 120ms ease;
+  }
+
+  .token-auth[open] > summary::before {
+    transform: rotate(90deg);
+  }
+
+  .token-auth-body {
+    margin-top: 0.5rem;
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    align-items: start;
+    padding: 0.65rem;
+    border: 1px solid var(--border-subtle, rgba(126, 110, 79, 0.3));
+    border-radius: 0.5rem;
+    background: rgba(0, 0, 0, 0.18);
+  }
+
+  .token-auth-body label {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
+    color: var(--text-on-dark, #f3f2ee);
+    text-align: left;
+  }
+
+  .token-auth-body small {
+    color: var(--text-dim, #9fa7a2);
+    font-size: 0.72rem;
   }
 
   input,
@@ -629,16 +793,16 @@
     font: inherit;
   }
 
-  .auth-bar input,
+  .token-auth-body input,
   .search-field input {
     border: 1px solid var(--border-subtle, rgba(126, 110, 79, 0.3));
     border-radius: 0.5rem;
     background: rgba(255, 255, 255, 0.06);
     color: inherit;
     padding: 0.45rem 0.6rem;
+    font-size: 1rem;
   }
 
-  .auth-bar button,
   .entity-list button,
   .editor-pane button {
     border: 1px solid var(--border-subtle, rgba(126, 110, 79, 0.3));
@@ -649,11 +813,18 @@
     cursor: pointer;
   }
 
-  .auth-bar button:disabled,
   .entity-list button:disabled,
   .editor-pane button:disabled {
     opacity: 0.55;
     cursor: default;
+  }
+
+  .admin-page button:focus-visible,
+  .admin-page input:focus-visible,
+  .admin-page textarea:focus-visible,
+  .admin-page summary:focus-visible {
+    outline: 2px solid rgba(66, 128, 196, 0.75);
+    outline-offset: 2px;
   }
 
   .message {
@@ -727,10 +898,17 @@
     font-size: 0.86rem;
   }
 
+  .search-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
   .collection-meta {
-    margin: 0;
-    font-size: 0.8rem;
-    color: var(--text-muted, #c6cbc6);
+    font-size: 0.74rem;
+    color: var(--text-dim, #9fa7a2);
+    font-variant-numeric: tabular-nums;
   }
 
   .entity-list ul {
@@ -747,7 +925,7 @@
     width: 100%;
     text-align: left;
     display: grid;
-    gap: 0.16rem;
+    gap: 0.18rem;
     align-items: flex-start;
     font-size: 0.8rem;
     position: relative;
@@ -763,17 +941,12 @@
     font-size: 0.87rem;
     font-weight: 600;
     color: #f0f1f0;
+    line-height: 1.3;
   }
 
   .item-subline {
     color: var(--text-muted, #c6cbc6);
     font-size: 0.74rem;
-  }
-
-  .item-id {
-    color: var(--text-dim, #9fa7a2);
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
   }
 
   .badge {
@@ -810,12 +983,36 @@
   .editor-head h2 {
     margin: 0;
     font-size: 1rem;
+    word-break: break-word;
+  }
+
+  .editor-head-actions {
+    display: inline-flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .editor-head-actions .ghost {
+    background: transparent;
+    color: var(--text-muted, #c6cbc6);
+  }
+
+  .editor-head-actions .ghost:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.06);
+    color: inherit;
   }
 
   .editor-note {
     margin: 0;
     color: var(--text-muted, #c6cbc6);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+  }
+
+  .editor-note code {
+    background: rgba(0, 0, 0, 0.28);
+    padding: 0.05rem 0.3rem;
+    border-radius: 0.3rem;
+    font-size: 0.78rem;
   }
 
   .editor-pane textarea {
@@ -827,7 +1024,7 @@
     background: rgba(0, 0, 0, 0.3);
     color: inherit;
     font-family: var(--font-mono, monospace);
-    font-size: 0.84rem;
+    font-size: max(0.84rem, 16px);
     line-height: 1.5;
     padding: 0.65rem;
   }
@@ -858,32 +1055,47 @@
   }
 
   .entity-meta {
-    margin: 0.1rem 0 0;
-    padding: 0.65rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.45rem 0.6rem;
     border-radius: 0.5rem;
     border: 1px solid rgba(255, 255, 255, 0.07);
     background: rgba(0, 0, 0, 0.14);
-    display: grid;
-    gap: 0.4rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .entity-meta div {
-    min-width: 0;
-  }
-
-  .entity-meta dt {
-    font-size: 0.72rem;
-    color: var(--text-dim, #9fa7a2);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .entity-meta dd {
-    margin: 0.1rem 0 0;
     font-size: 0.82rem;
+    color: var(--text-muted, #c6cbc6);
+  }
+
+  .meta-pill {
+    border: 1px solid rgba(64, 156, 106, 0.55);
+    background: rgba(64, 156, 106, 0.18);
+    color: #c7eed6;
+    padding: 0.12rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .meta-pill.archived {
+    border-color: rgba(247, 215, 181, 0.55);
+    background: rgba(247, 215, 181, 0.15);
+    color: #f7d7b5;
+  }
+
+  .meta-text time {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .meta-actor {
+    color: var(--text-on-dark, #f3f2ee);
     font-family: var(--font-mono, monospace);
-    overflow-wrap: anywhere;
+    font-size: 0.78rem;
+  }
+
+  .meta-dim {
+    color: var(--text-dim, #9fa7a2);
   }
 
   .history-preview h2 {
@@ -895,17 +1107,88 @@
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 0.35rem;
+    gap: 0.4rem;
   }
 
   .history-preview li {
     display: grid;
-    grid-template-columns: minmax(8rem, 13rem) 5.5rem minmax(12rem, 1fr) minmax(7rem, auto);
-    gap: 0.45rem;
-    font-size: 0.8rem;
-    font-family: var(--font-mono, monospace);
+    grid-template-columns: 5rem minmax(12rem, 1fr) minmax(6rem, auto) minmax(6rem, auto);
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.82rem;
     border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-    padding-bottom: 0.35rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .action-pill {
+    display: inline-block;
+    text-align: center;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid transparent;
+  }
+
+  .action-create {
+    border-color: rgba(64, 156, 106, 0.55);
+    background: rgba(64, 156, 106, 0.18);
+    color: #c7eed6;
+  }
+
+  .action-update {
+    border-color: rgba(66, 128, 196, 0.55);
+    background: rgba(66, 128, 196, 0.18);
+    color: #d5e8ff;
+  }
+
+  .action-archive {
+    border-color: rgba(247, 215, 181, 0.55);
+    background: rgba(247, 215, 181, 0.15);
+    color: #f7d7b5;
+  }
+
+  .action-restore {
+    border-color: rgba(126, 110, 79, 0.55);
+    background: rgba(126, 110, 79, 0.22);
+    color: var(--text-on-dark, #f3f2ee);
+  }
+
+  .entity-ref {
+    border: 1px solid transparent;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    padding: 0.15rem 0.3rem;
+    margin-left: -0.3rem;
+    border-radius: 0.35rem;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.8rem;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+
+  .entity-ref:hover:not(:disabled) {
+    background: rgba(66, 128, 196, 0.14);
+    color: #d5e8ff;
+  }
+
+  .entity-ref:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+
+  .history-time {
+    color: var(--text-muted, #c6cbc6);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .history-actor {
+    color: var(--text-dim, #9fa7a2);
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
   }
 
   .empty-history {
@@ -915,17 +1198,33 @@
   }
 
   @media (max-width: 1000px) {
-    .auth-bar {
-      grid-template-columns: 1fr;
-    }
-
     .admin-grid {
       grid-template-columns: 1fr;
     }
 
     .history-preview li {
-      grid-template-columns: 1fr;
-      gap: 0.15rem;
+      grid-template-columns: auto 1fr;
+      grid-template-areas:
+        'pill entity'
+        'time actor';
+      gap: 0.2rem 0.55rem;
+    }
+
+    .history-preview .action-pill {
+      grid-area: pill;
+    }
+
+    .history-preview .entity-ref {
+      grid-area: entity;
+    }
+
+    .history-preview .history-time {
+      grid-area: time;
+    }
+
+    .history-preview .history-actor {
+      grid-area: actor;
+      text-align: right;
     }
   }
 
@@ -939,13 +1238,56 @@
       min-width: auto;
     }
 
+    .status-line {
+      justify-content: flex-start;
+    }
+
+    .token-auth > summary {
+      text-align: left;
+    }
+
     .list-toolbar {
       flex-direction: column;
       align-items: stretch;
     }
 
-    .entity-meta {
-      grid-template-columns: 1fr;
+    .editor-pane textarea {
+      min-height: 16rem;
+    }
+  }
+
+  @media (max-height: 640px) {
+    .editor-pane textarea {
+      min-height: 14rem;
+    }
+  }
+
+  @media (pointer: coarse) {
+    .admin-page button,
+    .admin-page .archive-toggle,
+    .admin-page summary {
+      min-height: 2.75rem;
+    }
+
+    .admin-page .refresh-button,
+    .admin-page .action-pill,
+    .admin-page .meta-pill,
+    .admin-page .status-pill,
+    .admin-page .badge {
+      min-height: 0;
+    }
+
+    .admin-page button {
+      padding-block: 0.55rem;
+    }
+
+    .admin-page .refresh-button {
+      padding-block: 0.3rem;
+    }
+
+    .admin-page input[type='checkbox'] {
+      width: 1.15rem;
+      height: 1.15rem;
     }
   }
 </style>
