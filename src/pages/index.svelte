@@ -16,9 +16,15 @@ $: projects = data?.projects ?? [];
 $: goals = data?.goals ?? [];
 
 let selectedCounty: string | null = null;
+let mapRef: MetroMap;
 
 function handleCountySelected(event: CustomEvent<{ geoid: string | null }>) {
   selectedCounty = event.detail.geoid;
+}
+
+function handleClearCounty() {
+  selectedCounty = null;
+  mapRef?.clearSelection?.();
 }
 </script>
 
@@ -28,10 +34,9 @@ function handleCountySelected(event: CustomEvent<{ geoid: string | null }>) {
       <h1>Metro Atlanta Interface for Transit Advocacy Intelligence</h1>
     </div>
     <p class="lede">
-      A public, data-driven hub for understanding transit goals, agencies, and advocacy efforts across Metro Atlanta.
-      Use this site as a jumping-off point for deeper sources and how to take action.
+      A public hub for Metro Atlanta transit goals, agencies, and advocacy — your jumping-off point for deeper sources and ways to take action.
     </p>
-    <MetroMap on:countySelected={handleCountySelected} />
-    <GoalsTable {goals} {projects} {selectedCounty} />
+    <MetroMap bind:this={mapRef} on:countySelected={handleCountySelected} />
+    <GoalsTable {goals} {projects} {selectedCounty} on:clearCounty={handleClearCounty} />
   </section>
 </BaseLayout>

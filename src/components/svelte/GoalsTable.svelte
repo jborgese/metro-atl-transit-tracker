@@ -1,10 +1,17 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
   import type { Goal, Project } from './types';
 
   export let goals: Goal[] = [];
   export let projects: Project[] = [];
   export let selectedCounty: string | null = null;
   export let countyNames: Record<string, string> = {};
+
+  const dispatch = createEventDispatcher<{ clearCounty: void }>();
+
+  function shortCountyName(geoid: string): string {
+    return getCountyName(geoid).replace(/ County$/, '');
+  }
 
   // County name lookup (FIPS to name) - ordered for display
   const defaultCountyNames: Record<string, string> = {
@@ -162,12 +169,35 @@
 </script>
 
 <div class="goals-table">
+  <div class="goals-nav">
+    <nav class="county-jump" aria-label="Jump to section">
+      <a href="#section-regional">Regional</a>
+      {#each countyOrder as countyId}
+        <a href="#section-{countyId}">{shortCountyName(countyId)}</a>
+      {/each}
+    </nav>
+    {#if selectedCounty}
+      <button
+        type="button"
+        class="clear-filter"
+        on:click={() => dispatch('clearCounty')}
+      >
+        Show all counties
+      </button>
+    {/if}
+  </div>
+
   {#if groupedByCounty}
     <!-- No county selected: show Regional first, then grouped by county -->
-    
+
     <!-- Regional Section (at top when no county selected) -->
-    <div class="county-section">
-      <h2 class="county-header">Regional</h2>
+    <div class="county-section" id="section-regional">
+      <h2 class="county-header">
+        Regional
+        {#if regionalGoals.length > 0}
+          <span class="goal-count">({regionalGoals.length})</span>
+        {/if}
+      </h2>
       {#if regionalGoals.length === 0}
         <p class="no-goals-message">No regional goal information is available.</p>
       {:else}
@@ -176,16 +206,16 @@
           <thead>
             <tr>
               <th>Goal</th>
-              <th>Status/Related Projects</th>
-              <th>Actions to take in support of the Goal</th>
-              <th>Related Orgs</th>
+              <th>Status</th>
+              <th>Actions</th>
+              <th>Orgs</th>
             </tr>
           </thead>
           <tbody>
             {#each regionalGoals as goal}
               <tr class="goal-row">
                 <td data-label="Goal">{goal.goal}</td>
-              <td data-label="Status/Related Projects">
+              <td data-label="Status">
                 {#if goal.status_related_projects}
                   {#each parseStatusContent(goal.status_related_projects) as part}
                     {#if part.type === 'url'}
@@ -196,8 +226,8 @@
                   {/each}
                 {/if}
               </td>
-              <td data-label="Actions to Support the Goal">{goal.actions || ''}</td>
-              <td data-label="Related Orgs">
+              <td data-label="Actions">{goal.actions || ''}</td>
+              <td data-label="Orgs">
                 {#if goal.related_orgs && goal.related_orgs.length > 0}
                   {#each goal.related_orgs as org}
                     <div class="related-org">
@@ -207,7 +237,7 @@
                         <span>{org.name}</span>
                       {/if}
                       {#if org.contact_info}
-                        <span class="contact-info">({org.contact_info})</span>
+                        <span class="contact-info">{org.contact_info}</span>
                       {/if}
                     </div>
                   {/each}
@@ -250,8 +280,13 @@
     
     <!-- County Sections -->
     {#each [...groupedByCounty.entries()] as [countyId, countyGoals]}
-      <div class="county-section">
-        <h2 class="county-header">{getCountyName(countyId)}</h2>
+      <div class="county-section" id="section-{countyId}">
+        <h2 class="county-header">
+          {getCountyName(countyId)}
+          {#if countyGoals.length > 0}
+            <span class="goal-count">({countyGoals.length})</span>
+          {/if}
+        </h2>
         {#if countyGoals.length === 0}
           <p class="no-goals-message">No goal information is available for this county.</p>
         {:else}
@@ -269,7 +304,7 @@
               {#each countyGoals as goal}
                 <tr class="goal-row">
                   <td data-label="Goal">{goal.goal}</td>
-                <td data-label="Status/Related Projects">
+                <td data-label="Status">
                   {#if goal.status_related_projects}
                     {#each parseStatusContent(goal.status_related_projects) as part}
                       {#if part.type === 'url'}
@@ -280,8 +315,8 @@
                     {/each}
                   {/if}
                 </td>
-                <td data-label="Actions to Support the Goal">{goal.actions || ''}</td>
-                <td data-label="Related Orgs">
+                <td data-label="Actions">{goal.actions || ''}</td>
+                <td data-label="Orgs">
                   {#if goal.related_orgs && goal.related_orgs.length > 0}
                     {#each goal.related_orgs as org}
                       <div class="related-org">
@@ -334,8 +369,13 @@
     {/each}
   {:else}
     <!-- County selected: show county goals first, then Regional section -->
-    <div class="county-section">
-      <h2 class="county-header">{getCountyName(selectedCounty)}</h2>
+    <div class="county-section" id="section-{selectedCounty}">
+      <h2 class="county-header">
+        {getCountyName(selectedCounty ?? '')}
+        {#if filtered.length > 0}
+          <span class="goal-count">({filtered.length})</span>
+        {/if}
+      </h2>
       {#if filtered.length === 0}
         <p class="no-goals-message">No goal information is available for this county.</p>
       {:else}
@@ -344,16 +384,16 @@
           <thead>
             <tr>
               <th>Goal</th>
-              <th>Status/Related Projects</th>
-              <th>Actions to take in support of the Goal</th>
-              <th>Related Orgs</th>
+              <th>Status</th>
+              <th>Actions</th>
+              <th>Orgs</th>
             </tr>
           </thead>
           <tbody>
             {#each filtered as goal}
               <tr class="goal-row">
                 <td data-label="Goal">{goal.goal}</td>
-                <td data-label="Status/Related Projects">
+                <td data-label="Status">
                   {#if goal.status_related_projects}
                     {#each parseStatusContent(goal.status_related_projects) as part}
                       {#if part.type === 'url'}
@@ -364,8 +404,8 @@
                     {/each}
                   {/if}
                 </td>
-                <td data-label="Actions to Support the Goal">{goal.actions || ''}</td>
-                <td data-label="Related Orgs">
+                <td data-label="Actions">{goal.actions || ''}</td>
+                <td data-label="Orgs">
                   {#if goal.related_orgs && goal.related_orgs.length > 0}
                     {#each goal.related_orgs as org}
                       <div class="related-org">
@@ -417,8 +457,13 @@
     </div>
     
     <!-- Regional Section (below selected county) -->
-    <div class="county-section">
-      <h2 class="county-header">Regional</h2>
+    <div class="county-section" id="section-regional">
+      <h2 class="county-header">
+        Regional
+        {#if regionalGoals.length > 0}
+          <span class="goal-count">({regionalGoals.length})</span>
+        {/if}
+      </h2>
       {#if regionalGoals.length === 0}
         <p class="no-goals-message">No regional goal information is available.</p>
       {:else}
@@ -427,16 +472,16 @@
           <thead>
             <tr>
               <th>Goal</th>
-              <th>Status/Related Projects</th>
-              <th>Actions to take in support of the Goal</th>
-              <th>Related Orgs</th>
+              <th>Status</th>
+              <th>Actions</th>
+              <th>Orgs</th>
             </tr>
           </thead>
           <tbody>
             {#each regionalGoals as goal}
               <tr class="goal-row">
                 <td data-label="Goal">{goal.goal}</td>
-              <td data-label="Status/Related Projects">
+              <td data-label="Status">
                 {#if goal.status_related_projects}
                   {#each parseStatusContent(goal.status_related_projects) as part}
                     {#if part.type === 'url'}
@@ -447,8 +492,8 @@
                   {/each}
                 {/if}
               </td>
-              <td data-label="Actions to Support the Goal">{goal.actions || ''}</td>
-              <td data-label="Related Orgs">
+              <td data-label="Actions">{goal.actions || ''}</td>
+              <td data-label="Orgs">
                 {#if goal.related_orgs && goal.related_orgs.length > 0}
                   {#each goal.related_orgs as org}
                     <div class="related-org">
@@ -458,7 +503,7 @@
                         <span>{org.name}</span>
                       {/if}
                       {#if org.contact_info}
-                        <span class="contact-info">({org.contact_info})</span>
+                        <span class="contact-info">{org.contact_info}</span>
                       {/if}
                     </div>
                   {/each}
@@ -506,9 +551,63 @@
   margin-top: 2rem;
   container-type: inline-size;
   container-name: goals-layout;
+  scroll-behavior: smooth;
+}
+.goals-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-subtle, rgba(126, 110, 79, 0.3));
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.18);
+}
+.county-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+  align-items: center;
+  flex: 1 1 auto;
+  font-size: 0.86rem;
+}
+.county-jump a {
+  color: var(--text-muted, #c6cbc6);
+  text-decoration: none;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  line-height: 1.3;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.county-jump a:hover,
+.county-jump a:focus-visible {
+  color: var(--text-on-dark, #f3f2ee);
+  background: rgba(66, 128, 196, 0.14);
+  border-color: rgba(66, 128, 196, 0.45);
+  outline: none;
+}
+.clear-filter {
+  font: inherit;
+  font-size: 0.82rem;
+  color: inherit;
+  background: rgba(66, 128, 196, 0.16);
+  border: 1px solid rgba(66, 128, 196, 0.55);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.clear-filter:hover,
+.clear-filter:focus-visible {
+  background: rgba(66, 128, 196, 0.28);
+  outline: none;
 }
 .county-section {
   margin-bottom: 2.5rem;
+  scroll-margin-top: 1rem;
 }
 .county-header {
   font-size: clamp(1.2rem, 1rem + 1vw, 1.4rem);
@@ -517,6 +616,12 @@
   margin: 0 0 1rem 0;
   padding-bottom: 0.5rem;
   border-bottom: 2px solid var(--accent-color, #3b82f6);
+}
+.goal-count {
+  font-weight: 400;
+  color: var(--text-dim, #9fa7a2);
+  font-size: 0.82em;
+  margin-left: 0.35rem;
 }
 .no-goals-message {
   color: var(--text-muted, #94a3b8);
@@ -616,8 +721,11 @@ td a:hover {
 }
 .contact-info {
   display: block;
-  font-size: 0.85em;
-  color: var(--text-muted, #666);
+  font-size: 0.8em;
+  color: var(--text-dim, #9fa7a2);
+  font-style: italic;
+  line-height: 1.3;
+  margin-top: 0.1rem;
 }
 
 @container goals-layout (max-width: 50rem) {

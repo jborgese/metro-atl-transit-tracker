@@ -317,6 +317,10 @@
     return removeListeners;
   });
 
+  export function clearSelection() {
+    selectedCounty = null;
+  }
+
   $: if (selectedCounty) {
     // Focus the close button when the panel opens
     tick().then(() => closeBtn?.focus());
@@ -417,6 +421,13 @@
   @media (min-width: 1024px) {
     .map-frame {
       height: var(--map-height-desktop);
+    }
+  }
+
+  /* Landscape phones and other short viewports: don't let the map eat the whole screen */
+  @media (max-height: 500px) {
+    .map-frame {
+      height: clamp(12rem, 65vh, 20rem);
     }
   }
 
