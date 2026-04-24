@@ -1,32 +1,44 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { Goal, Project } from './types';
+  import { statusLabel, getStatusColor } from '@/utils/statusHelpers';
+  import { countyOrder, getCountyName as lookupCountyName } from '@/utils/countyLookup';
 
   export let goals: Goal[] = [];
   export let projects: Project[] = [];
   export let selectedCounty: string | null = null;
   export let countyNames: Record<string, string> = {};
 
-  const dispatch = createEventDispatcher<{ clearCounty: void }>();
+  const dispatch = createEventDispatcher<{
+    clearCounty: void;
+    selectProject: { project: Project };
+  }>();
+
+  function getCountyName(geoid: string): string {
+    return lookupCountyName(geoid, countyNames);
+  }
 
   function shortCountyName(geoid: string): string {
     return getCountyName(geoid).replace(/ County$/, '');
   }
 
-  // County name lookup (FIPS to name) - ordered for display
-  const defaultCountyNames: Record<string, string> = {
-    '13121': 'Fulton County',
-    '13089': 'DeKalb County',
-    '13067': 'Cobb County',
-    '13135': 'Gwinnett County',
-    '13063': 'Clayton County',
-    '13151': 'Henry County'
-  };
+  function selectProject(project: Project) {
+    dispatch('selectProject', { project });
+  }
 
-  // Ordered list of county IDs for consistent display
-  const countyOrder = ['13121', '13089', '13067', '13135', '13063', '13151'];
+  function handleProjectCardClick(project: Project, event: MouseEvent) {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('a')) return;
+    selectProject(project);
+  }
 
-  $: countyLookup = { ...defaultCountyNames, ...countyNames };
+  function handleProjectCardKeydown(project: Project, event: KeyboardEvent) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('a')) return;
+    event.preventDefault();
+    selectProject(project);
+  }
 
   // Determine if a goal is "Regional" (has no specific county - empty related_counties)
   function isRegionalGoal(goal: Goal): boolean {
@@ -72,40 +84,9 @@
     return grouped;
   }
 
-  function getCountyName(geoid: string): string {
-    return countyLookup[geoid] || `County ${geoid}`;
-  }
-
-  // Get related projects for a goal
   function getRelatedProjects(goal: Goal): Project[] {
     if (!goal.related_project_ids || goal.related_project_ids.length === 0) return [];
     return projects.filter((p) => goal.related_project_ids!.includes(p.id));
-  }
-
-  // Helper for status display
-  function statusLabel(status: string) {
-    switch (status) {
-      case 'planning': return 'Planning';
-      case 'public-outreach': return 'Public Outreach';
-      case 'funding-application': return 'Funding Application';
-      case 'implementation': return 'Implementation';
-      case 'completed': return 'Completed';
-      case 'ongoing': return 'Ongoing';
-      default: return status;
-    }
-  }
-
-  // 1996 Summer Olympics inspired color palette for status
-  function getStatusColor(status: string): string {
-    switch (status) {
-      case 'planning': return '#4280c4';           // Olympic blue
-      case 'public-outreach': return '#8a62b0';    // Olympic purple
-      case 'funding-application': return '#a32f65'; // Olympic magenta
-      case 'implementation': return '#c4a042';      // Complementary gold
-      case 'completed': return '#2d8659';           // Complementary forest green
-      case 'ongoing': return '#a73a32';             // Olympic terracotta red
-      default: return '#4280c4';
-    }
   }
 
   type StatusContentPart =
@@ -248,12 +229,18 @@
             {#each getRelatedProjects(goal) as project}
               <tr class="project-row">
                 <td class="nested-cell" colspan="4">
-                  <div class="project-card" style="--status-color: {getStatusColor(project.status)}">
+                  <div
+                    class="project-card"
+                    role="button"
+                    tabindex="0"
+                    aria-label="View details for {project.title}"
+                    style="--status-color: {getStatusColor(project.status)}"
+                    on:click={(e) => handleProjectCardClick(project, e)}
+                    on:keydown={(e) => handleProjectCardKeydown(project, e)}
+                  >
                     <div class="project-header">
-                      <span class="project-indicator">&rarr;</span>
-                      <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
-                        {project.title}
-                      </a>
+                      <span class="project-indicator" aria-hidden="true">&rarr;</span>
+                      <span class="project-title">{project.title}</span>
                       <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
                     </div>
                     <p class="project-summary">{project.summary}</p>
@@ -267,6 +254,17 @@
                         {/if}
                       </div>
                     {/if}
+                    <div class="project-card-footer">
+                      <span class="project-card-hint">View details</span>
+                      {#if project.sources?.[0]?.url}
+                        <a
+                          class="project-source-link"
+                          href={project.sources[0].url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >View source →</a>
+                      {/if}
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -514,12 +512,18 @@
             {#each getRelatedProjects(goal) as project}
               <tr class="project-row">
                 <td class="nested-cell" colspan="4">
-                  <div class="project-card" style="--status-color: {getStatusColor(project.status)}">
+                  <div
+                    class="project-card"
+                    role="button"
+                    tabindex="0"
+                    aria-label="View details for {project.title}"
+                    style="--status-color: {getStatusColor(project.status)}"
+                    on:click={(e) => handleProjectCardClick(project, e)}
+                    on:keydown={(e) => handleProjectCardKeydown(project, e)}
+                  >
                     <div class="project-header">
-                      <span class="project-indicator">&rarr;</span>
-                      <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
-                        {project.title}
-                      </a>
+                      <span class="project-indicator" aria-hidden="true">&rarr;</span>
+                      <span class="project-title">{project.title}</span>
                       <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
                     </div>
                     <p class="project-summary">{project.summary}</p>
@@ -533,6 +537,17 @@
                         {/if}
                       </div>
                     {/if}
+                    <div class="project-card-footer">
+                      <span class="project-card-hint">View details</span>
+                      {#if project.sources?.[0]?.url}
+                        <a
+                          class="project-source-link"
+                          href={project.sources[0].url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >View source →</a>
+                      {/if}
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -657,19 +672,27 @@ td a:hover {
   padding-bottom: 0.75rem !important;
 }
 .project-card {
-  background: linear-gradient(135deg, 
-    color-mix(in srgb, var(--status-color) 12%, transparent) 0%, 
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--status-color) 12%, transparent) 0%,
     color-mix(in srgb, var(--status-color) 4%, transparent) 100%);
   border: 1px solid color-mix(in srgb, var(--status-color) 30%, transparent);
   border-left: 4px solid var(--status-color);
   border-radius: 8px;
   padding: 0.875rem 1rem;
   margin-left: 1rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 .project-card:hover {
   border-color: color-mix(in srgb, var(--status-color) 50%, transparent);
   box-shadow: 0 2px 12px color-mix(in srgb, var(--status-color) 15%, transparent);
+  transform: translateY(-1px);
+}
+.project-card:focus-visible {
+  outline: 2px solid var(--atl-blue, #4280c4);
+  outline-offset: 2px;
+  border-color: color-mix(in srgb, var(--status-color) 60%, transparent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--status-color) 25%, transparent);
 }
 .project-header {
   display: flex;
@@ -708,6 +731,41 @@ td a:hover {
 }
 .project-org {
   font-size: 0.85em;
+}
+.project-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed color-mix(in srgb, var(--status-color) 25%, transparent);
+  font-size: 0.78em;
+  flex-wrap: wrap;
+}
+.project-card-hint {
+  color: var(--text-muted, #94a3b8);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.project-card-hint::before {
+  content: '›';
+  margin-right: 0.4em;
+  color: var(--status-color);
+  font-weight: 700;
+}
+.project-source-link {
+  color: var(--atl-blue, #4280c4);
+  text-decoration: none;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.project-source-link:hover,
+.project-source-link:focus-visible {
+  color: var(--text-on-dark, #f3f2ee);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  outline: none;
 }
 .org-label {
   color: var(--text-muted, #64748b);

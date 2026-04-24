@@ -3,6 +3,14 @@
 
   export let open = false;
 
+  $: if (typeof document !== 'undefined') {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }
+
   function close() {
     open = false;
   }

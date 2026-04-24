@@ -1,8 +1,12 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
   import type { Project } from './types';
+  import { statusLabel } from '@/utils/statusHelpers';
 
   export let projects: Project[] = [];
   export let selectedCounty: string | null = null;
+
+  const dispatch = createEventDispatcher<{ selectProject: { project: Project } }>();
 
   // Group projects by lead organization name
   let grouped: Record<string, Project[]> = {};
@@ -16,17 +20,14 @@
     return acc;
   }, {});
 
-  // Helper for status display
-  function statusLabel(status: string) {
-    switch (status) {
-      case 'planning': return 'Planning';
-      case 'public-outreach': return 'Public Outreach';
-      case 'funding-application': return 'Funding Application';
-      case 'implementation': return 'Implementation';
-      case 'completed': return 'Completed';
-      case 'ongoing': return 'Ongoing';
-      default: return status;
-    }
+  function selectProject(project: Project) {
+    dispatch('selectProject', { project });
+  }
+
+  function handleRowKeydown(project: Project, event: KeyboardEvent) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    selectProject(project);
   }
 </script>
 
@@ -49,7 +50,14 @@
             </thead>
             <tbody>
               {#each orgProjects as project}
-                <tr class="project-row">
+                <tr
+                  class="project-row"
+                  role="button"
+                  tabindex="0"
+                  aria-label="View details for {project.title}"
+                  on:click={() => selectProject(project)}
+                  on:keydown={(e) => handleRowKeydown(project, e)}
+                >
                   <td data-label="Project">{project.title}</td>
                   <td data-label="Status">{statusLabel(project.status)}</td>
                   <td data-label="Summary">{project.summary}</td>
@@ -72,6 +80,21 @@
 }
 .org-group {
   margin-bottom: 2.5rem;
+}
+
+.project-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.project-row:hover {
+  background: var(--surface-1, rgba(18, 32, 30, 0.78));
+}
+
+.project-row:focus-visible {
+  outline: 2px solid var(--atl-blue, #4280c4);
+  outline-offset: -2px;
+  background: var(--surface-1, rgba(18, 32, 30, 0.78));
 }
 
 @container projects-layout (max-width: 42rem) {
