@@ -335,12 +335,18 @@
               {#each getRelatedProjects(goal) as project}
                 <tr class="project-row">
                   <td class="nested-cell" colspan="4">
-                    <div class="project-card" style="--status-color: {getStatusColor(project.status)}">
+                    <div
+                      class="project-card"
+                      role="button"
+                      tabindex="0"
+                      aria-label="View details for {project.title}"
+                      style="--status-color: {getStatusColor(project.status)}"
+                      on:click={(e) => handleProjectCardClick(project, e)}
+                      on:keydown={(e) => handleProjectCardKeydown(project, e)}
+                    >
                       <div class="project-header">
-                        <span class="project-indicator">&rarr;</span>
-                        <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
-                          {project.title}
-                        </a>
+                        <span class="project-indicator" aria-hidden="true">&rarr;</span>
+                        <span class="project-title">{project.title}</span>
                         <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
                       </div>
                       <p class="project-summary">{project.summary}</p>
@@ -354,6 +360,17 @@
                           {/if}
                         </div>
                       {/if}
+                      <div class="project-card-footer">
+                        <span class="project-card-hint">View details</span>
+                        {#if project.sources?.[0]?.url}
+                          <a
+                            class="project-source-link"
+                            href={project.sources[0].url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >View source →</a>
+                        {/if}
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -424,12 +441,18 @@
               {#each getRelatedProjects(goal) as project}
                 <tr class="project-row">
                   <td class="nested-cell" colspan="4">
-                    <div class="project-card" style="--status-color: {getStatusColor(project.status)}">
+                    <div
+                      class="project-card"
+                      role="button"
+                      tabindex="0"
+                      aria-label="View details for {project.title}"
+                      style="--status-color: {getStatusColor(project.status)}"
+                      on:click={(e) => handleProjectCardClick(project, e)}
+                      on:keydown={(e) => handleProjectCardKeydown(project, e)}
+                    >
                       <div class="project-header">
-                        <span class="project-indicator">&rarr;</span>
-                        <a href={project.sources?.[0]?.url || '#'} target="_blank" rel="noopener noreferrer" class="project-title">
-                          {project.title}
-                        </a>
+                        <span class="project-indicator" aria-hidden="true">&rarr;</span>
+                        <span class="project-title">{project.title}</span>
                         <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
                       </div>
                       <p class="project-summary">{project.summary}</p>
@@ -443,6 +466,17 @@
                           {/if}
                         </div>
                       {/if}
+                      <div class="project-card-footer">
+                        <span class="project-card-hint">View details</span>
+                        {#if project.sources?.[0]?.url}
+                          <a
+                            class="project-source-link"
+                            href={project.sources[0].url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >View source →</a>
+                        {/if}
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -672,21 +706,42 @@ td a:hover {
   padding-bottom: 0.75rem !important;
 }
 .project-card {
+  position: relative;
   background: linear-gradient(135deg,
     color-mix(in srgb, var(--status-color) 12%, transparent) 0%,
     color-mix(in srgb, var(--status-color) 4%, transparent) 100%);
   border: 1px solid color-mix(in srgb, var(--status-color) 30%, transparent);
   border-left: 4px solid var(--status-color);
   border-radius: 8px;
-  padding: 0.875rem 1rem;
+  padding: 0.875rem 2.5rem 0.875rem 1rem;
   margin-left: 1rem;
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease, background 0.2s ease;
+}
+.project-card::after {
+  content: '›';
+  position: absolute;
+  top: 0.65rem;
+  right: 0.85rem;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--status-color) 70%, transparent);
+  font-weight: 700;
+  pointer-events: none;
+  transition: transform 0.2s ease, color 0.2s ease;
 }
 .project-card:hover {
   border-color: color-mix(in srgb, var(--status-color) 50%, transparent);
   box-shadow: 0 2px 12px color-mix(in srgb, var(--status-color) 15%, transparent);
   transform: translateY(-1px);
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--status-color) 18%, transparent) 0%,
+    color-mix(in srgb, var(--status-color) 7%, transparent) 100%);
+}
+.project-card:hover::after,
+.project-card:focus-visible::after {
+  color: var(--status-color);
+  transform: translateX(3px);
 }
 .project-card:focus-visible {
   outline: 2px solid var(--atl-blue, #4280c4);
@@ -708,10 +763,16 @@ td a:hover {
 }
 .project-title {
   font-weight: 600;
-  color: var(--link-color, #7dd3fc);
+  color: var(--text-on-dark, #f3f2ee);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--status-color) 45%, transparent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s ease;
 }
-.project-title:hover {
-  color: #fff;
+.project-card:hover .project-title,
+.project-card:focus-visible .project-title {
+  text-decoration-color: var(--status-color);
 }
 .project-status {
   color: #fff;
@@ -740,19 +801,27 @@ td a:hover {
   margin-top: 0.65rem;
   padding-top: 0.55rem;
   border-top: 1px dashed color-mix(in srgb, var(--status-color) 25%, transparent);
-  font-size: 0.78em;
+  font-size: 0.82em;
   flex-wrap: wrap;
 }
 .project-card-hint {
-  color: var(--text-muted, #94a3b8);
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-on-dark, #f3f2ee);
+  font-weight: 600;
   letter-spacing: 0.02em;
 }
-.project-card-hint::before {
-  content: '›';
-  margin-right: 0.4em;
+.project-card-hint::after {
+  content: '→';
   color: var(--status-color);
   font-weight: 700;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+.project-card:hover .project-card-hint::after,
+.project-card:focus-visible .project-card-hint::after {
+  transform: translateX(3px);
 }
 .project-source-link {
   color: var(--atl-blue, #4280c4);
