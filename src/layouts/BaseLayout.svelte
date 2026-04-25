@@ -5,7 +5,7 @@
 <script lang="ts">
   import MethodologyModal from '../components/svelte/MethodologyModal.svelte';
 
-  export let title: string = 'Metro Atlanta Transit Tracker';
+  export let title: string = 'Metro Atlanta Interface for Transit Advocacy Intelligence';
   export let description: string = 'A public, data-driven Metro Atlanta transit advocacy intelligence hub.';
 
   let methodologyOpen = false;

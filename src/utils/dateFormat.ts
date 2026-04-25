@@ -1,7 +1,8 @@
-const MEDIUM_DATE = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+const MEDIUM_DATE = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' });
 const FULL_DATETIME = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'medium',
   timeStyle: 'short',
+  timeZone: 'America/New_York',
 });
 
 export function formatDate(value: string | null | undefined): string {
