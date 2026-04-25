@@ -1,9 +1,11 @@
 import { env } from '$env/dynamic/private';
-import { json, type Handle, type RequestEvent } from '@sveltejs/kit';
+import { json, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 
 const API_PREFIX = '/api/';
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const SWEEP_INTERVAL = 100;
+const APEX_HOST = 'maitai.observer';
+const WWW_HOST = 'www.maitai.observer';
 
 type RateLimitBucket = {
   count: number;
@@ -115,6 +117,12 @@ function applyRateLimitHeaders(
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+  if (event.url.hostname === WWW_HOST) {
+    const target = new URL(event.url);
+    target.hostname = APEX_HOST;
+    redirect(301, target.toString());
+  }
+
   if (!isWriteApiRequest(event)) {
     return resolve(event);
   }

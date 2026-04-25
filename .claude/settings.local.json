@@ -13,7 +13,8 @@
       "mcp__cloudflare-bindings__workers_get_worker",
       "mcp__cloudflare-observability__observability_keys",
       "mcp__cloudflare-observability__observability_values",
-      "mcp__cloudflare-bindings__workers_get_worker_code"
+      "mcp__cloudflare-bindings__workers_get_worker_code",
+      "mcp__cloudflare-bindings__search_cloudflare_documentation"
     ]
   }
 }

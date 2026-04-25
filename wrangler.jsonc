@@ -15,10 +15,22 @@
 		"WRITE_RATE_LIMIT_WINDOW_SECONDS": "60"
 	},
 	"main": ".svelte-kit/cloudflare/_worker.js",
+	"workers_dev": false,
+	"preview_urls": false,
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
 	},
+	"routes": [
+		{
+			"pattern": "maitai.observer",
+			"custom_domain": true
+		},
+		{
+			"pattern": "www.maitai.observer",
+			"custom_domain": true
+		}
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",
