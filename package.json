@@ -21,7 +21,7 @@
     "build:org-logos": "node scripts/build-org-logos.js"
   },
   "dependencies": {
-    "jose": "^6.1.3",
+    "jose": "^6.2.3",
     "maplibre-gl": "^5.16.0",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
