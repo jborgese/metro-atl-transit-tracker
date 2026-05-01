@@ -136,16 +136,21 @@ These are the application-code fixes for the OWASP findings. Phase 1's tests cau
 
 Lands after Phase 1's tests are in place so the structural change is safe.
 
-- [ ] **Health H-04 / Codebase F-03 / FOSS F-04 (🟠) — Split [src/lib/server/content/store.ts](../src/lib/server/content/store.ts) into four modules:**
-      - `validators.ts` — Zod schemas + `parseSchema`.
-      - `mappers.ts` — `normalizeEntityForStorage`, `applyArchiveFields`, `ensureProvenance`, row ↔ entity helpers.
-      - `repository.ts` — D1 SQL constants and prepare/bind/batch.
-      - `service.ts` — public CRUD operations (preserve existing exported names).
-      Cuts the 1,483-LOC file along seams that already exist.
-- [ ] **Health H-06 — Reduce cyclomatic complexity** of three functions, ideally as part of the H-04 split:
-      - `seedPromise` IIFE (CC 27) at [store.ts:646](../src/lib/server/content/store.ts#L646) → `seedProjectsIfEmpty(db)`, `seedGoalsIfEmpty(db)`, `seedHistoryIfEmpty(db)`.
-      - `requireEditorActor` (CC 22) at [editor.ts:203](../src/lib/server/auth/editor.ts#L203) → `extractAccessJwt`, `verifyAccessActor`, `enforceRbac`.
-      - `toSeedHistoryEvent` (CC 20) at [store.ts:542](../src/lib/server/content/store.ts#L542) → guard helpers `parseEntityType` / `parseAction` / `parseTimestamp`.
+- [x] **Health H-04 / Codebase F-03 / FOSS F-04 (🟠) — Split [src/lib/server/content/store.ts](../src/lib/server/content/store.ts) into focused modules** ✅ (executed 2026-05-01).
+      Final layout in [src/lib/server/content/](../src/lib/server/content/) — 6 files (4 from the action plan + `errors.ts` for cycle elimination + `seeding.ts` for lifecycle separation):
+      - [errors.ts](../src/lib/server/content/errors.ts) (9 LOC) — `ContentStoreError` only, zero deps.
+      - [validators.ts](../src/lib/server/content/validators.ts) (207 LOC) — All Zod schemas, `parseSchema`, `to*Create`/`to*Patch`/`to*Seed`, `assertNoForbiddenWriteFields`, `selectProjectSeeds`/`selectGoalSeeds`, `isMissingTableError`/`isUniqueConstraintError`, `parseIntSafe`, `asSeedArray`, `SEED_ACTOR`/`FORBIDDEN_MUTATION_FIELDS`/`ID_PATTERN`.
+      - [mappers.ts](../src/lib/server/content/mappers.ts) (300 LOC) — `nowIso`, `isRecord`, `cloneRecord`, `parseJsonObject`, `ensureProvenance`, `applyArchiveFields`, `normalizeEntityForStorage`, `rowToProject`/`rowToGoal`/`rowToHistoryEvent`, `toHistoryJson`, `buildHistoryEvent`, `toSeedHistoryEvent`, `extractRunChanges`. Owns the storage row types `StoredEntityRow`/`StoredHistoryRow`/`StoredCountsRow`/`StoredEntityWrite` and `StoreEvent`.
+      - [repository.ts](../src/lib/server/content/repository.ts) (126 LOC) — All SQL constants (`SELECT_ENTITY_COLUMNS`, `INSERT_*_SQL`, `UPDATE_*_SQL`), `DB_BINDING_NAME`, `D1_LOCAL_MIGRATION_CMD`, `SEED_BATCH_SIZE`, `getDb`, `executeInBatches`, `findProjectRow`, `findGoalRow`. Wires `import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types'` (closes the Phase 0 deferred follow-up — inline aliases gone).
+      - [seeding.ts](../src/lib/server/content/seeding.ts) (209 LOC) — `seedPromise` singleton, `ensureSeeded(db)` orchestrator, plus the three split seeders `seedProjectsIfEmpty(db, count)` / `seedGoalsIfEmpty(db, count)` / `seedHistoryIfEmpty(db, count)` extracted from the CC-27 IIFE. Each returns `D1PreparedStatement[]`; orchestrator concatenates and calls `executeInBatches` once. Seed JSON imports moved here.
+      - [service.ts](../src/lib/server/content/service.ts) (710 LOC) — All 13 public CRUD operations + `listHistory`. Each calls `ensureSeeded(db)` from `seeding.ts` at the top.
+      - [store.ts](../src/lib/server/content/store.ts) (36 LOC) — Pure barrel. Explicit named re-exports of the 18-name public surface (1 error class, 4 schemas, `assertNoForbiddenWriteFields`, 13 CRUD functions). All 9 external callers unchanged.
+      DAG (one-way, no cycles): `errors → validators → mappers → repository → seeding → service → store (barrel)`.
+- [x] **Health H-06 (partial — store.ts side) — Reduced cyclomatic complexity** of two functions in the same PR.
+      - ✅ `seedPromise` IIFE (was CC 27) → split into `seedProjectsIfEmpty` / `seedGoalsIfEmpty` / `seedHistoryIfEmpty` in [seeding.ts](../src/lib/server/content/seeding.ts), each ~5-10 LOC and easily testable. The orchestrator `ensureSeeded` is now ~20 LOC vs. the original 150-LOC IIFE.
+      - ✅ `toSeedHistoryEvent` (was CC 20) → moved to [mappers.ts](../src/lib/server/content/mappers.ts) where it sits next to `buildHistoryEvent`. Body unchanged for now; the natural follow-up (extract `parseEntityType`/`parseAction`/`parseTimestamp` guard helpers) is light work for a follow-up PR.
+      - ⏭️ `requireEditorActor` (CC 22) at [editor.ts:203](../src/lib/server/auth/editor.ts#L203) — separate file, separate PR.
+      Verification: `npm run typecheck` 520 files / 0 errors, `npm test` **48 / 48 pass** unchanged, `npm run lint` 0 errors / 134 warnings (was 135 — the schema imports through the barrel cleared one redundant warning).
 - [ ] **Health H-05 / FOSS F-05 — Extract `makeCollectionHandlers<T>(store)` + `makeItemHandlers<T>(store)`** into [src/lib/server/content/](../src/lib/server/content/) and rewrite the seven `+server.ts` files to thin wrappers. Also absorb the body-size limit from S-11.
       Eliminates the 40–48% line duplication between `goal` and `project` handlers.
 - [ ] **Health H-11 — Extract `clearHover(map, id)` and `setHover(map, id)`** in [src/lib/map/addMetroCountyLayers.ts](../src/lib/map/addMetroCountyLayers.ts) (two self-clones detected by jscpd).
