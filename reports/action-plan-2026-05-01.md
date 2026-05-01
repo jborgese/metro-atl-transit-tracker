@@ -89,22 +89,26 @@ After the first push fixed Workers Builds + Backup Snapshots, **Quality Checks s
 
 ---
 
-## Phase 3 — Security hardening
+## Phase 3 — Security hardening ✅ (executed 2026-05-01)
 
-These are the application-code fixes for the OWASP findings. They no longer depend on Phase 2 (the audit is already clean) but Phase 1's tests catch regressions.
+These are the application-code fixes for the OWASP findings. Phase 1's tests caught regressions during the migration.
 
-- [ ] **S-02 (🟠) — Gate the `EDITOR_API_TOKEN` fallback path by environment.**
-      In [src/lib/server/auth/editor.ts:207-215](../src/lib/server/auth/editor.ts#L207), refuse the token-mode unless `event.url.hostname` is `localhost`/`127.0.0.1` or `env.NODE_ENV === 'test'`. Today nothing prevents an operator from accidentally enabling it in production.
-- [ ] **S-05 (🟡) — Use constant-time compare for the editor token** while the path still exists.
-      `crypto.timingSafeEqual` (`nodejs_compat` is already on in [wrangler.jsonc:5](../wrangler.jsonc#L5)).
-- [ ] **S-03 (🟠) — Add an explicit CSRF Origin check** in [src/hooks.server.ts](../src/hooks.server.ts) for write methods on `/api/`. Reject when `Origin` host ≠ request host. SvelteKit's default CSRF check covers form-encoded POSTs only — the JSON write API is currently relying on browser CORS preflight + Cloudflare Access cookie SameSite alone.
-- [ ] **S-11 (🟢) — Add a body-size limit before `JSON.parse`** in the write handlers (proposed `readJson(event, 64 * 1024)` helper). Defense-in-depth; combine with H-05 in Phase 5 since both produce a shared route helper.
-- [ ] **S-10 (🟢) — Redact env var names from the 503 message** at [editor.ts:219-223](../src/lib/server/auth/editor.ts#L219). Move detail to the structured warn log only.
-- [ ] **S-07 (🟡) — Add security headers** in [src/hooks.server.ts](../src/hooks.server.ts): `Strict-Transport-Security`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, plus a `Content-Security-Policy-Report-Only` to start tuning. Concrete starter values in [reports/security-2026-05-01.md S-07](security-2026-05-01.md#s-07--%F0%9F%9F%A1-no-security-headers-a04).
-- [ ] **S-08 (🟡) — Pin GitHub Actions to commit SHAs** in [.github/workflows/](../.github/workflows/). Especially [backup-snapshots.yml](../.github/workflows/backup-snapshots.yml), which holds Cloudflare API tokens. Dependabot (Phase 0) keeps SHAs current.
-- [ ] **F-02 FOSS / S-06 / Codebase F-07 (🟠 combined) — Replace the per-isolate rate limiter with Cloudflare's native `RateLimit` binding.**
-      Add a `unsafe.bindings` block to [wrangler.jsonc](../wrangler.jsonc) and replace `consumeWriteLimit(...)` with `await event.platform.env.WRITE_LIMITER.limit({ key: getClientKey(event) })`. Globally consistent across isolates, no extra deps. Concrete config in [reports/foss-recommendations-2026-05-01.md F-02](foss-recommendations-2026-05-01.md#f-02--%F0%9F%9F%A0-replace-the-per-isolate-rate-limiter-with-cloudflares-native-ratelimit-binding).
-- [ ] **S-04 (🟡) — Add a Cloudflare alert policy** for `[editor-auth] 401` rate exceeding a threshold from one IP. Do this after S-02 lands so the alert isn't noisy.
+- [x] **S-02 (🟠) — Gate the `EDITOR_API_TOKEN` fallback path by environment.**
+      [editor.ts](../src/lib/server/auth/editor.ts) now wraps the token-mode block with `isTestEnvironment(event)` (hostname ∈ `{localhost, 127.0.0.1, 0.0.0.0, ::1}`). On a deployed hostname, even with the env vars set, the code falls through to the Access JWT path and emits a structured warn log naming the rejected hostname.
+- [x] **S-05 (🟡) — Use constant-time compare for the editor token.**
+      Replaced `presentedToken !== editorToken` with `safeEqualString()` backed by `node:crypto.timingSafeEqual` (`nodejs_compat` enabled in [wrangler.jsonc:5](../wrangler.jsonc#L5)).
+- [x] **S-03 (🟠) — Add an explicit CSRF Origin check** in [hooks.server.ts](../src/hooks.server.ts) for write methods on `/api/`. `isCrossOriginWrite()` rejects with 403 when the `Origin` header is present and its host differs from `event.url.host`. Bypassed (intentionally) when no Origin is sent (curl / wrangler / smoke tests) — auth still gates writes at the route level.
+- [x] **S-11 (🟢) — Body-size limit before `JSON.parse`.**
+      New `readJsonBody(event, maxBytes = 64 * 1024)` helper in [http.ts](../src/lib/server/content/http.ts) checks both declared `content-length` and actual byte length. Wired into all four write handlers (POST/PATCH × projects/goals). 6 unit tests added.
+- [x] **S-10 (🟢) — Redacted env var names from 503 message.**
+      Now `Authentication is not configured.` (instead of naming `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD`).
+- [x] **S-07 (🟡) — Security headers** added in [hooks.server.ts](../src/hooks.server.ts) `applySecurityHeaders()`, applied to every response: `Strict-Transport-Security` (2 years, includeSubDomains, preload), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (geolocation/camera/microphone all denied), and a `Content-Security-Policy-Report-Only` covering MapTiler, Google Fonts, and Cloudflare Access. Report-only first; team can flip to enforcing once telemetry confirms nothing breaks.
+- [x] **S-08 (🟡) — Pinned GitHub Actions to commit SHAs** in [ci-gates.yml](../.github/workflows/ci-gates.yml) and [backup-snapshots.yml](../.github/workflows/backup-snapshots.yml). All `actions/checkout@v6`, `actions/setup-node@v6`, `actions/upload-artifact@v7` references now use `@<sha> # v<major>` format. Dependabot config from Phase 0 will keep them current.
+- [x] **F-02 FOSS / S-06 / Codebase F-07 (🟠 combined) — Replaced the per-isolate rate limiter with Cloudflare's native `RateLimit` binding.**
+      Added `unsafe.bindings` blocks to [wrangler.jsonc](../wrangler.jsonc) (prod namespace 1001, staging 1002, both `simple: { limit: 30, period: 60 }`). [hooks.server.ts](../src/hooks.server.ts) now calls `event.platform.env.WRITE_LIMITER.limit({ key })` via a `checkWriteRateLimit()` helper that fails open when the binding is absent (e.g., local dev without `unsafe.bindings`). Removed the in-memory `Map`, `maybeSweepBuckets`, `consumeWriteLimit`, and `parsePositiveInt`. Removed `WRITE_RATE_LIMIT_REQUESTS` / `WRITE_RATE_LIMIT_WINDOW_SECONDS` from `vars` (limits live on the binding). Updated [.env.example](../.env.example). 9 new unit tests for `checkWriteRateLimit` + `getClientKey`.
+- [ ] **S-04 (🟡) — Add a Cloudflare alert policy** for `[editor-auth] 401` rate exceeding a threshold from one IP. Configured via the Cloudflare dashboard / API — out of scope for code commits. Do this after S-02 ships so the alert isn't noisy with token-mode 401s.
+
+**Verification:** `npm run typecheck` 0 errors, `npm test` **48 / 48 pass** (was 40), `npm run lint` 0 errors / 133 warnings, `npm ci --dry-run` clean.
 
 ---
 

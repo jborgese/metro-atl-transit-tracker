@@ -1,87 +1,84 @@
 import { describe, expect, it } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
-import { consumeWriteLimit, parsePositiveInt } from './hooks.server';
+import { checkWriteRateLimit, getClientKey, type WriteRateLimit } from './hooks.server';
 
-function makeEvent(ip: string, opts: { path?: string; method?: string } = {}): RequestEvent {
-  const url = new URL(`http://example.test${opts.path ?? '/api/projects'}`);
+function makeEvent(headers: Record<string, string>): RequestEvent {
+  const url = new URL('http://example.test/api/projects');
   return {
     url,
-    request: new Request(url, {
-      method: opts.method ?? 'POST',
-      headers: { 'cf-connecting-ip': ip },
-    }),
+    request: new Request(url, { method: 'POST', headers }),
     cookies: { get: () => undefined } as unknown as RequestEvent['cookies'],
-    getClientAddress: () => ip,
+    getClientAddress: () => 'fallback-address',
   } as unknown as RequestEvent;
 }
 
-describe('parsePositiveInt', () => {
-  it('returns the fallback when value is undefined', () => {
-    expect(parsePositiveInt(undefined, 30)).toBe(30);
+describe('getClientKey', () => {
+  it('prefers cf-connecting-ip when present', () => {
+    expect(getClientKey(makeEvent({ 'cf-connecting-ip': '10.0.0.1' }))).toBe('10.0.0.1');
   });
 
-  it('parses positive integers', () => {
-    expect(parsePositiveInt('5', 30)).toBe(5);
-    expect(parsePositiveInt('999', 30)).toBe(999);
+  it('falls back to the first x-forwarded-for entry', () => {
+    expect(getClientKey(makeEvent({ 'x-forwarded-for': '10.0.0.6, 192.168.1.1' }))).toBe('10.0.0.6');
   });
 
-  it('returns the fallback for zero, negative, or non-numeric input', () => {
-    expect(parsePositiveInt('0', 30)).toBe(30);
-    expect(parsePositiveInt('-5', 30)).toBe(30);
-    expect(parsePositiveInt('abc', 30)).toBe(30);
-    expect(parsePositiveInt('', 30)).toBe(30);
-  });
-});
-
-describe('consumeWriteLimit', () => {
-  // Each test uses a unique IP so module-scope buckets don't carry over.
-  it('allows the first request and reports remaining = max - 1', () => {
-    const event = makeEvent('10.0.0.1');
-    const result = consumeWriteLimit(event, 5, 60);
-    expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(4);
-    expect(result.resetSeconds).toBeGreaterThan(0);
-    expect(result.resetSeconds).toBeLessThanOrEqual(60);
+  it('falls back to event.getClientAddress() when no relevant headers are present', () => {
+    expect(getClientKey(makeEvent({}))).toBe('fallback-address');
   });
 
-  it('decrements remaining on each consume within the window', () => {
-    const event = makeEvent('10.0.0.2');
-    const a = consumeWriteLimit(event, 3, 60);
-    const b = consumeWriteLimit(event, 3, 60);
-    const c = consumeWriteLimit(event, 3, 60);
-    expect([a.remaining, b.remaining, c.remaining]).toEqual([2, 1, 0]);
-    expect([a.allowed, b.allowed, c.allowed]).toEqual([true, true, true]);
+  it('trims surrounding whitespace from cf-connecting-ip', () => {
+    expect(getClientKey(makeEvent({ 'cf-connecting-ip': '  10.0.0.2  ' }))).toBe('10.0.0.2');
   });
 
-  it('rejects requests after the limit is exhausted', () => {
-    const event = makeEvent('10.0.0.3');
-    consumeWriteLimit(event, 2, 60);
-    consumeWriteLimit(event, 2, 60);
-    const denied = consumeWriteLimit(event, 2, 60);
-    expect(denied.allowed).toBe(false);
-    expect(denied.remaining).toBe(0);
-  });
-
-  it('keys buckets by client IP', () => {
-    const a = consumeWriteLimit(makeEvent('10.0.0.4'), 2, 60);
-    const b = consumeWriteLimit(makeEvent('10.0.0.5'), 2, 60);
-    expect(a.remaining).toBe(1);
-    expect(b.remaining).toBe(1); // different IP — fresh bucket
-  });
-
-  it('falls back to x-forwarded-for when cf-connecting-ip is absent', () => {
+  it('returns "unknown" if the fallback throws', () => {
     const url = new URL('http://example.test/api/projects');
     const event = {
       url,
-      request: new Request(url, {
-        method: 'POST',
-        headers: { 'x-forwarded-for': '10.0.0.6, 192.168.1.1' },
-      }),
+      request: new Request(url, { method: 'POST' }),
       cookies: { get: () => undefined } as unknown as RequestEvent['cookies'],
-      getClientAddress: () => 'ignored',
+      getClientAddress: () => {
+        throw new Error('no address');
+      },
     } as unknown as RequestEvent;
-    const result = consumeWriteLimit(event, 5, 60);
+    expect(getClientKey(event)).toBe('unknown');
+  });
+});
+
+describe('checkWriteRateLimit', () => {
+  it('fails open when the binding is undefined', async () => {
+    const result = await checkWriteRateLimit(undefined, '10.0.0.1');
     expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(4);
+  });
+
+  it('returns allowed: true when the binding reports success', async () => {
+    const binding: WriteRateLimit = {
+      limit: async () => ({ success: true }),
+    };
+    expect(await checkWriteRateLimit(binding, '10.0.0.1')).toEqual({ allowed: true });
+  });
+
+  it('returns allowed: false when the binding reports failure', async () => {
+    const binding: WriteRateLimit = {
+      limit: async () => ({ success: false }),
+    };
+    expect(await checkWriteRateLimit(binding, '10.0.0.1')).toEqual({ allowed: false });
+  });
+
+  it('passes the provided key through to the binding', async () => {
+    let capturedKey: string | undefined;
+    const binding: WriteRateLimit = {
+      limit: async ({ key }) => {
+        capturedKey = key;
+        return { success: true };
+      },
+    };
+    await checkWriteRateLimit(binding, '203.0.113.7');
+    expect(capturedKey).toBe('203.0.113.7');
+  });
+
+  it('treats a missing success field as denied', async () => {
+    const binding = {
+      limit: async () => ({}) as unknown as { success: boolean },
+    } as WriteRateLimit;
+    expect(await checkWriteRateLimit(binding, '10.0.0.1')).toEqual({ allowed: false });
   });
 });

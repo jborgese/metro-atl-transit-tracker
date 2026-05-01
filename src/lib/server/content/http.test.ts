@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { parseIncludeArchived, parseLimit, toHttpError } from './http';
+import type { RequestEvent } from '@sveltejs/kit';
+import { DEFAULT_MAX_JSON_BYTES, parseIncludeArchived, parseLimit, readJsonBody, toHttpError } from './http';
 import { ContentStoreError } from './store';
+
+function makeJsonEvent(body: string | null, init: { contentLength?: number } = {}): RequestEvent {
+  const headers: Record<string, string> = {};
+  if (init.contentLength !== undefined) {
+    headers['content-length'] = String(init.contentLength);
+  }
+  return {
+    request: new Request('http://example.test/api/projects', {
+      method: 'POST',
+      headers,
+      body,
+    }),
+  } as unknown as RequestEvent;
+}
 
 describe('parseIncludeArchived', () => {
   it('returns false when value is null or empty', () => {
@@ -73,5 +88,70 @@ describe('toHttpError', () => {
 
   it('rethrows non-Error values unchanged', () => {
     expect(() => toHttpError('not-an-error')).toThrow();
+  });
+});
+
+describe('readJsonBody', () => {
+  it('parses a valid JSON body within the size limit', async () => {
+    const event = makeJsonEvent(JSON.stringify({ id: 'a', title: 'b' }));
+    const parsed = await readJsonBody(event);
+    expect(parsed).toEqual({ id: 'a', title: 'b' });
+  });
+
+  it('throws ContentStoreError(413) when the body exceeds maxBytes', async () => {
+    const big = JSON.stringify({ data: 'x'.repeat(2048) });
+    let caught: unknown;
+    try {
+      await readJsonBody(makeJsonEvent(big), 1024);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ContentStoreError);
+    expect((caught as ContentStoreError).status).toBe(413);
+  });
+
+  it('throws ContentStoreError(413) when content-length declares too large', async () => {
+    const event = makeJsonEvent(JSON.stringify({ id: 'a' }), { contentLength: 999_999 });
+    let caught: unknown;
+    try {
+      await readJsonBody(event, 1024);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ContentStoreError);
+    expect((caught as ContentStoreError).status).toBe(413);
+  });
+
+  it('throws ContentStoreError(400) on empty body', async () => {
+    const event = makeJsonEvent('');
+    let caught: unknown;
+    try {
+      await readJsonBody(event);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ContentStoreError);
+    expect((caught as ContentStoreError).status).toBe(400);
+    expect((caught as ContentStoreError).message).toMatch(/empty/i);
+  });
+
+  it('throws ContentStoreError(400) on malformed JSON', async () => {
+    const event = makeJsonEvent('{ not: json }');
+    let caught: unknown;
+    try {
+      await readJsonBody(event);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ContentStoreError);
+    expect((caught as ContentStoreError).status).toBe(400);
+    expect((caught as ContentStoreError).message).toMatch(/valid JSON/i);
+  });
+
+  it('uses DEFAULT_MAX_JSON_BYTES when no explicit limit is passed', async () => {
+    const small = JSON.stringify({ id: 'a' });
+    expect(small.length).toBeLessThan(DEFAULT_MAX_JSON_BYTES);
+    const parsed = await readJsonBody(makeJsonEvent(small));
+    expect(parsed).toEqual({ id: 'a' });
   });
 });

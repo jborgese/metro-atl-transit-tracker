@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { requireEditorActor } from '$lib/server/auth/editor';
 import { archiveGoal, getGoalById, updateGoal } from '$lib/server/content/store';
-import { parseIncludeArchived, toHttpError } from '$lib/server/content/http';
+import { parseIncludeArchived, readJsonBody, toHttpError } from '$lib/server/content/http';
 import type { ApiItemResponse, Goal } from '@/types/content';
 
 export const GET: RequestHandler = async (event) => {
@@ -21,7 +21,7 @@ export const GET: RequestHandler = async (event) => {
 export const PATCH: RequestHandler = async (event) => {
   try {
     const actor = await requireEditorActor(event, 'content:edit');
-    const payload = await event.request.json();
+    const payload = await readJsonBody(event);
     const updated = await updateGoal(event, event.params.id!, payload, actor);
 
     const response: ApiItemResponse<Goal> = { data: updated };

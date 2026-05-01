@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { env } from '$env/dynamic/private';
 import { error, type RequestEvent } from '@sveltejs/kit';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
@@ -10,6 +11,21 @@ const EDITOR_TOKEN_AUTH_ENABLED_ENV = 'EDITOR_TOKEN_AUTH_ENABLED';
 const RBAC_ADMINS_ENV = 'CF_ACCESS_RBAC_ADMINS';
 const RBAC_EDITORS_ENV = 'CF_ACCESS_RBAC_EDITORS';
 const RBAC_ARCHIVERS_ENV = 'CF_ACCESS_RBAC_ARCHIVERS';
+
+const TEST_HOSTNAMES = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1']);
+
+function isTestEnvironment(event: RequestEvent) {
+  return TEST_HOSTNAMES.has(event.url.hostname);
+}
+
+function safeEqualString(a: string, b: string) {
+  const aBytes = Buffer.from(a, 'utf8');
+  const bBytes = Buffer.from(b, 'utf8');
+  if (aBytes.length !== bBytes.length) {
+    return false;
+  }
+  return timingSafeEqual(aBytes, bBytes);
+}
 
 export type EditorPermission = 'content:edit' | 'content:archive' | 'admin:users';
 
@@ -206,20 +222,27 @@ export async function requireEditorActor(
 ) {
   const editorTokenAuthEnabled = isEnabled(env[EDITOR_TOKEN_AUTH_ENABLED_ENV]);
   const editorToken = env[EDITOR_API_TOKEN_ENV]?.trim();
-  if (editorTokenAuthEnabled && editorToken) {
+  // Token-mode is for local/CI smoke + integration tests only — refuse to
+  // honor it on a deployed hostname even if the env vars are set, so that an
+  // accidentally-leaked production env can't fall back to a single shared
+  // secret. See reports/security-2026-05-01.md S-02.
+  if (editorTokenAuthEnabled && editorToken && isTestEnvironment(event)) {
     const presentedToken = event.request.headers.get(EDITOR_TOKEN_HEADER)?.trim();
-    if (!presentedToken || presentedToken !== editorToken) {
+    if (!presentedToken || !safeEqualString(presentedToken, editorToken)) {
       throw error(401, 'Unauthorized');
     }
     return 'editor-token-user';
   }
+  if (editorTokenAuthEnabled && editorToken && !isTestEnvironment(event)) {
+    console.warn('[editor-auth] refusing token-mode auth on deployed hostname', {
+      hostname: event.url.hostname,
+    });
+    // Fall through to Access JWT path; do not silently auth.
+  }
 
   const accessConfig = getAccessConfig();
   if (!accessConfig) {
-    throw error(
-      503,
-      'Access auth is not configured. Set CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD.'
-    );
+    throw error(503, 'Authentication is not configured.');
   }
 
   const headerJwt = event.request.headers.get(ACCESS_JWT_HEADER)?.trim();
