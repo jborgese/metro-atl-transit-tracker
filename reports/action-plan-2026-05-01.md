@@ -1,0 +1,167 @@
+# Consolidated Action Plan — metro-atl-transit-tracker
+
+**Generated:** 2026-05-01
+**Source reports:**
+- [codebase-analysis-2026-05-01.md](codebase-analysis-2026-05-01.md)
+- [health-2026-05-01.md](health-2026-05-01.md)
+- [security-2026-05-01.md](security-2026-05-01.md)
+- [foss-recommendations-2026-05-01.md](foss-recommendations-2026-05-01.md)
+- [uiux-audit-2026-05-01.md](uiux-audit-2026-05-01.md)
+
+This is a deduplicated, ordered punch list. Each item names the source finding(s) and the rationale for its position. Phase numbers are sequencing — items inside a phase can be parallelized.
+
+---
+
+## Phase 0 — Install tooling so later phases have a safety net
+
+These come first because they make every subsequent phase faster and the regressions easier to catch.
+
+- [ ] **Install `@cloudflare/workers-types` as a direct devDependency**
+      `npm i -D @cloudflare/workers-types`. Do **not** add it to [tsconfig.json](../tsconfig.json) `compilerOptions.types` — its globals (`Request`/`Response`/`WebSocket`/`EventTarget`) conflict with the DOM lib that SvelteKit needs for Svelte components (verified: 64 typecheck errors when added globally). Server files should import the types directly when wanted, e.g. `import type { D1Database } from '@cloudflare/workers-types'` in [src/lib/server/content/store.ts](../src/lib/server/content/store.ts). The actual swap from inline `D1Database` declarations to imports lands in Phase 5 alongside the `store.ts` split.
+      **Source:** FOSS F-03. Already in the lockfile transitively; this just makes the dependency explicit.
+- [ ] **Install `@types/geojson`**
+      `npm i -D @types/geojson`. [src/types/map.ts](../src/types/map.ts) imports `Feature`/`FeatureCollection` from `geojson` but the package is currently resolved transitively via `maplibre-gl`.
+      **Source:** Health H-09.
+- [ ] **Install Vitest + `@cloudflare/vitest-pool-workers`**
+      `npm i -D vitest @vitest/coverage-v8 @cloudflare/vitest-pool-workers`. Also add a `vitest.config.ts` reusing [vite.config.js](../vite.config.js) aliases. This is *the* lever that unblocks Phase 1's test work and replaces 597 LOC of bespoke harness in Phase 5.
+      **Source:** FOSS F-01 (replaces Health H-02 + H-08).
+- [ ] **Remove unused `@tailwindcss/vite` dep**
+      `npm uninstall @tailwindcss/vite` after confirming [vite.config.js](../vite.config.js) and [svelte.config.js](../svelte.config.js) don't import it.
+      **Source:** Health H-10.
+- [ ] **Add `.github/dependabot.yml`** for `npm` and `github-actions` ecosystems.
+      Enables Phase 2 + 3 (S-08) to stay current automatically.
+- [ ] **(Optional, audit environment) Install `cloc`, `semgrep`, `gitleaks` locally**
+      `winget install AlDanial.Cloc returntocorp.semgrep gitleaks.gitleaks`. Future audits (and any CI SAST job) become richer.
+      **Source:** Codebase F-13, Security S-13.
+
+---
+
+## Phase 1 — Restore the CI safety net
+
+The lint gate is a no-op today and there is no unit-test framework. Fixing both before patching dependencies (Phase 2) means breaking changes get caught.
+
+- [ ] **Port real ESLint rules into [eslint.config.cjs](../eslint.config.cjs)**
+      Spread `tseslint.configs.recommended.rules`, `eslint-plugin-svelte/configs['flat/recommended'][0].rules`, and `eslint-config-prettier`. See concrete config in [reports/health-2026-05-01.md H-01](health-2026-05-01.md#h-01--%F0%9F%9F%A0-eslint-9-flat-config-has-empty-rules-lint-is-a-ci-no-op). Triage the resulting backlog with `--max-warnings=N` set high, then ratchet down.
+      **Source:** Codebase F-01 / Health H-01. Cascades into UI/UX U-14, U-15 (a11y rules silently disabled today).
+- [ ] **Delete legacy [.eslintrc.cjs](../.eslintrc.cjs)** once the flat config is authoritative.
+      **Source:** Codebase F-05.
+- [ ] **Wire a Vitest starter suite** with three test files:
+      - `store.validation.test.ts` — `projectCreateSchema`, `goalCreateSchema`, `projectPatchSchema` happy + error paths.
+      - `hooks.rate-limit.test.ts` — `consumeWriteLimit`, `parsePositiveInt`.
+      - `http.helpers.test.ts` — `parseIncludeArchived`, `parseLimit`, `toHttpError`.
+      **Source:** Codebase F-02 / Health H-02. These are the highest-risk pure functions in the repo.
+- [ ] **Add `npm test` to the `ci:gate` script** in [package.json](../package.json) so unit tests run before lint/typecheck/integration.
+      **Source:** Health H-02.
+
+---
+
+## Phase 2 — Patch the dependency tree
+
+Run *after* Phase 1 because the safety net catches the bumps. Several of these directly close security findings.
+
+- [ ] **`npm audit fix`** for non-version-bump fixes.
+      **Source:** Security S-01 / Health H-03. Closes Svelte SSR XSS (GHSA-qgvg-pr8v-6rr3, GHSA-phwv-c562-gvmh) and SvelteKit handle-hook DoS (GHSA-3f6h-2hrp-w5wx) in particular.
+- [ ] **Single PR for non-major bumps** — `@sveltejs/kit`, `svelte`, `svelte-check`, `wrangler`, `maplibre-gl`, `jose`, `zod`, `prettier`, `tailwindcss`, `@tailwindcss/typography`, `eslint-plugin-svelte`, `svelte-eslint-parser`, `@typescript-eslint/*`. Run `npm run ci:gate:full` locally to verify.
+      **Source:** Health H-03.
+- [ ] **Major bumps, each in its own PR, in order:** `eslint` 9 → 10 → `vite` 7 → 8 → `@sveltejs/vite-plugin-svelte` 6 → 7 → `typescript` 5 → 6. Coordinate carefully — these are the four trailing majors.
+      **Source:** Health H-03.
+
+---
+
+## Phase 3 — Security hardening
+
+These are the application-code fixes for the OWASP findings. They no longer depend on Phase 2 (the audit is already clean) but Phase 1's tests catch regressions.
+
+- [ ] **S-02 (🟠) — Gate the `EDITOR_API_TOKEN` fallback path by environment.**
+      In [src/lib/server/auth/editor.ts:207-215](../src/lib/server/auth/editor.ts#L207), refuse the token-mode unless `event.url.hostname` is `localhost`/`127.0.0.1` or `env.NODE_ENV === 'test'`. Today nothing prevents an operator from accidentally enabling it in production.
+- [ ] **S-05 (🟡) — Use constant-time compare for the editor token** while the path still exists.
+      `crypto.timingSafeEqual` (`nodejs_compat` is already on in [wrangler.jsonc:5](../wrangler.jsonc#L5)).
+- [ ] **S-03 (🟠) — Add an explicit CSRF Origin check** in [src/hooks.server.ts](../src/hooks.server.ts) for write methods on `/api/`. Reject when `Origin` host ≠ request host. SvelteKit's default CSRF check covers form-encoded POSTs only — the JSON write API is currently relying on browser CORS preflight + Cloudflare Access cookie SameSite alone.
+- [ ] **S-11 (🟢) — Add a body-size limit before `JSON.parse`** in the write handlers (proposed `readJson(event, 64 * 1024)` helper). Defense-in-depth; combine with H-05 in Phase 5 since both produce a shared route helper.
+- [ ] **S-10 (🟢) — Redact env var names from the 503 message** at [editor.ts:219-223](../src/lib/server/auth/editor.ts#L219). Move detail to the structured warn log only.
+- [ ] **S-07 (🟡) — Add security headers** in [src/hooks.server.ts](../src/hooks.server.ts): `Strict-Transport-Security`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, plus a `Content-Security-Policy-Report-Only` to start tuning. Concrete starter values in [reports/security-2026-05-01.md S-07](security-2026-05-01.md#s-07--%F0%9F%9F%A1-no-security-headers-a04).
+- [ ] **S-08 (🟡) — Pin GitHub Actions to commit SHAs** in [.github/workflows/](../.github/workflows/). Especially [backup-snapshots.yml](../.github/workflows/backup-snapshots.yml), which holds Cloudflare API tokens. Dependabot (Phase 0) keeps SHAs current.
+- [ ] **F-02 FOSS / S-06 / Codebase F-07 (🟠 combined) — Replace the per-isolate rate limiter with Cloudflare's native `RateLimit` binding.**
+      Add a `unsafe.bindings` block to [wrangler.jsonc](../wrangler.jsonc) and replace `consumeWriteLimit(...)` with `await event.platform.env.WRITE_LIMITER.limit({ key: getClientKey(event) })`. Globally consistent across isolates, no extra deps. Concrete config in [reports/foss-recommendations-2026-05-01.md F-02](foss-recommendations-2026-05-01.md#f-02--%F0%9F%9F%A0-replace-the-per-isolate-rate-limiter-with-cloudflares-native-ratelimit-binding).
+- [ ] **S-04 (🟡) — Add a Cloudflare alert policy** for `[editor-auth] 401` rate exceeding a threshold from one IP. Do this after S-02 lands so the alert isn't noisy.
+
+---
+
+## Phase 4 — UI/UX accessibility (sprint-sized)
+
+Independent of Phases 1–3; can run in parallel with Phase 3 by a different contributor.
+
+- [ ] **U-01 (🟠) — Fix `.project-status` badge contrast.**
+      Four of six status states fail WCAG 1.4.3 AA against `color: #fff`. Switch to `color: #1F1F1F` on light backgrounds (`implementation` gold is the worst at ~2.4:1). Pattern in [reports/uiux-audit-2026-05-01.md U-01](uiux-audit-2026-05-01.md#u-01--%F0%9F%9F%A0-status-badge-contrast-failure-wcag-143--aa).
+- [ ] **U-02 + U-03 (🟠) — Image attributes and weight.**
+      Compress [static/mai-tai-logo.png](../static/mai-tai-logo.png) (244 KB) to ≤30 KB; serve `<picture>` with WebP/AVIF + PNG fallback. Add `width`, `height`, `loading="eager"`, `fetchpriority="high"` to the BaseLayout logo and `width`, `height`, `loading="lazy"` to every other `<img>` (verified: zero `<img>` carries dimensions today).
+- [ ] **U-04 (🟠) — Modal focus management** in [src/components/svelte/MethodologyModal.svelte](../src/components/svelte/MethodologyModal.svelte): move focus into the dialog on open, trap Tab, restore focus on close. ~25 LOC; concrete code in [reports/uiux-audit-2026-05-01.md U-04](uiux-audit-2026-05-01.md#u-04--%F0%9F%9F%A0-modal-focus-management).
+- [ ] **U-10 (🟡) — Replace render-blocking `@import`** of Google Fonts in [src/styles/global.css:4](../src/styles/global.css#L4) with `<link rel="preconnect">` + `<link rel="stylesheet">` in [src/app.html](../src/app.html). Long-term: self-host WOFF2 with `size-adjust` / `ascent-override` to match fallback metrics.
+- [ ] **U-05 (🟡) — Add a `prefers-reduced-motion` block** at the end of [global.css](../src/styles/global.css) zeroing transitions and `scroll-behavior`. Six-line fix.
+- [ ] **U-08 (🟡) — County-panel close button target size.**
+      Add `w-8 h-8 flex items-center justify-center` (or equivalent) to the button at [MetroMap.svelte:401](../src/components/svelte/MetroMap.svelte#L401). WCAG 2.5.8 minimum is 24×24.
+- [ ] **U-07 (🟡) — Admin tablist `aria-controls` + `role="tabpanel"`.**
+      [admin/+page.svelte:486-503](../src/routes/admin/+page.svelte#L486) declares `role="tab"` without binding to a panel.
+- [ ] **U-06 (🟡) — Drop `role="application"` on the map** at [MetroMap.svelte:381-388](../src/components/svelte/MetroMap.svelte#L381). If the Enter-to-select-center keystroke is wanted, expose it as a real `<button>` instead.
+- [ ] **U-09 (🟢) — Use `autocomplete="current-password"`** on the admin token field instead of `autocomplete="off"`.
+- [ ] **U-12 (🟢) — Surface the D1 fallback** when [src/routes/+page.ts:19-32](../src/routes/+page.ts#L19) returns the bundled JSON. Add a `usingFallback: boolean` to page data and render a small banner.
+
+---
+
+## Phase 5 — Refactor for maintainability
+
+Lands after Phase 1's tests are in place so the structural change is safe.
+
+- [ ] **Health H-04 / Codebase F-03 / FOSS F-04 (🟠) — Split [src/lib/server/content/store.ts](../src/lib/server/content/store.ts) into four modules:**
+      - `validators.ts` — Zod schemas + `parseSchema`.
+      - `mappers.ts` — `normalizeEntityForStorage`, `applyArchiveFields`, `ensureProvenance`, row ↔ entity helpers.
+      - `repository.ts` — D1 SQL constants and prepare/bind/batch.
+      - `service.ts` — public CRUD operations (preserve existing exported names).
+      Cuts the 1,483-LOC file along seams that already exist.
+- [ ] **Health H-06 — Reduce cyclomatic complexity** of three functions, ideally as part of the H-04 split:
+      - `seedPromise` IIFE (CC 27) at [store.ts:646](../src/lib/server/content/store.ts#L646) → `seedProjectsIfEmpty(db)`, `seedGoalsIfEmpty(db)`, `seedHistoryIfEmpty(db)`.
+      - `requireEditorActor` (CC 22) at [editor.ts:203](../src/lib/server/auth/editor.ts#L203) → `extractAccessJwt`, `verifyAccessActor`, `enforceRbac`.
+      - `toSeedHistoryEvent` (CC 20) at [store.ts:542](../src/lib/server/content/store.ts#L542) → guard helpers `parseEntityType` / `parseAction` / `parseTimestamp`.
+- [ ] **Health H-05 / FOSS F-05 — Extract `makeCollectionHandlers<T>(store)` + `makeItemHandlers<T>(store)`** into [src/lib/server/content/](../src/lib/server/content/) and rewrite the seven `+server.ts` files to thin wrappers. Also absorb the body-size limit from S-11.
+      Eliminates the 40–48% line duplication between `goal` and `project` handlers.
+- [ ] **Health H-11 — Extract `clearHover(map, id)` and `setHover(map, id)`** in [src/lib/map/addMetroCountyLayers.ts](../src/lib/map/addMetroCountyLayers.ts) (two self-clones detected by jscpd).
+- [ ] **Codebase F-06 — Pick a Svelte 5 idiom** (runes vs. legacy) and write the decision into [CONTRIBUTING.md](../CONTRIBUTING.md). Either is fine; the indecision is what costs.
+- [ ] **Codebase F-08 + F-09 — Resolve `pages/`↔`routes/` indirection.**
+      Either inline [src/pages/index.svelte](../src/pages/index.svelte) into [src/routes/+page.svelte](../src/routes/+page.svelte) and add a `routes/methodology/+page.svelte` for the orphaned [methodology.svelte](../src/pages/methodology.svelte), or delete `methodology.svelte`. Removes the Astro-migration leftover.
+
+---
+
+## Phase 6 — Optional / longer term
+
+Run when capacity allows. Not on the critical path.
+
+- [ ] **FOSS F-04 (🟡, L effort) — Adopt Drizzle ORM for D1.**
+      Schema-first `drizzle-kit generate` replaces `0001_init_content_schema.sql`; `drizzle-zod` replaces the duplicate Zod create/patch schemas. Strangler-fig migration possible. Largest investment in this list, biggest long-term lever.
+- [ ] **FOSS F-06 (🟢) — `@asteasolutions/zod-to-openapi`** generates an OpenAPI spec from the existing Zod schemas. ~30 LOC + a new `+server.ts` for `/api/openapi.json`.
+- [ ] **Codebase F-11 — Add a real `compilerOptions` block** to [tsconfig.json](../tsconfig.json) (e.g., `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`) once the team picks a strictness level.
+- [ ] **UI/UX U-11 — Document the design tokens** in [global.css:9-47](../src/styles/global.css#L9) somewhere durable ([README.md](../README.md), [CONTRIBUTING.md](../CONTRIBUTING.md), or [docs/](../docs/)).
+- [ ] **UI/UX U-13 — Decide on `prefers-color-scheme: light`.** Site is dark-only by design; either commit explicitly or add a light-mode token override.
+- [ ] **Codebase F-10 — Decide policy on Cloudflare Access AUD/team-domain in [wrangler.jsonc](../wrangler.jsonc).** Already safe to commit (validation parameters, not credentials); this is a documentation/clarity decision, not a security one.
+- [ ] **Security S-09 — Per-tester token actor logging.** Only relevant if S-02's environment gate isn't fixed; if S-02 ships, this becomes moot.
+
+---
+
+## Items intentionally skipped
+
+These were findings in the source reports but do not get an action item, by design:
+
+| Item | Why skipped |
+| --- | --- |
+| Codebase F-12, F-13, F-14; Health H-13 | Info-only observations (linear history, `cloc` not installed, zero TODO markers). |
+| Health H-07 | **Invalidated.** ts-prune flagged [src/lib/map/](../src/lib/map/) exports as dead, but it doesn't traverse `.svelte` imports — the audit caught at [MetroMap.svelte:6-23](../src/components/svelte/MetroMap.svelte#L6) that those modules *are* imported. The original H-07 finding is wrong. |
+| Security S-12, S-14, S-15, S-16 | Info-only positives (no SSRF surface, all SQL parameterized, etc.). |
+| UI/UX U-14, U-15 | Surface automatically as lint warnings once Phase 1's ESLint is restored. |
+
+---
+
+## Suggested follow-ups
+
+After Phase 5 lands, schedule a `/loop`-driven recurring review:
+- Quarterly: `/check-health` + `/security-scan` to catch new advisories and complexity growth.
+- After any major dep bump: `/audit-uiux` to catch CWV regressions.
+- Annually: `/recommend-foss` to revisit ecosystem fit.
