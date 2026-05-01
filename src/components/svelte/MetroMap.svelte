@@ -158,12 +158,9 @@
     }
   }
 
-  function handleKeyDown(e: KeyboardEvent) {
+  function selectCenteredCounty() {
     if (!map) return;
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      (map as any).__countyKeyboardActivate?.();
-    }
+    (map as any).__countyKeyboardActivate?.();
   }
 
 
@@ -375,20 +372,17 @@
       style={`--map-height: ${height}; --map-height-desktop: ${desktopHeight};`}
       aria-label="Metro Atlanta map"
     >
-      <!-- MapLibre mounts here; .map-container MUST be 100%/100% -->
-      <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-      <div
-        class="map-container"
-        bind:this={mapEl}
-        tabindex="0"
-        role="application"
-        on:keydown={handleKeyDown}
-        aria-describedby="map-instructions"
-      >
-        <p id="map-instructions" class="sr-only">
-          Focus the map and press Enter to highlight the county at the center of the map.
-        </p>
+      <!-- MapLibre mounts here; .map-container MUST be 100%/100%.
+           MapLibre's own canvas handles keyboard pan/zoom (arrows, +/-) and
+           is exposed to assistive tech without a role="application" wrapper. -->
+      <div class="map-container" bind:this={mapEl}>
+        <button
+          type="button"
+          class="select-center-button absolute top-2 right-2 z-40 rounded bg-neutral-900/80 px-3 py-2 text-xs text-neutral-100 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          on:click={selectCenteredCounty}
+        >
+          Select county at map center
+        </button>
         {#if showDebugPanel}
           <DebugBadge
             selectedCountyKey={debugSelectedKey}
@@ -398,7 +392,7 @@
         {/if}
         {#if selectedCounty}
           <aside bind:this={panelEl} class="map-panel-wrapper absolute top-4 left-4 z-50">
-            <button bind:this={closeBtn} aria-label="Close county panel" class="ml-2 text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2" on:click={closePanel}>&times;</button>
+            <button bind:this={closeBtn} aria-label="Close county panel" class="text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2 w-8 h-8 flex items-center justify-center text-xl leading-none" on:click={closePanel}>&times;</button>
             <MetroCountyPanel county={selectedCounty} />
           </aside>
         {/if}

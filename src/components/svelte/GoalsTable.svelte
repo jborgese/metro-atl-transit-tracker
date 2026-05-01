@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { Goal, Project } from './types';
-  import { statusLabel, getStatusColor } from '@/utils/statusHelpers';
+  import { statusLabel, getStatusColor, getStatusTextColor } from '@/utils/statusHelpers';
   import { countyOrder, getCountyName as lookupCountyName } from '@/utils/countyLookup';
 
   export let goals: Goal[] = [];
@@ -241,7 +241,7 @@
                     <div class="project-header">
                       <span class="project-indicator" aria-hidden="true">&rarr;</span>
                       <span class="project-title">{project.title}</span>
-                      <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
+                      <span class="project-status" style="background: {getStatusColor(project.status)}; color: {getStatusTextColor(project.status)}">{statusLabel(project.status)}</span>
                     </div>
                     <p class="project-summary">{project.summary}</p>
                     {#if project.lead_org}
@@ -347,7 +347,7 @@
                       <div class="project-header">
                         <span class="project-indicator" aria-hidden="true">&rarr;</span>
                         <span class="project-title">{project.title}</span>
-                        <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
+                        <span class="project-status" style="background: {getStatusColor(project.status)}; color: {getStatusTextColor(project.status)}">{statusLabel(project.status)}</span>
                       </div>
                       <p class="project-summary">{project.summary}</p>
                       {#if project.lead_org}
@@ -453,7 +453,7 @@
                       <div class="project-header">
                         <span class="project-indicator" aria-hidden="true">&rarr;</span>
                         <span class="project-title">{project.title}</span>
-                        <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
+                        <span class="project-status" style="background: {getStatusColor(project.status)}; color: {getStatusTextColor(project.status)}">{statusLabel(project.status)}</span>
                       </div>
                       <p class="project-summary">{project.summary}</p>
                       {#if project.lead_org}
@@ -558,7 +558,7 @@
                     <div class="project-header">
                       <span class="project-indicator" aria-hidden="true">&rarr;</span>
                       <span class="project-title">{project.title}</span>
-                      <span class="project-status" style="background: {getStatusColor(project.status)}">{statusLabel(project.status)}</span>
+                      <span class="project-status" style="background: {getStatusColor(project.status)}; color: {getStatusTextColor(project.status)}">{statusLabel(project.status)}</span>
                     </div>
                     <p class="project-summary">{project.summary}</p>
                     {#if project.lead_org}

@@ -463,7 +463,7 @@
               <input
                 bind:value={token}
                 type="password"
-                autocomplete="off"
+                autocomplete="current-password"
                 placeholder="Leave blank when signed in via Access"
               />
             </label>

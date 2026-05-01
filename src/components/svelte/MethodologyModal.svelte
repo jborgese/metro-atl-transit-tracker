@@ -85,11 +85,11 @@
             </thead>
             <tbody>
               <tr>
-                <td><span class="status-badge" style="background: #4280c4">Planning</span></td>
+                <td><span class="status-badge" style="background: #4280c4; color: #1F1F1F">Planning</span></td>
                 <td>Olympic Blue</td>
               </tr>
               <tr>
-                <td><span class="status-badge" style="background: #8a62b0">Public Outreach</span></td>
+                <td><span class="status-badge" style="background: #8a62b0; color: #1F1F1F">Public Outreach</span></td>
                 <td>Olympic Purple</td>
               </tr>
               <tr>
@@ -97,11 +97,11 @@
                 <td>Olympic Magenta</td>
               </tr>
               <tr>
-                <td><span class="status-badge" style="background: #c4a042">Implementation</span></td>
+                <td><span class="status-badge" style="background: #c4a042; color: #1F1F1F">Implementation</span></td>
                 <td>Gold</td>
               </tr>
               <tr>
-                <td><span class="status-badge" style="background: #2d8659">Completed</span></td>
+                <td><span class="status-badge" style="background: #2d8659; color: #1F1F1F">Completed</span></td>
                 <td>Forest Green</td>
               </tr>
               <tr>

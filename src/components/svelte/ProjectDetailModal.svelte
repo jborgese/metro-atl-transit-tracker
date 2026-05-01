@@ -2,7 +2,7 @@
   import { createEventDispatcher, tick } from 'svelte';
   import Portal from './Portal.svelte';
   import type { Goal, Project } from '@/types/content';
-  import { statusLabel, getStatusColor } from '@/utils/statusHelpers';
+  import { statusLabel, getStatusColor, getStatusTextColor } from '@/utils/statusHelpers';
   import { getCountyName } from '@/utils/countyLookup';
   import { formatDate, formatTimestamp } from '@/utils/dateFormat';
   import { getRelatedGoals } from '@/utils/projectRelations';
@@ -140,7 +140,7 @@
             <div class="badge-row">
               <span
                 class="status-badge"
-                style="background: {getStatusColor(project.status)}"
+                style="background: {getStatusColor(project.status)}; color: {getStatusTextColor(project.status)}"
               >{statusLabel(project.status)}</span>
               {#if project.is_archived === true}
                 <span class="archived-badge">Archived</span>
