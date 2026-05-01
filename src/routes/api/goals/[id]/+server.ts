@@ -9,7 +9,7 @@ export const GET: RequestHandler = async (event) => {
     const includeArchivedParam = event.url.searchParams.get('includeArchived');
     const includeArchived =
       includeArchivedParam === null ? true : parseIncludeArchived(includeArchivedParam);
-    const goal = await getGoalById(event, event.params.id, { includeArchived });
+    const goal = await getGoalById(event, event.params.id!, { includeArchived });
 
     const response: ApiItemResponse<Goal> = { data: goal };
     return json(response);
@@ -22,7 +22,7 @@ export const PATCH: RequestHandler = async (event) => {
   try {
     const actor = await requireEditorActor(event, 'content:edit');
     const payload = await event.request.json();
-    const updated = await updateGoal(event, event.params.id, payload, actor);
+    const updated = await updateGoal(event, event.params.id!, payload, actor);
 
     const response: ApiItemResponse<Goal> = { data: updated };
     return json(response);
@@ -34,7 +34,7 @@ export const PATCH: RequestHandler = async (event) => {
 export const DELETE: RequestHandler = async (event) => {
   try {
     const actor = await requireEditorActor(event, 'content:archive');
-    const archived = await archiveGoal(event, event.params.id, actor);
+    const archived = await archiveGoal(event, event.params.id!, actor);
 
     const response: ApiItemResponse<Goal> = { data: archived };
     return json(response);
