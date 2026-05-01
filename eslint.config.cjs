@@ -110,6 +110,10 @@ module.exports = [
       ],
       'no-undef': 'off', // TS handles this for .ts files
       'no-empty': ['error', { allowEmptyCatch: true }],
+      // ESLint 10 / @eslint/js: false-positives on Svelte reactive declarations
+      // (`let x = []` re-assigned via `$:` block). Demote until Svelte 5 runes
+      // migration (codebase F-06) makes the reactivity legible to ESLint.
+      'no-useless-assignment': 'warn',
       // Backlog — demote to warn for now, ratchet to error in a follow-up.
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-expressions': 'warn',
@@ -141,6 +145,8 @@ module.exports = [
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
       'no-undef': 'off',
+      // ESLint 10 / @eslint/js: false-positives on Svelte reactive declarations.
+      'no-useless-assignment': 'warn',
       // Backlog — large existing surface; ratchet down in a follow-up PR.
       'svelte/require-each-key': 'warn',
       'svelte/no-navigation-without-resolve': 'warn',

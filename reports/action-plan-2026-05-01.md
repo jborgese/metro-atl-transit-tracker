@@ -79,7 +79,13 @@ The local install of Vite 8 + plugin 7 used `--legacy-peer-deps` to clear a tran
 
 - [x] **Drop `svelte-preprocess`** in favor of the built-in `vitePreprocess()` from `@sveltejs/vite-plugin-svelte`. The previous [svelte.config.js](../svelte.config.js) called `preprocess()` with no arguments — it produced nothing that the modern Vite plugin doesn't already provide. `svelte-preprocess` is in maintenance mode (last release 6.0.3, June 2024) and won't update to TS 6.
 - [x] **Regenerate `package-lock.json`** from a clean state (deleted `node_modules` + `package-lock.json`, ran `npm install` with no flags).
-- [x] **Verified `npm ci --dry-run`** — `up to date in 308ms`, no peer-dep errors. Typecheck, all 40 tests, and lint still pass.
+- [x] **Verified `npm ci --dry-run`** — `up to date in 308ms`, no peer-dep errors.
+
+After the first push fixed Workers Builds + Backup Snapshots, **Quality Checks still failed at the Lint step** with `Cannot find module '@eslint/js'`. The flat config's `require('@eslint/js')` resolved locally because the package was present in the developer's user-level `node_modules` (likely from a prior global ESLint install) and Node falls back to parent-directory `node_modules` during resolution. CI's clean checkout has no such fallback. Fix:
+
+- [x] **Add `@eslint/js` as a direct devDependency** so [eslint.config.cjs](../eslint.config.cjs) finds it through the project's local `node_modules`.
+- [x] **Demote `no-useless-assignment` to `warn`** in [eslint.config.cjs](../eslint.config.cjs) — the local `@eslint/js@10.0.1` introduced 8 new errors from this rule, all false positives on Svelte's `let x = []; $: x = computeFromState();` reactive-declaration pattern that ESLint's static analyzer can't see through. Will become legible after the Svelte 5 runes migration (Codebase F-06, Phase 5).
+- [x] **Bump `--max-warnings=130` → `140`** in [package.json](../package.json) to absorb the 8 new `no-useless-assignment` warnings.
 
 ---
 
