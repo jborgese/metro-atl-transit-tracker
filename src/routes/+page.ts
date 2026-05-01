@@ -9,25 +9,25 @@ async function loadCollection<T>(
   fetchFn: LoadFetch,
   url: string,
   fallback: T[]
-) {
+): Promise<{ data: T[]; usedFallback: boolean }> {
   try {
     const response = await fetchFn(url);
     if (!response.ok) {
-      return fallback;
+      return { data: fallback, usedFallback: true };
     }
 
     const payload = (await response.json()) as ApiListResponse<T> | T[];
     if (Array.isArray(payload)) {
-      return payload;
+      return { data: payload, usedFallback: false };
     }
 
     if (payload && Array.isArray(payload.data)) {
-      return payload.data;
+      return { data: payload.data, usedFallback: false };
     }
 
-    return fallback;
+    return { data: fallback, usedFallback: true };
   } catch {
-    return fallback;
+    return { data: fallback, usedFallback: true };
   }
 }
 
@@ -38,7 +38,8 @@ export const load: PageLoad = async ({ fetch }) => {
   ]);
 
   return {
-    projects,
-    goals,
+    projects: projects.data,
+    goals: goals.data,
+    usingFallback: projects.usedFallback || goals.usedFallback,
   };
 };

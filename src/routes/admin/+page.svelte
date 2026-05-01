@@ -486,7 +486,9 @@
         <div class="list-actions" role="tablist" aria-label="Content type">
           <button
             role="tab"
+            id="tab-project"
             aria-selected={dataset === 'project'}
+            aria-controls="content-list-panel"
             class:active={dataset === 'project'}
             on:click={() => setDataset('project')}
             disabled={loading}
@@ -495,7 +497,9 @@
           </button>
           <button
             role="tab"
+            id="tab-goal"
             aria-selected={dataset === 'goal'}
+            aria-controls="content-list-panel"
             class:active={dataset === 'goal'}
             on:click={() => setDataset('goal')}
             disabled={loading}
@@ -503,6 +507,12 @@
             Goals ({goals.length})
           </button>
         </div>
+
+        <div
+          id="content-list-panel"
+          role="tabpanel"
+          aria-labelledby={dataset === 'project' ? 'tab-project' : 'tab-goal'}
+        >
 
         <label class="search-field">
           <span class="search-label">
@@ -548,6 +558,7 @@
             {/each}
           {/if}
         </ul>
+        </div>
       </aside>
 
       <section class="editor-pane panel">

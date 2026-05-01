@@ -9,6 +9,7 @@ import type { Goal, Project } from '@/types/content';
 export let data: {
   projects: Project[];
   goals: Goal[];
+  usingFallback?: boolean;
 };
 
 let projects: Project[] = [];
@@ -88,6 +89,11 @@ onMount(() => {
     <p class="lede">
       A public hub for Metro Atlanta transit goals, agencies, and advocacy — your jumping-off point for deeper sources and ways to take action.
     </p>
+    {#if data?.usingFallback}
+      <p class="fallback-banner" role="status">
+        Showing a cached snapshot of projects and goals — live data is temporarily unavailable.
+      </p>
+    {/if}
     <MetroMap bind:this={mapRef} on:countySelected={handleCountySelected} />
     <GoalsTable
       {goals}

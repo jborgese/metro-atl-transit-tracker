@@ -3,11 +3,20 @@
 
   export let open = false;
 
+  let modalContent: HTMLDivElement | null = null;
+  let closeButton: HTMLButtonElement | null = null;
+  let lastFocused: HTMLElement | null = null;
+
   $: if (typeof document !== 'undefined') {
     if (open) {
+      lastFocused = (document.activeElement as HTMLElement) ?? null;
       document.body.style.overflow = 'hidden';
+      // Wait for the portal to mount, then move focus into the dialog.
+      Promise.resolve().then(() => closeButton?.focus());
     } else {
       document.body.style.overflow = '';
+      lastFocused?.focus();
+      lastFocused = null;
     }
   }
 
@@ -16,7 +25,32 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') close();
+    if (!open) return;
+    if (e.key === 'Escape') {
+      close();
+      return;
+    }
+    if (e.key === 'Tab' && modalContent) {
+      const focusables = Array.from(
+        modalContent.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])'
+        )
+      );
+      if (focusables.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
   }
 
   function handleBackdropClick(e: MouseEvent) {
@@ -45,8 +79,8 @@
       aria-modal="true"
       aria-labelledby="methodology-title"
     >
-      <div class="modal-content">
-        <button class="modal-close" on:click={close} aria-label="Close">
+      <div class="modal-content" bind:this={modalContent}>
+        <button class="modal-close" on:click={close} aria-label="Close" bind:this={closeButton}>
           &times;
         </button>
         <article class="methodology-article">

@@ -112,24 +112,23 @@ These are the application-code fixes for the OWASP findings. Phase 1's tests cau
 
 ---
 
-## Phase 4 — UI/UX accessibility (sprint-sized)
+## Phase 4 — UI/UX accessibility ✅ (executed 2026-05-01)
 
-Independent of Phases 1–3; can run in parallel with Phase 3 by a different contributor.
+- [x] **U-01 (🟠) — Status-badge contrast.**
+      New `getStatusTextColor()` in [statusHelpers.ts](../src/utils/statusHelpers.ts) returns `#1F1F1F` for the four high-luminance backgrounds (`planning`, `public-outreach`, `implementation`, `completed`) and keeps `#fff` for the dark ones (`funding-application`, `ongoing`). Threaded through all four callsites in [GoalsTable.svelte](../src/components/svelte/GoalsTable.svelte), [ProjectDetailModal.svelte](../src/components/svelte/ProjectDetailModal.svelte), and the legend in [MethodologyModal.svelte](../src/components/svelte/MethodologyModal.svelte).
+- [x] **U-02 + U-03 (🟠) — Image attributes and weight.**
+      Compressed via `sharp`: `mai-tai-logo.png` 238 KB → **39 KB** (palette PNG); generated `mai-tai-logo.webp` (25 KB) and `mai-tai-logo.avif` (17 KB) siblings; `mai-tai-logo-transparent.png` 236 KB → 83 KB; `static/logos/abettercobb.png` 511 KB → **21 KB**. [BaseLayout.svelte](../src/layouts/BaseLayout.svelte) now serves `<picture>` with AVIF + WebP + PNG fallback, plus `width="712" height="712" loading="eager" fetchpriority="high" decoding="async"`. [MetroCountyPanel.svelte](../src/components/svelte/MetroCountyPanel.svelte) panel logos got `width="160" height="64" loading="lazy" decoding="async"` (3 callsites).
+- [x] **U-04 (🟠) — Modal focus management** in [MethodologyModal.svelte](../src/components/svelte/MethodologyModal.svelte). Captures `lastFocused` on open, focuses the close button on mount, traps Tab forward + Shift+Tab back across the focusable subtree, restores focus on close. Escape and click-outside still close.
+- [x] **U-10 (🟡) — Replaced render-blocking `@import`** of Google Fonts in [global.css](../src/styles/global.css) with `<link rel="preconnect">` (×2) + `<link rel="stylesheet">` in [src/app.html](../src/app.html). Self-host follow-up tracked in Phase 6.
+- [x] **U-05 (🟡) — `prefers-reduced-motion` block** added at the end of [global.css](../src/styles/global.css). Zeroes transitions/animations and disables `scroll-behavior: smooth`.
+- [x] **U-08 (🟡) — County-panel close button** at [MetroMap.svelte:401](../src/components/svelte/MetroMap.svelte#L401) now has `w-8 h-8 flex items-center justify-center text-xl leading-none` (32 × 32 CSS px, WCAG 2.5.8 PASS).
+- [x] **U-07 (🟡) — Admin tablist** in [admin/+page.svelte:486-503](../src/routes/admin/+page.svelte#L486) now wires `id="tab-project"` / `id="tab-goal"` and `aria-controls="content-list-panel"` on each tab; the search + list region beneath is wrapped in `<div id="content-list-panel" role="tabpanel" aria-labelledby={dataset === 'project' ? 'tab-project' : 'tab-goal'}>`.
+- [x] **U-06 (🟡) — Dropped `role="application"`** on the map. The wrapper `<div class="map-container">` no longer carries `role`/`tabindex`/`on:keydown`/`aria-describedby`. The custom Enter-to-select-center keystroke is now a visible `<button>Select county at map center</button>` overlaid in the top-right of the map. The two `svelte-ignore a11y-*` directives at [MetroMap.svelte:379-380](../src/components/svelte/MetroMap.svelte#L379) (cross-ref UI/UX U-14) are also gone.
+- [x] **U-09 (🟢) — `autocomplete="current-password"`** on the admin token field at [admin/+page.svelte](../src/routes/admin/+page.svelte).
+- [x] **U-12 (🟢) — Surfaced the D1 fallback signal.**
+      [src/routes/+page.ts](../src/routes/+page.ts) now returns `{ projects, goals, usingFallback }`; [pages/index.svelte](../src/pages/index.svelte) renders a `role="status"` banner above the map when the live API failed. Banner styling added to [global.css](../src/styles/global.css) using existing tokens.
 
-- [ ] **U-01 (🟠) — Fix `.project-status` badge contrast.**
-      Four of six status states fail WCAG 1.4.3 AA against `color: #fff`. Switch to `color: #1F1F1F` on light backgrounds (`implementation` gold is the worst at ~2.4:1). Pattern in [reports/uiux-audit-2026-05-01.md U-01](uiux-audit-2026-05-01.md#u-01--%F0%9F%9F%A0-status-badge-contrast-failure-wcag-143--aa).
-- [ ] **U-02 + U-03 (🟠) — Image attributes and weight.**
-      Compress [static/mai-tai-logo.png](../static/mai-tai-logo.png) (244 KB) to ≤30 KB; serve `<picture>` with WebP/AVIF + PNG fallback. Add `width`, `height`, `loading="eager"`, `fetchpriority="high"` to the BaseLayout logo and `width`, `height`, `loading="lazy"` to every other `<img>` (verified: zero `<img>` carries dimensions today).
-- [ ] **U-04 (🟠) — Modal focus management** in [src/components/svelte/MethodologyModal.svelte](../src/components/svelte/MethodologyModal.svelte): move focus into the dialog on open, trap Tab, restore focus on close. ~25 LOC; concrete code in [reports/uiux-audit-2026-05-01.md U-04](uiux-audit-2026-05-01.md#u-04--%F0%9F%9F%A0-modal-focus-management).
-- [ ] **U-10 (🟡) — Replace render-blocking `@import`** of Google Fonts in [src/styles/global.css:4](../src/styles/global.css#L4) with `<link rel="preconnect">` + `<link rel="stylesheet">` in [src/app.html](../src/app.html). Long-term: self-host WOFF2 with `size-adjust` / `ascent-override` to match fallback metrics.
-- [ ] **U-05 (🟡) — Add a `prefers-reduced-motion` block** at the end of [global.css](../src/styles/global.css) zeroing transitions and `scroll-behavior`. Six-line fix.
-- [ ] **U-08 (🟡) — County-panel close button target size.**
-      Add `w-8 h-8 flex items-center justify-center` (or equivalent) to the button at [MetroMap.svelte:401](../src/components/svelte/MetroMap.svelte#L401). WCAG 2.5.8 minimum is 24×24.
-- [ ] **U-07 (🟡) — Admin tablist `aria-controls` + `role="tabpanel"`.**
-      [admin/+page.svelte:486-503](../src/routes/admin/+page.svelte#L486) declares `role="tab"` without binding to a panel.
-- [ ] **U-06 (🟡) — Drop `role="application"` on the map** at [MetroMap.svelte:381-388](../src/components/svelte/MetroMap.svelte#L381). If the Enter-to-select-center keystroke is wanted, expose it as a real `<button>` instead.
-- [ ] **U-09 (🟢) — Use `autocomplete="current-password"`** on the admin token field instead of `autocomplete="off"`.
-- [ ] **U-12 (🟢) — Surface the D1 fallback** when [src/routes/+page.ts:19-32](../src/routes/+page.ts#L19) returns the bundled JSON. Add a `usingFallback: boolean` to page data and render a small banner.
+**Verification:** `npm run typecheck` 0 errors, `npm test` 48 / 48 pass, `npm run lint` 0 errors / 135 warnings (`--max-warnings=140`).
 
 ---
 

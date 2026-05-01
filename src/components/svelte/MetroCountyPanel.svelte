@@ -23,7 +23,7 @@
             <li>
               {#if getLogo(group.name)}
                 <a href={group.website} target="_blank" rel="noopener">
-                  <img src={getLogo(group.name)} alt={group.name} class="panel-logo" />
+                  <img src={getLogo(group.name)} alt={group.name} class="panel-logo" width="160" height="64" loading="lazy" decoding="async" />
                   <span class="sr-only">{group.name}</span>
                 </a>
               {:else}
@@ -43,7 +43,7 @@
           <li>
             {#if getLogo(agency.name)}
               <a href={agency.contact_url} target="_blank" rel="noopener">
-                <img src={getLogo(agency.name)} alt={agency.name} class="panel-logo" />
+                <img src={getLogo(agency.name)} alt={agency.name} class="panel-logo" width="160" height="64" loading="lazy" decoding="async" />
                 <span class="sr-only">{agency.name}</span>
               </a>
             {:else}
@@ -65,7 +65,7 @@
           <li>
             {#if getLogo(group.name)}
               <a href={group.website} target="_blank" rel="noopener">
-                <img src={getLogo(group.name)} alt={group.name} class="panel-logo" />
+                <img src={getLogo(group.name)} alt={group.name} class="panel-logo" width="160" height="64" loading="lazy" decoding="async" />
                 <span class="sr-only">{group.name}</span>
               </a>
             {:else}

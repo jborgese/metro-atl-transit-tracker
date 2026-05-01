@@ -27,7 +27,20 @@
 <header class="site-header">
   <div class="site-header-inner">
     <a href="/" class="site-title">
-      <img src="/mai-tai-logo.png" alt="MAI TAI" class="site-logo" />
+      <picture>
+        <source srcset="/mai-tai-logo.avif" type="image/avif" />
+        <source srcset="/mai-tai-logo.webp" type="image/webp" />
+        <img
+          src="/mai-tai-logo.png"
+          alt="MAI TAI"
+          class="site-logo"
+          width="712"
+          height="712"
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+        />
+      </picture>
     </a>
     <nav class="site-nav" aria-label="Primary">
       <a class="site-nav-link" href="/history">History</a>
