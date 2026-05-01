@@ -12,23 +12,23 @@ This is a deduplicated, ordered punch list. Each item names the source finding(s
 
 ---
 
-## Phase 0 — Install tooling so later phases have a safety net
+## Phase 0 — Install tooling so later phases have a safety net ✅ (executed 2026-05-01, commit 5f79636)
 
 These come first because they make every subsequent phase faster and the regressions easier to catch.
 
-- [ ] **Install `@cloudflare/workers-types` as a direct devDependency**
+- [x] **Install `@cloudflare/workers-types` as a direct devDependency**
       `npm i -D @cloudflare/workers-types`. Do **not** add it to [tsconfig.json](../tsconfig.json) `compilerOptions.types` — its globals (`Request`/`Response`/`WebSocket`/`EventTarget`) conflict with the DOM lib that SvelteKit needs for Svelte components (verified: 64 typecheck errors when added globally). Server files should import the types directly when wanted, e.g. `import type { D1Database } from '@cloudflare/workers-types'` in [src/lib/server/content/store.ts](../src/lib/server/content/store.ts). The actual swap from inline `D1Database` declarations to imports lands in Phase 5 alongside the `store.ts` split.
       **Source:** FOSS F-03. Already in the lockfile transitively; this just makes the dependency explicit.
-- [ ] **Install `@types/geojson`**
+- [x] **Install `@types/geojson`**
       `npm i -D @types/geojson`. [src/types/map.ts](../src/types/map.ts) imports `Feature`/`FeatureCollection` from `geojson` but the package is currently resolved transitively via `maplibre-gl`.
       **Source:** Health H-09.
-- [ ] **Install Vitest + `@cloudflare/vitest-pool-workers`**
-      `npm i -D vitest @vitest/coverage-v8 @cloudflare/vitest-pool-workers`. Also add a `vitest.config.ts` reusing [vite.config.js](../vite.config.js) aliases. This is *the* lever that unblocks Phase 1's test work and replaces 597 LOC of bespoke harness in Phase 5.
+- [x] **Install Vitest + `@cloudflare/vitest-pool-workers`**
+      `npm i -D vitest @vitest/coverage-v8 @cloudflare/vitest-pool-workers`. Created [vitest.config.ts](../vitest.config.ts) using the SvelteKit Vite plugin (so `$lib`/`@/types` aliases resolve), `src/**/*.{test,spec}.ts` glob, v8 coverage. The Workers-pool integration config gets added in Phase 5 when integration tests actually need it.
       **Source:** FOSS F-01 (replaces Health H-02 + H-08).
-- [ ] **Remove unused `@tailwindcss/vite` dep**
-      `npm uninstall @tailwindcss/vite` after confirming [vite.config.js](../vite.config.js) and [svelte.config.js](../svelte.config.js) don't import it.
+- [x] **Remove unused `@tailwindcss/vite` dep**
+      Verified Tailwind 4 is consumed via `@import "tailwindcss/preflight"` in [global.css:1-2](../src/styles/global.css#L1) and the PostCSS-driven [tailwind.config.ts](../tailwind.config.ts).
       **Source:** Health H-10.
-- [ ] **Add `.github/dependabot.yml`** for `npm` and `github-actions` ecosystems.
+- [x] **Add [.github/dependabot.yml](../.github/dependabot.yml)** — weekly Monday updates for `npm` + `github-actions`, with grouped PRs (svelte, eslint, tailwind, vitest, cloudflare clusters).
       Enables Phase 2 + 3 (S-08) to stay current automatically.
 - [ ] **(Optional, audit environment) Install `cloc`, `semgrep`, `gitleaks` locally**
       `winget install AlDanial.Cloc returntocorp.semgrep gitleaks.gitleaks`. Future audits (and any CI SAST job) become richer.
@@ -36,35 +36,50 @@ These come first because they make every subsequent phase faster and the regress
 
 ---
 
-## Phase 1 — Restore the CI safety net
+## Phase 1 — Restore the CI safety net ✅ (executed 2026-05-01, commit 3dea744)
 
 The lint gate is a no-op today and there is no unit-test framework. Fixing both before patching dependencies (Phase 2) means breaking changes get caught.
 
-- [ ] **Port real ESLint rules into [eslint.config.cjs](../eslint.config.cjs)**
-      Spread `tseslint.configs.recommended.rules`, `eslint-plugin-svelte/configs['flat/recommended'][0].rules`, and `eslint-config-prettier`. See concrete config in [reports/health-2026-05-01.md H-01](health-2026-05-01.md#h-01--%F0%9F%9F%A0-eslint-9-flat-config-has-empty-rules-lint-is-a-ci-no-op). Triage the resulting backlog with `--max-warnings=N` set high, then ratchet down.
+- [x] **Port real ESLint rules into [eslint.config.cjs](../eslint.config.cjs)**
+      Pulls in `@typescript-eslint/eslint-plugin/recommended`, `eslint-plugin-svelte/flat/recommended`, `eslint-config-prettier`, plus core `js.configs.recommended`. Browser/platform globals (`window`, `URL`, `fetch`, `requestAnimationFrame`, etc.) declared explicitly. Stylistic-backlog rules demoted to **warn** (`@typescript-eslint/no-explicit-any`, `svelte/require-each-key`, `svelte/no-navigation-without-resolve`, `svelte/infinite-reactive-loop`, `@typescript-eslint/no-unsafe-function-type`). Final state: **0 errors, 125 warnings**.
       **Source:** Codebase F-01 / Health H-01. Cascades into UI/UX U-14, U-15 (a11y rules silently disabled today).
-- [ ] **Delete legacy [.eslintrc.cjs](../.eslintrc.cjs)** once the flat config is authoritative.
+- [x] **Delete legacy [.eslintrc.cjs](../.eslintrc.cjs)**
       **Source:** Codebase F-05.
-- [ ] **Wire a Vitest starter suite** with three test files:
-      - `store.validation.test.ts` — `projectCreateSchema`, `goalCreateSchema`, `projectPatchSchema` happy + error paths.
-      - `hooks.rate-limit.test.ts` — `consumeWriteLimit`, `parsePositiveInt`.
-      - `http.helpers.test.ts` — `parseIncludeArchived`, `parseLimit`, `toHttpError`.
-      **Source:** Codebase F-02 / Health H-02. These are the highest-risk pure functions in the repo.
-- [ ] **Add `npm test` to the `ci:gate` script** in [package.json](../package.json) so unit tests run before lint/typecheck/integration.
+- [x] **Set `--max-warnings=130`** in [package.json](../package.json) `lint` script (current count 125, set 5 above for headroom).
+      Ratchet target: get the 41 `no-explicit-any` warnings to zero, then drop the ceiling. Tracked as a Phase-2-or-later cleanup PR.
+- [x] **Wire a Vitest starter suite** — 40 tests across 3 files, runs in 224 ms:
+      - [src/lib/server/content/store.validation.test.ts](../src/lib/server/content/store.validation.test.ts) — `projectCreateSchema`, `projectPatchSchema`, `goalCreateSchema`, `goalPatchSchema`, plus `assertNoForbiddenWriteFields`.
+      - [src/hooks.server.test.ts](../src/hooks.server.test.ts) — `consumeWriteLimit`, `parsePositiveInt` (allow/decrement/exhaust/per-IP/`x-forwarded-for` fallback).
+      - [src/lib/server/content/http.test.ts](../src/lib/server/content/http.test.ts) — `parseIncludeArchived`, `parseLimit`, `toHttpError`.
+      Required minor source changes: added `export` to `projectCreateSchema`, `projectPatchSchema`, `goalCreateSchema`, `goalPatchSchema`, `assertNoForbiddenWriteFields` in [store.ts](../src/lib/server/content/store.ts), and `parsePositiveInt`, `consumeWriteLimit` in [hooks.server.ts](../src/hooks.server.ts).
+      **Source:** Codebase F-02 / Health H-02.
+- [x] **Add `npm test` (and `npm run test:watch`/`npm run test:coverage`) and put it in `ci:gate`** between `lint` and `schema:check`.
       **Source:** Health H-02.
 
 ---
 
-## Phase 2 — Patch the dependency tree
+## Phase 2 — Patch the dependency tree ✅ (executed 2026-05-01, commit be9ee1a)
 
 Run *after* Phase 1 because the safety net catches the bumps. Several of these directly close security findings.
 
-- [ ] **`npm audit fix`** for non-version-bump fixes.
-      **Source:** Security S-01 / Health H-03. Closes Svelte SSR XSS (GHSA-qgvg-pr8v-6rr3, GHSA-phwv-c562-gvmh) and SvelteKit handle-hook DoS (GHSA-3f6h-2hrp-w5wx) in particular.
-- [ ] **Single PR for non-major bumps** — `@sveltejs/kit`, `svelte`, `svelte-check`, `wrangler`, `maplibre-gl`, `jose`, `zod`, `prettier`, `tailwindcss`, `@tailwindcss/typography`, `eslint-plugin-svelte`, `svelte-eslint-parser`, `@typescript-eslint/*`. Run `npm run ci:gate:full` locally to verify.
+- [x] **`npm audit fix`** — vulnerability count went 14 (1L/7M/6H) → 3 (3L/0M/0H). All highs and moderates closed. Closes Svelte SSR XSS (GHSA-qgvg-pr8v-6rr3, GHSA-phwv-c562-gvmh), SvelteKit handle-hook DoS (GHSA-3f6h-2hrp-w5wx), Vite path traversal (GHSA-4w7w-66w2-5vf9, GHSA-v2wj-q39q-566r, GHSA-p9ff-h696-f583), undici/wrangler chain (multiple). The 3 remaining lows are chained `cookie` → `@sveltejs/kit` → `@sveltejs/adapter-cloudflare`; no non-breaking fix path until upstream kit drops the vulnerable cookie dep — Dependabot (Phase 0) will catch that.
+      **Source:** Security S-01 / Health H-03.
+- [x] **All non-major bumps via `npm update`** — `@sveltejs/kit` 2.52→2.59, `svelte` 5.53→5.55, `svelte-check`, `wrangler` 4.67→4.87, `maplibre-gl`, `jose`, `zod`, `prettier`, `tailwindcss`, `@tailwindcss/typography`, `eslint-plugin-svelte`, `svelte-eslint-parser`, `@typescript-eslint/*`.
       **Source:** Health H-03.
-- [ ] **Major bumps, each in its own PR, in order:** `eslint` 9 → 10 → `vite` 7 → 8 → `@sveltejs/vite-plugin-svelte` 6 → 7 → `typescript` 5 → 6. Coordinate carefully — these are the four trailing majors.
+- [x] **Major bumps applied in sequence** with `ci:gate` verification between each:
+      - `eslint` 9.39.4 → 10.3.0 — drop-in, same 125 warnings.
+      - `vite` 7.3.2 → 8.0.10 + `@sveltejs/vite-plugin-svelte` 6.2.4 → 7.0.0 — **had to be combined** because the plugin 7.0.0 declares `vite ^8` as a peer. Required `--legacy-peer-deps` for one install transition (the outgoing `vite-plugin-svelte-inspector@5` was pinned to plugin 6); resolved cleanly afterward.
+      - `typescript` 5.9.3 → 6.0.3 — surfaced 8 typecheck errors: SvelteKit's `event.params.id` is now correctly typed `string | undefined`. Applied non-null assertion `event.params.id!` at the 7 callsites in [src/routes/api/projects/[id]/+server.ts](../src/routes/api/projects/%5Bid%5D/+server.ts), [src/routes/api/goals/[id]/+server.ts](../src/routes/api/goals/%5Bid%5D/+server.ts), and the two `restore/+server.ts` files. The dynamic route literally cannot match without `id`, so the assertion is correct; the proper guard lives with H-05's CRUD handler extraction in Phase 5.
+      Final state: `npm outdated` returns nothing — every direct dep on its latest published version.
       **Source:** Health H-03.
+
+### Phase 2 fix-up — CI regression caught after push (commit be9ee1a)
+
+The local install of Vite 8 + plugin 7 used `--legacy-peer-deps` to clear a transition-time inspector pin, which left `svelte-preprocess@6.0.3` in the tree even though it declares `peerOptional typescript@"^5.0.0"` (we're on TS 6.0.3). `npm ci` is strict about peer deps in CI by default, so all three workflows that run `npm ci` failed: **CI Gates / Quality Checks**, **Workers Builds**, and **Backup Snapshots**. Smoke + Integration were skipped because `quality-checks` is their `needs:` parent.
+
+- [x] **Drop `svelte-preprocess`** in favor of the built-in `vitePreprocess()` from `@sveltejs/vite-plugin-svelte`. The previous [svelte.config.js](../svelte.config.js) called `preprocess()` with no arguments — it produced nothing that the modern Vite plugin doesn't already provide. `svelte-preprocess` is in maintenance mode (last release 6.0.3, June 2024) and won't update to TS 6.
+- [x] **Regenerate `package-lock.json`** from a clean state (deleted `node_modules` + `package-lock.json`, ran `npm install` with no flags).
+- [x] **Verified `npm ci --dry-run`** — `up to date in 308ms`, no peer-dep errors. Typecheck, all 40 tests, and lint still pass.
 
 ---
 
