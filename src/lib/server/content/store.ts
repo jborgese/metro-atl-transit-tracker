@@ -189,7 +189,7 @@ const contentSourceSchema = z
   })
   .passthrough();
 
-const projectCreateSchema = z
+export const projectCreateSchema = z
   .object({
     id: idSchema,
     title: nonEmptyStringSchema.max(240),
@@ -208,9 +208,9 @@ const projectCreateSchema = z
   })
   .passthrough();
 
-const projectPatchSchema = projectCreateSchema.partial();
+export const projectPatchSchema = projectCreateSchema.partial();
 
-const goalCreateSchema = z
+export const goalCreateSchema = z
   .object({
     id: idSchema,
     goal: nonEmptyStringSchema.max(2000),
@@ -223,7 +223,7 @@ const goalCreateSchema = z
   })
   .passthrough();
 
-const goalPatchSchema = goalCreateSchema.partial();
+export const goalPatchSchema = goalCreateSchema.partial();
 
 let seedPromise: Promise<void> | null = null;
 
@@ -292,7 +292,7 @@ function parseSchema<T>(schema: z.ZodType<T>, input: unknown, label: string): T 
   throw new ContentStoreError(400, `${label} validation failed - ${zodErrorToMessage(parsed.error)}`);
 }
 
-function assertNoForbiddenWriteFields(payload: Record<string, unknown>, label: string) {
+export function assertNoForbiddenWriteFields(payload: Record<string, unknown>, label: string) {
   for (const field of FORBIDDEN_MUTATION_FIELDS) {
     if (field in payload) {
       throw new ContentStoreError(

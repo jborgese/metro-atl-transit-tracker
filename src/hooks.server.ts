@@ -16,7 +16,7 @@ type RateLimitBucket = {
 const writeBuckets = new Map<string, RateLimitBucket>();
 let requestCounter = 0;
 
-function parsePositiveInt(value: string | undefined, fallback: number) {
+export function parsePositiveInt(value: string | undefined, fallback: number) {
   const parsed = Number.parseInt(value ?? '', 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return fallback;
@@ -71,7 +71,7 @@ function maybeSweepBuckets(now: number, windowMs: number) {
   }
 }
 
-function consumeWriteLimit(event: RequestEvent, maxRequests: number, windowSeconds: number) {
+export function consumeWriteLimit(event: RequestEvent, maxRequests: number, windowSeconds: number) {
   const now = Date.now();
   const windowMs = windowSeconds * 1000;
   maybeSweepBuckets(now, windowMs);
