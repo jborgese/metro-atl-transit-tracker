@@ -306,7 +306,7 @@ jobs:
 
       - name: Upload backup artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backup-${{ steps.paths.outputs.timestamp }}-run-${{ github.run_id }}
           path: ${{ steps.paths.outputs.backup_root }}
