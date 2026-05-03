@@ -41,6 +41,16 @@ export function initMetroMap({
     "bottom-right"
   );
 
+  const closeAttribution = () => {
+    const el = container.querySelector(".maplibregl-ctrl-attrib");
+    if (el) {
+      el.classList.remove("maplibregl-compact-show");
+      el.removeAttribute("open");
+    }
+  };
+  closeAttribution();
+  map.on("load", closeAttribution);
+
   map.addControl(new maplibregl.NavigationControl(), "top-right");
 
   if (onLoad) {
