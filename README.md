@@ -51,6 +51,7 @@ Policies/runbooks:
 
 - `docs/ci-gate-policy.md`
 - `docs/backup-retention-policy.md`
+- `docs/design-tokens.md`
 
 ## API Routes
 

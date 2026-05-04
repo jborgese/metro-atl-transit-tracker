@@ -50,3 +50,7 @@ The decision is recorded here because the indecision is what costs: mixing idiom
 ### Lint
 
 The `--max-warnings=140` ceiling in `package.json` is intentionally above current count to absorb the runes migration's churn. Once every component is on runes and the `no-useless-assignment` false positives clear, ratchet the ceiling down — do that as a separate follow-up PR, not as part of any single component migration.
+
+## Styling
+
+Brand colors, surfaces, typography, and layout primitives are CSS custom properties on `:root` in [src/styles/global.css](src/styles/global.css). See [docs/design-tokens.md](docs/design-tokens.md) for the catalog and usage guidance — including the cross-reference for status badge colors, which live in [src/utils/statusHelpers.ts](src/utils/statusHelpers.ts) instead of as CSS tokens.
