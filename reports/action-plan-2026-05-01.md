@@ -179,8 +179,6 @@ Lands after Phase 1's tests are in place so the structural change is safe.
 
 Run when capacity allows. Not on the critical path.
 
-- [ ] **FOSS F-04 (🟡, L effort) — Adopt Drizzle ORM for D1.**
-      Schema-first `drizzle-kit generate` replaces `0001_init_content_schema.sql`; `drizzle-zod` replaces the duplicate Zod create/patch schemas. Strangler-fig migration possible. Largest investment in this list, biggest long-term lever.
 - [ ] **FOSS F-06 (🟢) — `@asteasolutions/zod-to-openapi`** generates an OpenAPI spec from the existing Zod schemas. ~30 LOC + a new `+server.ts` for `/api/openapi.json`.
 - [ ] **Codebase F-11 — Add a real `compilerOptions` block** to [tsconfig.json](../tsconfig.json) (e.g., `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`) once the team picks a strictness level.
 - [ ] **UI/UX U-11 — Document the design tokens** in [global.css:9-47](../src/styles/global.css#L9) somewhere durable ([README.md](../README.md), [CONTRIBUTING.md](../CONTRIBUTING.md), or [docs/](../docs/)).
@@ -200,6 +198,7 @@ These were findings in the source reports but do not get an action item, by desi
 | Health H-07 | **Invalidated.** ts-prune flagged [src/lib/map/](../src/lib/map/) exports as dead, but it doesn't traverse `.svelte` imports — the audit caught at [MetroMap.svelte:6-23](../src/components/svelte/MetroMap.svelte#L6) that those modules *are* imported. The original H-07 finding is wrong. |
 | Security S-12, S-14, S-15, S-16 | Info-only positives (no SSRF surface, all SQL parameterized, etc.). |
 | UI/UX U-14, U-15 | Surface automatically as lint warnings once Phase 1's ESLint is restored. |
+| FOSS F-04 — Drizzle ORM for D1 | **Considered, not adopted (2026-05-04).** Quality-of-life refactor, not on the critical path. The post-Phase-5 raw-SQL store is verbose but correct; H-04 split + H-05 handler factories already removed the worst duplication. Two parts of the original recommendation also do not apply: `drizzle-kit generate` cannot replace [0001_init_content_schema.sql](../migrations/d1/0001_init_content_schema.sql) (already deployed under wrangler's `d1_migrations` tracker; the `json_valid` CHECK constraints + `RAISE(ABORT)` immutability triggers don't roundtrip cleanly), and `drizzle-zod` does not replace the existing Zod schemas (they validate the JSON payload shape stored in `payload_json`, not the SQL row shape — different layers, no duplication to remove). Revisit if a stream of schema evolution lands; the right shape would be wrangler-managed migrations as source of truth + a Drizzle schema as a type-only mirror, strangler-fig per operation. |
 
 ---
 

@@ -216,10 +216,10 @@ async function requireAccessActor(jwtAssertion: string, config: AccessConfig): P
   };
 }
 
-export async function requireEditorActor(
+async function resolveIdentity(
   event: RequestEvent,
-  permission: EditorPermission = 'content:edit'
-) {
+  context: { permission?: EditorPermission }
+): Promise<AccessIdentity> {
   const editorTokenAuthEnabled = isEnabled(env[EDITOR_TOKEN_AUTH_ENABLED_ENV]);
   const editorToken = env[EDITOR_API_TOKEN_ENV]?.trim();
   // Token-mode is for local/CI smoke + integration tests only — refuse to
@@ -231,7 +231,7 @@ export async function requireEditorActor(
     if (!presentedToken || !safeEqualString(presentedToken, editorToken)) {
       throw error(401, 'Unauthorized');
     }
-    return 'editor-token-user';
+    return { actor: 'editor-token-user', identity: 'editor-token-user' };
   }
   if (editorTokenAuthEnabled && editorToken && !isTestEnvironment(event)) {
     console.warn('[editor-auth] refusing token-mode auth on deployed hostname', {
@@ -252,7 +252,7 @@ export async function requireEditorActor(
     console.warn('[editor-auth] 401 no Access JWT on request', {
       path: event.url.pathname,
       method: event.request.method,
-      permission,
+      permission: context.permission,
       hasHeader: Boolean(headerJwt),
       hasCookie: Boolean(cookieJwt),
     });
@@ -260,25 +260,41 @@ export async function requireEditorActor(
   }
 
   try {
-    const { actor, identity } = await requireAccessActor(jwtAssertion, accessConfig);
-    const rbac = getRbacConfig();
-    if (!hasPermission(permission, identity, rbac)) {
-      throw error(403, 'Forbidden');
-    }
-    return actor;
+    return await requireAccessActor(jwtAssertion, accessConfig);
   } catch (err) {
-    if (typeof err === 'object' && err !== null && 'status' in err && (err as { status?: number }).status === 403) {
-      throw err;
-    }
     const reason = err instanceof Error ? err.message : String(err);
     const code = err instanceof Error && 'code' in err ? (err as { code?: unknown }).code : undefined;
     console.warn('[editor-auth] 401 JWT verification failed', {
       path: event.url.pathname,
       method: event.request.method,
-      permission,
+      permission: context.permission,
       reason,
       code,
     });
     throw error(401, 'Unauthorized');
   }
+}
+
+export async function requireEditorActor(
+  event: RequestEvent,
+  permission: EditorPermission = 'content:edit'
+) {
+  const { actor, identity } = await resolveIdentity(event, { permission });
+  const rbac = getRbacConfig();
+  if (!hasPermission(permission, identity, rbac)) {
+    throw error(403, 'Forbidden');
+  }
+  return actor;
+}
+
+export async function requireAuthenticatedIdentity(
+  event: RequestEvent
+): Promise<{ actor: string; identity: string }> {
+  const { actor, identity } = await resolveIdentity(event, {});
+  if (!identity) {
+    // No usable identity claim in the JWT — treat as unauthenticated rather
+    // than letting an empty profile key collide across users.
+    throw error(401, 'Unauthorized');
+  }
+  return { actor, identity };
 }

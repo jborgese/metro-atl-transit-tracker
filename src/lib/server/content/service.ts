@@ -5,6 +5,8 @@ import type {
 } from '@/types/content';
 import { ContentStoreError } from './errors';
 import {
+  applyProfileMapToEntity,
+  applyProfileMapToHistoryEvent,
   buildHistoryEvent,
   cloneRecord,
   ensureProvenance,
@@ -20,6 +22,7 @@ import {
   type StoredHistoryRow,
   type StoreEvent,
 } from './mappers';
+import { loadProfileMap } from './profiles';
 import {
   INSERT_GOAL_SQL,
   INSERT_HISTORY_SQL,
@@ -49,8 +52,11 @@ export async function listProjects(event: StoreEvent, options: { includeArchived
     ? `SELECT ${SELECT_ENTITY_COLUMNS} FROM projects ORDER BY rowid`
     : `SELECT ${SELECT_ENTITY_COLUMNS} FROM projects WHERE is_archived = 0 ORDER BY rowid`;
 
-  const rows = await db.prepare(sql).all<StoredEntityRow>();
-  return rows.results.map((row) => rowToProject(row));
+  const [rows, profiles] = await Promise.all([
+    db.prepare(sql).all<StoredEntityRow>(),
+    loadProfileMap(event),
+  ]);
+  return rows.results.map((row) => applyProfileMapToEntity(rowToProject(row) as Record<string, unknown>, profiles)) as ReturnType<typeof rowToProject>[];
 }
 
 export async function listGoals(event: StoreEvent, options: { includeArchived?: boolean } = {}) {
@@ -62,8 +68,11 @@ export async function listGoals(event: StoreEvent, options: { includeArchived?: 
     ? `SELECT ${SELECT_ENTITY_COLUMNS} FROM goals ORDER BY rowid`
     : `SELECT ${SELECT_ENTITY_COLUMNS} FROM goals WHERE is_archived = 0 ORDER BY rowid`;
 
-  const rows = await db.prepare(sql).all<StoredEntityRow>();
-  return rows.results.map((row) => rowToGoal(row));
+  const [rows, profiles] = await Promise.all([
+    db.prepare(sql).all<StoredEntityRow>(),
+    loadProfileMap(event),
+  ]);
+  return rows.results.map((row) => applyProfileMapToEntity(rowToGoal(row) as Record<string, unknown>, profiles)) as ReturnType<typeof rowToGoal>[];
 }
 
 export async function getProjectById(
@@ -85,6 +94,8 @@ export async function getProjectById(
     throw new ContentStoreError(404, `project ${id} not found`);
   }
 
+  const profiles = await loadProfileMap(event);
+  applyProfileMapToEntity(project as unknown as Record<string, unknown>, profiles);
   return project;
 }
 
@@ -103,6 +114,8 @@ export async function getGoalById(event: StoreEvent, id: string, options: { incl
     throw new ContentStoreError(404, `goal ${id} not found`);
   }
 
+  const profiles = await loadProfileMap(event);
+  applyProfileMapToEntity(goal as unknown as Record<string, unknown>, profiles);
   return goal;
 }
 
@@ -705,6 +718,9 @@ FROM content_history
   sql += ' ORDER BY timestamp DESC LIMIT ?';
   values.push(limit);
 
-  const rows = await db.prepare(sql).bind(...values).all<StoredHistoryRow>();
-  return rows.results.map((row) => rowToHistoryEvent(row));
+  const [rows, profiles] = await Promise.all([
+    db.prepare(sql).bind(...values).all<StoredHistoryRow>(),
+    loadProfileMap(event),
+  ]);
+  return rows.results.map((row) => applyProfileMapToHistoryEvent(rowToHistoryEvent(row), profiles));
 }

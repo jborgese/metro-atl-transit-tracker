@@ -34,3 +34,12 @@ export {
   updateGoal,
   updateProject,
 } from './service';
+
+export {
+  deleteProfile,
+  getProfile,
+  loadProfileMap,
+  normalizeIdentity,
+  upsertProfile,
+  type UserProfile,
+} from './profiles';

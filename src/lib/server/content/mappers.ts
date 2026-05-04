@@ -287,6 +287,71 @@ export function toSeedHistoryEvent(input: unknown): ContentHistoryEvent {
   };
 }
 
+export function resolveActorDisplay(
+  actor: string | null | undefined,
+  profiles: Map<string, string>
+): string | null | undefined {
+  if (typeof actor !== 'string' || actor.trim().length === 0) {
+    return actor;
+  }
+  if (profiles.size === 0) {
+    return actor;
+  }
+  const key = actor.trim().toLowerCase();
+  return profiles.get(key) ?? actor;
+}
+
+const PROVENANCE_ACTOR_FIELDS = ['created_by', 'updated_by'] as const;
+
+export function applyProfileMapToEntity<T extends Record<string, unknown>>(
+  entity: T,
+  profiles: Map<string, string>
+): T {
+  if (profiles.size === 0) {
+    return entity;
+  }
+  const target = entity as Record<string, unknown>;
+  if (typeof target.archived_by === 'string') {
+    const resolved = resolveActorDisplay(target.archived_by, profiles);
+    if (typeof resolved === 'string') {
+      target.archived_by = resolved;
+    }
+  }
+  const provenance = target.provenance;
+  if (isRecord(provenance)) {
+    for (const field of PROVENANCE_ACTOR_FIELDS) {
+      const current = provenance[field];
+      if (typeof current === 'string') {
+        const resolved = resolveActorDisplay(current, profiles);
+        if (typeof resolved === 'string') {
+          provenance[field] = resolved;
+        }
+      }
+    }
+  }
+  return entity;
+}
+
+export function applyProfileMapToHistoryEvent(
+  event: ContentHistoryEvent,
+  profiles: Map<string, string>
+): ContentHistoryEvent {
+  if (profiles.size === 0) {
+    return event;
+  }
+  const resolvedActor = resolveActorDisplay(event.actor, profiles);
+  if (typeof resolvedActor === 'string') {
+    event.actor = resolvedActor;
+  }
+  if (isRecord(event.before)) {
+    applyProfileMapToEntity(event.before, profiles);
+  }
+  if (isRecord(event.after)) {
+    applyProfileMapToEntity(event.after, profiles);
+  }
+  return event;
+}
+
 export function extractRunChanges(result: unknown): number | null {
   if (!isRecord(result)) {
     return null;

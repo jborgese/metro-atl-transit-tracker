@@ -26,6 +26,13 @@
   let lastLoadedAt = $state('');
   let now = $state(Date.now());
 
+  let myIdentity: string | null = $state(null);
+  let myActor: string | null = $state(null);
+  let myDisplayName = $state('');
+  let savedDisplayName: string | null = $state(null);
+  let savingDisplayName = $state(false);
+  const displayNameDirty = $derived(myDisplayName.trim() !== (savedDisplayName ?? ''));
+
   const entityTitle: Record<EditorEntity, string> = {
     project: 'Project',
     goal: 'Goal',
@@ -424,8 +431,78 @@
     }
   }
 
+  async function loadProfile() {
+    try {
+      const res = await fetch('/api/me');
+      if (res.status === 401 || res.status === 503) {
+        myIdentity = null;
+        myActor = null;
+        myDisplayName = '';
+        savedDisplayName = null;
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(await toResponseErrorMessage('/api/me', res));
+      }
+      const payload = (await res.json()) as {
+        data?: { identity?: string; actor?: string; display_name?: string | null };
+      };
+      const data = payload.data ?? {};
+      myIdentity = typeof data.identity === 'string' ? data.identity : null;
+      myActor = typeof data.actor === 'string' ? data.actor : null;
+      savedDisplayName = typeof data.display_name === 'string' ? data.display_name : null;
+      myDisplayName = savedDisplayName ?? '';
+    } catch (err) {
+      console.warn('Failed to load profile', err);
+      myIdentity = null;
+      myActor = null;
+    }
+  }
+
+  async function saveDisplayName(next: string | null) {
+    if (savingDisplayName) {
+      return;
+    }
+    savingDisplayName = true;
+    try {
+      const res = await fetch('/api/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display_name: next }),
+      });
+      if (!res.ok) {
+        throw new Error(await toResponseErrorMessage('/api/me', res));
+      }
+      const payload = (await res.json()) as {
+        data?: { display_name?: string | null };
+      };
+      const resolved = payload.data?.display_name ?? null;
+      savedDisplayName = resolved;
+      myDisplayName = resolved ?? '';
+      setMessage(
+        resolved ? `Display name set to "${resolved}".` : 'Display name cleared.',
+        'success'
+      );
+      await loadData({ quiet: true });
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Failed to save display name.', 'error');
+    } finally {
+      savingDisplayName = false;
+    }
+  }
+
+  function handleSaveDisplayName() {
+    const trimmed = myDisplayName.trim();
+    saveDisplayName(trimmed.length === 0 ? null : trimmed);
+  }
+
+  function handleClearDisplayName() {
+    saveDisplayName(null);
+  }
+
   onMount(() => {
     loadData();
+    loadProfile();
     const tick = setInterval(() => {
       now = Date.now();
     }, 30_000);
@@ -452,6 +529,49 @@
           {/if}
           <button class="refresh-button" onclick={() => loadData()} disabled={loading}>Refresh</button>
         </div>
+
+        {#if myIdentity}
+          <details class="token-auth profile-auth" open>
+            <summary>Profile</summary>
+            <div class="token-auth-body profile-body">
+              <p class="profile-actor">
+                Signed in as <code>{myActor ?? myIdentity}</code>
+              </p>
+              <label>
+                Display Name
+                <input
+                  bind:value={myDisplayName}
+                  type="text"
+                  autocomplete="off"
+                  maxlength="64"
+                  placeholder={myActor ?? myIdentity ?? ''}
+                  disabled={savingDisplayName}
+                />
+                <small>
+                  Replaces your email on <a href="/history">/history</a> and on entity
+                  "Updated by" fields. Past entries update too. Leave blank to use your email.
+                </small>
+              </label>
+              <div class="profile-actions">
+                <button
+                  type="button"
+                  onclick={handleSaveDisplayName}
+                  disabled={savingDisplayName || !displayNameDirty}
+                >
+                  {savingDisplayName ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  class="ghost"
+                  onclick={handleClearDisplayName}
+                  disabled={savingDisplayName || savedDisplayName === null}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </details>
+        {/if}
 
         <details class="token-auth">
           <summary>Token auth (optional)</summary>
@@ -794,6 +914,48 @@
   .token-auth-body small {
     color: var(--text-dim, #9fa7a2);
     font-size: 0.72rem;
+  }
+
+  .profile-body {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-actor {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-muted, #c6cbc6);
+  }
+
+  .profile-actor code {
+    background: rgba(0, 0, 0, 0.28);
+    padding: 0.05rem 0.3rem;
+    border-radius: 0.3rem;
+    font-size: 0.78rem;
+  }
+
+  .profile-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .profile-actions button {
+    border: 1px solid var(--border-subtle, rgba(126, 110, 79, 0.3));
+    border-radius: 0.5rem;
+    background: rgba(66, 128, 196, 0.22);
+    color: inherit;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+  }
+
+  .profile-actions button.ghost {
+    background: transparent;
+    color: var(--text-muted, #c6cbc6);
+  }
+
+  .profile-actions button:disabled {
+    opacity: 0.55;
+    cursor: default;
   }
 
   input,
