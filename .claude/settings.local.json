@@ -29,7 +29,9 @@
       "PowerShell(Get-Process | Where-Object { $_.Name -match 'wrangler|workerd' } | Stop-Process -Force; Start-Sleep -Seconds 2; Get-Process | Where-Object { $_.Name -match 'wrangler|workerd' })",
       "PowerShell(Get-Process -Name workerd -ErrorAction SilentlyContinue)",
       "PowerShell(Stop-Process -Force)",
-      "PowerShell(Get-Process -Name workerd -ErrorAction SilentlyContinue | Stop-Process -Force; cd \"$env:USERPROFILE\\\\Documents\\\\GitHub\\\\metro-atl-pre-pr\"; npm ci 2>&1 | Select-Object -Last 5)"
+      "PowerShell(Get-Process -Name workerd -ErrorAction SilentlyContinue | Stop-Process -Force; cd \"$env:USERPROFILE\\\\Documents\\\\GitHub\\\\metro-atl-pre-pr\"; npm ci 2>&1 | Select-Object -Last 5)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
