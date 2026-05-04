@@ -54,11 +54,18 @@ export async function getProfile(event: StoreEvent, identity: string): Promise<U
   if (!key) {
     return null;
   }
-  const row = await db
-    .prepare('SELECT identity, display_name, updated_at FROM user_profiles WHERE identity = ?1')
-    .bind(key)
-    .first<StoredProfileRow>();
-  return row ? rowToProfile(row) : null;
+  try {
+    const row = await db
+      .prepare('SELECT identity, display_name, updated_at FROM user_profiles WHERE identity = ?1')
+      .bind(key)
+      .first<StoredProfileRow>();
+    return row ? rowToProfile(row) : null;
+  } catch (err) {
+    if (isMissingTableError(err)) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 export async function upsertProfile(
@@ -73,16 +80,26 @@ export async function upsertProfile(
   const validated = validateDisplayName(displayName);
   const timestamp = nowIso();
   const db = getDb(event);
-  await db
-    .prepare(
-      `INSERT INTO user_profiles (identity, display_name, updated_at)
-       VALUES (?1, ?2, ?3)
-       ON CONFLICT(identity) DO UPDATE SET
-         display_name = excluded.display_name,
-         updated_at = excluded.updated_at`
-    )
-    .bind(key, validated, timestamp)
-    .run();
+  try {
+    await db
+      .prepare(
+        `INSERT INTO user_profiles (identity, display_name, updated_at)
+         VALUES (?1, ?2, ?3)
+         ON CONFLICT(identity) DO UPDATE SET
+           display_name = excluded.display_name,
+           updated_at = excluded.updated_at`
+      )
+      .bind(key, validated, timestamp)
+      .run();
+  } catch (err) {
+    if (isMissingTableError(err)) {
+      throw new ContentStoreError(
+        503,
+        'user profile storage is not provisioned (run migration 0002)'
+      );
+    }
+    throw err;
+  }
   return { identity: key, display_name: validated, updated_at: timestamp };
 }
 
@@ -92,7 +109,14 @@ export async function deleteProfile(event: StoreEvent, identity: string): Promis
     return;
   }
   const db = getDb(event);
-  await db.prepare('DELETE FROM user_profiles WHERE identity = ?1').bind(key).run();
+  try {
+    await db.prepare('DELETE FROM user_profiles WHERE identity = ?1').bind(key).run();
+  } catch (err) {
+    if (isMissingTableError(err)) {
+      return;
+    }
+    throw err;
+  }
 }
 
 export async function loadProfileMap(event: StoreEvent): Promise<Map<string, string>> {
