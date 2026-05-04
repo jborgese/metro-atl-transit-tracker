@@ -10,6 +10,15 @@ The Atlanta-1996 design system is expressed as CSS custom properties on `:root` 
 - In Tailwind utility contexts where no shade is a faithful match, use the token via arbitrary value: `bg-[color:var(--surface-1)]` or `border-[color:var(--border-subtle)]`.
 - Do not hardcode brand hexes outside [global.css](../src/styles/global.css) and [src/utils/statusHelpers.ts](../src/utils/statusHelpers.ts) (see "Status badges" below).
 
+## Color scheme: dark-only
+
+The site is dark-only by design (UI/UX U-13). The commitment is declared in two places so the browser knows before our CSS loads:
+
+- `<meta name="color-scheme" content="dark">` in [src/app.html](../src/app.html) — applied during initial paint, before `global.css` parses.
+- `color-scheme: dark` on `:root` in [global.css:11](../src/styles/global.css#L11) — keeps the hint in CSS for any environment that ignores the meta tag.
+
+This makes the UA render scrollbars, native form controls, and autofill highlights in dark mode for every visitor, regardless of OS-level `prefers-color-scheme`. There is intentionally no `@media (prefers-color-scheme: light)` override; adding one would mean designing a full second token palette and re-verifying contrast on the [statusHelpers.ts](../src/utils/statusHelpers.ts) status fills, which is out of scope for the current product. Revisit only if a light theme becomes a real product requirement.
+
 ## Tokens
 
 ### Brand (6)

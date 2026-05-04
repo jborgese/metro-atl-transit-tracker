@@ -8,6 +8,11 @@
    Atlanta 1996 Design Tokens
    ================================ */
 :root {
+  /* Dark-only by design (U-13). Tells the UA to render scrollbars,
+     form controls, and autofill in dark mode for every visitor,
+     regardless of OS-level prefers-color-scheme. */
+  color-scheme: dark;
+
   /* Brand */
   --atl-green: #33514D;
   --atl-bronze: #7E6E4F;

@@ -7,6 +7,10 @@
 	"observability": {
 		"enabled": true
 	},
+	// CF_ACCESS_* are JWT validation parameters, not credentials — safe to commit.
+	// The team domain is the public *.cloudflareaccess.com host users see at login;
+	// the AUD is a public application identifier checked against the `aud` claim.
+	// Neither value can be used to forge a token (signing keys live in Cloudflare).
 	"vars": {
 		"CF_ACCESS_TEAM_DOMAIN": "frootsnoops.cloudflareaccess.com",
 		"CF_ACCESS_AUD": "96f0e12e20cbdf4fd6f78aaecf0129add7fbc21883156fc4b2f703c4cccc3638",
@@ -50,6 +54,7 @@
 	},
 	"env": {
 		"staging": {
+			// See note above the top-level `vars` block: CF_ACCESS_* are public validation parameters.
 			"vars": {
 				"CF_ACCESS_TEAM_DOMAIN": "frootsnoops.cloudflareaccess.com",
 				"CF_ACCESS_AUD": "96f0e12e20cbdf4fd6f78aaecf0129add7fbc21883156fc4b2f703c4cccc3638",
