@@ -13,9 +13,22 @@ const RBAC_EDITORS_ENV = 'CF_ACCESS_RBAC_EDITORS';
 const RBAC_ARCHIVERS_ENV = 'CF_ACCESS_RBAC_ARCHIVERS';
 
 const TEST_HOSTNAMES = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1']);
+const CF_EDGE_HEADER = 'cf-ray';
 
 function isTestEnvironment(event: RequestEvent) {
-  return TEST_HOSTNAMES.has(event.url.hostname);
+  // Direct local hit (no `routes` config rewriting the URL).
+  if (TEST_HOSTNAMES.has(event.url.hostname)) {
+    return true;
+  }
+  // wrangler dev with a `routes` block rewrites both the URL and the Host
+  // header to the production hostname so it can simulate edge routing — so
+  // the URL alone is not enough. `cf-ray` is set by Cloudflare's edge on every
+  // real request and is absent in `wrangler dev --local`, so its absence is a
+  // reliable "we are not on the edge" signal.
+  if (!event.request.headers.get(CF_EDGE_HEADER)) {
+    return true;
+  }
+  return false;
 }
 
 function safeEqualString(a: string, b: string) {

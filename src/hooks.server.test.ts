@@ -41,6 +41,30 @@ describe('getClientKey', () => {
     } as unknown as RequestEvent;
     expect(getClientKey(event)).toBe('unknown');
   });
+
+  it('returns "unknown" if the fallback returns null', () => {
+    // The SvelteKit Cloudflare adapter returns cf-connecting-ip directly,
+    // which is null under wrangler dev. Must not propagate to the rate limiter.
+    const url = new URL('http://example.test/api/projects');
+    const event = {
+      url,
+      request: new Request(url, { method: 'POST' }),
+      cookies: { get: () => undefined } as unknown as RequestEvent['cookies'],
+      getClientAddress: () => null as unknown as string,
+    } as unknown as RequestEvent;
+    expect(getClientKey(event)).toBe('unknown');
+  });
+
+  it('returns "unknown" if the fallback returns an empty string', () => {
+    const url = new URL('http://example.test/api/projects');
+    const event = {
+      url,
+      request: new Request(url, { method: 'POST' }),
+      cookies: { get: () => undefined } as unknown as RequestEvent['cookies'],
+      getClientAddress: () => '   ',
+    } as unknown as RequestEvent;
+    expect(getClientKey(event)).toBe('unknown');
+  });
 });
 
 describe('checkWriteRateLimit', () => {

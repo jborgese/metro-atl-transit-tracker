@@ -60,7 +60,7 @@ function isCrossOriginWrite(event: RequestEvent) {
   }
 }
 
-export function getClientKey(event: RequestEvent) {
+export function getClientKey(event: RequestEvent): string {
   const cfIp = event.request.headers.get('cf-connecting-ip');
   if (cfIp && cfIp.trim().length > 0) {
     return cfIp.trim();
@@ -74,11 +74,20 @@ export function getClientKey(event: RequestEvent) {
     }
   }
 
+  // The SvelteKit Cloudflare adapter implements getClientAddress() as a thin
+  // wrapper around cf-connecting-ip, which returns null (not a throw) when the
+  // header is missing — common under `wrangler dev` and in tests. Treat any
+  // non-string / empty value as unknown so we never hand null to the rate
+  // limiter binding (which rejects with "invalid key: null").
   try {
-    return event.getClientAddress();
+    const addr = event.getClientAddress();
+    if (typeof addr === 'string' && addr.trim().length > 0) {
+      return addr.trim();
+    }
   } catch {
-    return 'unknown';
+    // fall through
   }
+  return 'unknown';
 }
 
 function getWriteLimiter(event: RequestEvent): WriteRateLimit | undefined {
