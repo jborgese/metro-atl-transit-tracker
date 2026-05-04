@@ -785,14 +785,14 @@
   .admin-page {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.25rem;
   }
 
   .panel {
     border: 1px solid var(--border-subtle, rgba(126, 110, 79, 0.3));
     border-radius: 0.75rem;
     background: rgba(0, 0, 0, 0.18);
-    padding: 0.9rem;
+    padding: 1.1rem;
   }
 
   .admin-header {
@@ -814,7 +814,7 @@
   .header-status {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.6rem;
     align-items: flex-end;
     min-width: 14rem;
   }
@@ -822,7 +822,7 @@
   .status-line {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.65rem;
     flex-wrap: wrap;
     justify-content: flex-end;
   }
@@ -935,8 +935,9 @@
 
   .profile-actions {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.6rem;
     flex-wrap: wrap;
+    margin-top: 0.15rem;
   }
 
   .profile-actions button {
@@ -1029,13 +1030,19 @@
   .entity-list {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.85rem;
+  }
+
+  #content-list-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
   }
 
   .list-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
+    gap: 0.65rem;
   }
 
   .list-actions button.active {
@@ -1045,8 +1052,10 @@
 
   .list-toolbar {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.85rem;
     align-items: center;
+    flex-wrap: wrap;
+    row-gap: 0.55rem;
   }
 
   .new-button {
@@ -1141,13 +1150,13 @@
   .editor-pane {
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
+    gap: 0.8rem;
   }
 
   .editor-head {
     display: flex;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: 1rem;
     align-items: center;
   }
 
@@ -1159,7 +1168,7 @@
 
   .editor-head-actions {
     display: inline-flex;
-    gap: 0.4rem;
+    gap: 0.55rem;
     flex-shrink: 0;
   }
 
@@ -1217,7 +1226,9 @@
   .editor-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    column-gap: 0.65rem;
+    row-gap: 0.55rem;
+    margin-top: 0.15rem;
   }
 
   .editor-actions .primary {
@@ -1270,7 +1281,7 @@
   }
 
   .history-preview h2 {
-    margin: 0 0 0.55rem;
+    margin: 0 0 0.75rem;
   }
 
   .history-preview ul {
@@ -1278,17 +1289,17 @@
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 0.4rem;
+    gap: 0.55rem;
   }
 
   .history-preview li {
     display: grid;
     grid-template-columns: 5rem minmax(12rem, 1fr) minmax(6rem, auto) minmax(6rem, auto);
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.85rem;
     font-size: 0.82rem;
     border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-    padding-bottom: 0.4rem;
+    padding-bottom: 0.55rem;
   }
 
   .action-pill {
