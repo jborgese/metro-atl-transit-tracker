@@ -1,44 +1,4 @@
-import { json, type RequestHandler } from '@sveltejs/kit';
-import { requireEditorActor } from '$lib/server/auth/editor';
-import { archiveGoal, getGoalById, updateGoal } from '$lib/server/content/store';
-import { parseIncludeArchived, readJsonBody, toHttpError } from '$lib/server/content/http';
-import type { ApiItemResponse, Goal } from '@/types/content';
+import { makeItemHandlers } from '$lib/server/content/handlers';
+import { goalStore } from '$lib/server/content/stores';
 
-export const GET: RequestHandler = async (event) => {
-  try {
-    const includeArchivedParam = event.url.searchParams.get('includeArchived');
-    const includeArchived =
-      includeArchivedParam === null ? true : parseIncludeArchived(includeArchivedParam);
-    const goal = await getGoalById(event, event.params.id!, { includeArchived });
-
-    const response: ApiItemResponse<Goal> = { data: goal };
-    return json(response);
-  } catch (err) {
-    toHttpError(err);
-  }
-};
-
-export const PATCH: RequestHandler = async (event) => {
-  try {
-    const actor = await requireEditorActor(event, 'content:edit');
-    const payload = await readJsonBody(event);
-    const updated = await updateGoal(event, event.params.id!, payload, actor);
-
-    const response: ApiItemResponse<Goal> = { data: updated };
-    return json(response);
-  } catch (err) {
-    toHttpError(err);
-  }
-};
-
-export const DELETE: RequestHandler = async (event) => {
-  try {
-    const actor = await requireEditorActor(event, 'content:archive');
-    const archived = await archiveGoal(event, event.params.id!, actor);
-
-    const response: ApiItemResponse<Goal> = { data: archived };
-    return json(response);
-  } catch (err) {
-    toHttpError(err);
-  }
-};
+export const { GET, PATCH, DELETE } = makeItemHandlers(goalStore);

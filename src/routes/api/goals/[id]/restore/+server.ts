@@ -1,17 +1,4 @@
-import { json, type RequestHandler } from '@sveltejs/kit';
-import { requireEditorActor } from '$lib/server/auth/editor';
-import { restoreGoal } from '$lib/server/content/store';
-import { toHttpError } from '$lib/server/content/http';
-import type { ApiItemResponse, Goal } from '@/types/content';
+import { makeRestoreHandler } from '$lib/server/content/handlers';
+import { goalStore } from '$lib/server/content/stores';
 
-export const POST: RequestHandler = async (event) => {
-  try {
-    const actor = await requireEditorActor(event, 'content:archive');
-    const restored = await restoreGoal(event, event.params.id!, actor);
-
-    const response: ApiItemResponse<Goal> = { data: restored };
-    return json(response);
-  } catch (err) {
-    toHttpError(err);
-  }
-};
+export const { POST } = makeRestoreHandler(goalStore);
