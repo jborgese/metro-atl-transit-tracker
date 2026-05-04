@@ -7,8 +7,9 @@ Public, data-driven transit advocacy map and content hub for Metro Atlanta.
 - SvelteKit + Svelte 5
 - MapLibre GL
 - Tailwind CSS
-- Cloudflare Workers + D1 (`projects`, `goals`, `content_history`)
+- Cloudflare Workers + D1 (`projects`, `goals`, `content_history`, `user_profiles`)
 - Cloudflare Access (editor auth)
+- Cloudflare native rate-limit binding for write protection
 
 ## Current Capabilities
 
@@ -19,7 +20,9 @@ Public, data-driven transit advocacy map and content hub for Metro Atlanta.
 - Admin JSON editor at `/admin` for projects/goals (create, update, archive, restore)
 - Soft-delete archive model with immutable D1-backed content history
 - Server-side payload validation for writes (Zod)
-- Write-route rate limiting (fixed-window, per runtime instance)
+- Per-identity display name overrides (`user_profiles`) shown on `/history` and admin views
+- Write-route rate limiting via Cloudflare's native ratelimit binding (globally enforced)
+- OpenAPI 3.1 spec published at `/api/openapi.json` (generated from Zod schemas)
 - Automatic D1 seeding on empty DBs from `data/content/*` (fallbacks to legacy metadata files)
 
 ## Pages
@@ -62,6 +65,12 @@ Read routes (public):
 - `GET /api/goals?includeArchived=true|false`
 - `GET /api/goals/:id?includeArchived=true|false` (defaults to `true` when omitted)
 - `GET /api/history?entityType=project|goal&entityId=<id>&limit=<n>`
+- `GET /api/openapi.json` (OpenAPI 3.1 spec, cached for 5 min)
+
+Authenticated routes (no special scope, any authenticated identity):
+
+- `GET /api/me` — returns `{ identity, actor, display_name }` for the current user
+- `PUT /api/me` — upsert/clear `display_name` (pass `null` or empty string to clear)
 
 Write routes (auth required):
 
@@ -88,15 +97,16 @@ Cloudflare Access mode:
 
 - Set `CF_ACCESS_TEAM_DOMAIN` (example: `your-team.cloudflareaccess.com`)
 - Set `CF_ACCESS_AUD` (single value or comma-separated audiences)
-- Send `cf-access-jwt-assertion` header (usually injected by Cloudflare Access)
+- Send `cf-access-jwt-assertion` header or `CF_Authorization` cookie (both are injected by Cloudflare Access)
 - Actor is derived from claims in this order: `email`, `common_name`, `name`, `sub`
+- Display name in UI is overridden by `user_profiles.display_name` when set (see `PUT /api/me`)
 
 Local/CI token mode (tests only):
 
 - Set `EDITOR_TOKEN_AUTH_ENABLED=true`
 - Set `EDITOR_API_TOKEN=<token>`
 - Send `x-editor-token: <token>`
-- Keep disabled in deployed environments
+- Honored only when the request hostname is `localhost`/`127.0.0.1`/`0.0.0.0`/`::1` or no `cf-ray` edge header is present — refused on real Cloudflare edge requests even if the env vars are set
 
 Optional RBAC allowlists (CSV, case-insensitive):
 
@@ -115,9 +125,10 @@ CF_ACCESS_RBAC_EDITORS=editor1@example.com,editor2@example.com
 CF_ACCESS_RBAC_ARCHIVERS=archiver1@example.com
 CF_ACCESS_RBAC_ADMINS=admin1@example.com
 WRITE_RATE_LIMIT_ENABLED=true
-WRITE_RATE_LIMIT_REQUESTS=30
-WRITE_RATE_LIMIT_WINDOW_SECONDS=60
 ```
+
+The actual write rate limit (requests/period) is configured on the `WRITE_LIMITER`
+binding in `wrangler.jsonc` (`unsafe.bindings`) — not via env vars.
 
 See `.env.example` for the full local config template.
 
@@ -132,20 +143,24 @@ See `.env.example` for the full local config template.
 
 ## Write Rate Limits
 
-All `/api/*` write methods (`POST`, `PUT`, `PATCH`, `DELETE`) use a fixed-window limiter.
+All `/api/*` write methods (`POST`, `PUT`, `PATCH`, `DELETE`) are rate-limited via
+the Cloudflare native `WRITE_LIMITER` ratelimit binding (configured in `wrangler.jsonc`).
 
-- Default: `30` requests / `60` seconds / client IP
-- Best-effort in-memory per runtime instance (use Cloudflare WAF for global enforcement)
-- `429` responses include `Retry-After`
-- Write responses include both standard and legacy rate-limit headers:
-  - `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`, `RateLimit-Policy`
-  - `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+- Default: `30` requests / `60` seconds, keyed on `cf-connecting-ip` (falls back to
+  `x-forwarded-for`, then `getClientAddress()`, then the literal `unknown`)
+- Globally enforced by the Cloudflare runtime — not best-effort/per-isolate
+- Cross-origin writes are rejected with `403` before the limiter runs
+- `429` responses include `Retry-After: 60`
+- Write responses include rate-limit headers:
+  - `RateLimit-Limit`, `RateLimit-Policy`, `X-RateLimit-Limit` (always)
+  - `RateLimit-Remaining: 0`, `X-RateLimit-Remaining: 0` (when blocked)
+- If the binding is not provisioned (e.g., bare `wrangler dev` without `unsafe.bindings`),
+  the limiter fails open — route-level auth still gates writes
 
 Environment controls:
 
-- `WRITE_RATE_LIMIT_ENABLED=true|false`
-- `WRITE_RATE_LIMIT_REQUESTS=<positive integer>`
-- `WRITE_RATE_LIMIT_WINDOW_SECONDS=<positive integer>`
+- `WRITE_RATE_LIMIT_ENABLED=true|false` (kill switch only; defaults to enabled)
+- Limit + window are configured on the `WRITE_LIMITER` binding's `simple` block in `wrangler.jsonc`
 
 ## Local Development
 
@@ -199,7 +214,8 @@ Local quality/test commands:
 - `npm run test:smoke` (Wrangler local worker + read/write happy path)
 - `npm run test:integration` (history ordering + immutability checks)
 - `npm run test:all`
-- `npm run ci:gate` (typecheck + lint + schema + smoke)
+- `npm run test` (vitest unit tests)
+- `npm run ci:gate` (typecheck + lint + test + schema + smoke)
 - `npm run ci:gate:full` (adds integration)
 
 CI workflows:
