@@ -7,7 +7,7 @@ describe('buildOpenApiDocument', () => {
   it('emits a 3.1.0 document with title and a server entry', () => {
     expect(doc.openapi).toBe('3.1.0');
     expect(doc.info.title).toMatch(/Metro ATL/);
-    expect(doc.servers?.[0].url).toBe('https://example.test/');
+    expect(doc.servers?.[0]?.url).toBe('https://example.test/');
   });
 
   it('registers every CRUD path for projects and goals', () => {

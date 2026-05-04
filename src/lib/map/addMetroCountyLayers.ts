@@ -105,8 +105,8 @@ export function addMetroCountyLayers({ map, mapEl, log }: AddMetroCountyLayersOp
     const rect = mapEl.getBoundingClientRect();
     const point = [rect.width / 2, rect.height / 2] as const;
     const features = map.queryRenderedFeatures(point as any, { layers: ["ga-counties-fill"] });
-    if (!features.length) return;
     const f = features[0];
+    if (!f) return;
     const props = f.properties || {};
     const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
     if (!geoid || !metroCountyGeoids.includes(String(geoid))) return;

@@ -37,12 +37,12 @@
           'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])'
         )
       );
-      if (focusables.length === 0) {
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (!first || !last) {
         e.preventDefault();
         return;
       }
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
       const active = document.activeElement;
       if (e.shiftKey && active === first) {
         e.preventDefault();

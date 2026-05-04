@@ -109,11 +109,11 @@ export function isUniqueConstraintError(err: unknown) {
 }
 
 function zodErrorToMessage(err: z.ZodError) {
-  if (err.issues.length === 0) {
+  const firstIssue = err.issues[0];
+  if (!firstIssue) {
     return 'invalid payload';
   }
 
-  const firstIssue = err.issues[0];
   const path = firstIssue.path.length > 0 ? firstIssue.path.join('.') : 'payload';
   return `${path}: ${firstIssue.message}`;
 }
