@@ -22,6 +22,11 @@
   --atl-blue: #4280c4;
   --atl-lavender: #8a62b0;
 
+  /* Link text on dark surfaces. --atl-blue is too dark on --atl-green
+     (2.1:1, fails WCAG AA); --link clears AA at ~5.2:1. */
+  --link: #7DD3FC;
+  --link-hover: var(--text-on-dark);
+
   /* Neutrals */
   --text-on-dark: #F3F2EE;
   --text-muted: #C6CBC6;
@@ -85,12 +90,14 @@ canvas {
 }
 
 a {
-  color: var(--atl-blue);
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 a:hover {
-  color: var(--text-on-dark);
+  color: var(--link-hover);
 }
 
 
@@ -134,7 +141,7 @@ a:hover {
 }
 
   .county-panel-content .panel-link {
-  color: var(--atl-blue);
+  color: var(--link);
   text-decoration: underline;
   text-underline-offset: 3px;
   transition: color 0.15s, opacity 0.15s;
@@ -147,7 +154,7 @@ a:hover {
 
   .county-panel-content .panel-link:hover,
   .county-panel-content .panel-link:focus {
-    color: var(--text-on-dark);
+    color: var(--link-hover);
     opacity: 0.95;
   }
 

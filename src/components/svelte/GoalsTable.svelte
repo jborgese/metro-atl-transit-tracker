@@ -688,11 +688,14 @@
   border: 1px dashed var(--border-subtle, #334155);
 }
 td a {
-  color: var(--link-color, #0066cc);
+  color: var(--link, #7DD3FC);
   text-decoration: none;
 }
-td a:hover {
+td a:hover,
+td a:focus-visible {
+  color: var(--link-hover, #f3f2ee);
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .goal-row {
   background: var(--surface-0, #fff);
@@ -831,14 +834,14 @@ td a:hover {
   transform: translateX(3px);
 }
 .project-source-link {
-  color: var(--atl-blue, #4280c4);
+  color: var(--link, #7DD3FC);
   text-decoration: none;
   font-weight: 500;
   white-space: nowrap;
 }
 .project-source-link:hover,
 .project-source-link:focus-visible {
-  color: var(--text-on-dark, #f3f2ee);
+  color: var(--link-hover, #f3f2ee);
   text-decoration: underline;
   text-underline-offset: 3px;
   outline: none;

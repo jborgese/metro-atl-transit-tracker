@@ -441,13 +441,13 @@
 }
 
 .fact a {
-  color: var(--atl-blue);
+  color: var(--link);
   text-decoration: none;
 }
 
 .fact a:hover,
 .fact a:focus-visible {
-  color: var(--text-on-dark);
+  color: var(--link-hover);
   text-decoration: underline;
   text-underline-offset: 3px;
   outline: none;
@@ -511,13 +511,13 @@
 }
 
 .partners a {
-  color: var(--atl-blue);
+  color: var(--link);
   text-decoration: none;
 }
 
 .partners a:hover,
 .partners a:focus-visible {
-  color: var(--text-on-dark);
+  color: var(--link-hover);
   text-decoration: underline;
   text-underline-offset: 3px;
   outline: none;
@@ -582,14 +582,14 @@
 }
 
 .sources a {
-  color: var(--atl-blue);
+  color: var(--link);
   text-decoration: none;
   font-weight: 500;
 }
 
 .sources a:hover,
 .sources a:focus-visible {
-  color: var(--text-on-dark);
+  color: var(--link-hover);
   text-decoration: underline;
   text-underline-offset: 3px;
   outline: none;
