@@ -53,8 +53,7 @@
   let mapEl: HTMLDivElement | null = null;
   let map: maplibregl.Map | null = null;
   let ro: ResizeObserver | null = null;
-  // County metadata (loaded from public/data/geo/counties-metadata.json)
-  let countyMetadata: any[] = $state([]);
+  // County metadata lookup (loaded from public/data/geo/counties-metadata.json)
   let countyMetadataMap: Record<string, any> = {};
   let selectedCounty: any = $state(null);
   let projectsMetadata: any[] = $state([]);
@@ -119,9 +118,7 @@
     oncountySelected?.({ geoid: selectedCounty?.geoid ? String(selectedCounty.geoid) : null });
   });
 
-  // UI: available project modes and currently selected modes for filtering
-  const selectedModes: string[] = [];
-
+  // Debug-panel inputs (panel itself is gated by showDebugPanel)
   const availableModes = $derived(
     projectsMetadata && projectsMetadata.length
       ? Array.from(new Set(projectsMetadata.flatMap((p: any) => p.modes || []))).sort()
@@ -133,14 +130,6 @@
   const debugSelectedKey = $derived(
     selectedCounty ? (selectedCounty.geoid ?? selectedCounty.name ?? 'unknown') : 'none'
   );
-
-  // filtered list derived from relatedProjects + selectedModes (currently unused in template)
-  const _relatedProjectsFiltered = $derived(
-    selectedModes && selectedModes.length
-      ? relatedProjects.filter((p: any) => (p.modes || []).some((m: string) => selectedModes.indexOf(m) !== -1))
-      : relatedProjects
-  );
-
 
   function closePanel() {
     handlePanelClose({ mapEl, setSelectedCounty: (val) => (selectedCounty = val) });
@@ -244,7 +233,6 @@
               })();
               {
                 const { countyMetadata: cm, countyMetadataMap: cmm, error: countyError } = await loadCountyMetadata();
-                countyMetadata = cm;
                 countyMetadataMap = cmm;
                 if (countyError) log.warn('metadata:load-failed', countyError);
                 else log.info('metadata:loaded', { count: cm.length });

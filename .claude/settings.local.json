@@ -20,7 +20,13 @@
       "WebFetch(domain:beltlinerailnow.com)",
       "WebFetch(domain:www.letspropelatl.org)",
       "WebFetch(domain:www.martaarmy.org)",
-      "WebSearch"
+      "WebSearch",
+      "PowerShell(npm run typecheck 2>&1)",
+      "PowerShell(npm run lint 2>&1)",
+      "PowerShell(npm test 2>&1)",
+      "PowerShell(npm run build 2>&1)",
+      "PowerShell(Get-Process | Where-Object { $_.Name -match 'wrangler|workerd|node' } | Select-Object Id, Name, StartTime, MainWindowTitle | Format-Table -AutoSize)",
+      "PowerShell(Get-Process | Where-Object { $_.Name -match 'wrangler|workerd' } | Stop-Process -Force; Start-Sleep -Seconds 2; Get-Process | Where-Object { $_.Name -match 'wrangler|workerd' })"
     ]
   }
 }
