@@ -7,30 +7,24 @@
   type EntityItem = Project | Goal;
   type MessageKind = 'info' | 'success' | 'error';
 
-  let token = '';
-  let actor = 'admin';
-  let dataset: EditorEntity = 'project';
-  let selectedDataset: EditorEntity = 'project';
-  let projects: Project[] = [];
-  let goals: Goal[] = [];
-  let history: ContentHistoryEvent[] = [];
-  let selectedId = '';
-  let editorJson = '';
-  let searchQuery = '';
-  let includeArchived = true;
-  let loading = false;
-  let message = '';
-  let messageKind: MessageKind = 'info';
-  let dirty = false;
-  let editorError = '';
-  let lastLoadedAt = '';
-  let now = Date.now();
-
-  let activeItems: EntityItem[] = [];
-  let filteredItems: EntityItem[] = [];
-  let selectedEntity: EntityItem | null = null;
-  let selectedArchived = false;
-  let searchTerm = '';
+  let token = $state('');
+  let actor = $state('admin');
+  let dataset: EditorEntity = $state('project');
+  let selectedDataset: EditorEntity = $state('project');
+  let projects: Project[] = $state([]);
+  let goals: Goal[] = $state([]);
+  let history: ContentHistoryEvent[] = $state([]);
+  let selectedId = $state('');
+  let editorJson = $state('');
+  let searchQuery = $state('');
+  let includeArchived = $state(true);
+  let loading = $state(false);
+  let message = $state('');
+  let messageKind: MessageKind = $state('info');
+  let dirty = $state(false);
+  let editorError = $state('');
+  let lastLoadedAt = $state('');
+  let now = $state(Date.now());
 
   const entityTitle: Record<EditorEntity, string> = {
     project: 'Project',
@@ -56,23 +50,27 @@
     related_orgs: [],
   };
 
-  $: activeItems = dataset === 'project' ? projects : goals;
-  $: searchTerm = searchQuery.trim().toLowerCase();
-  $: filteredItems = activeItems.filter((item) => {
-    if (!includeArchived && item.is_archived === true) {
-      return false;
-    }
-    if (!searchTerm) {
-      return true;
-    }
+  const activeItems: EntityItem[] = $derived(dataset === 'project' ? projects : goals);
+  const searchTerm = $derived(searchQuery.trim().toLowerCase());
+  const filteredItems: EntityItem[] = $derived(
+    activeItems.filter((item) => {
+      if (!includeArchived && item.is_archived === true) {
+        return false;
+      }
+      if (!searchTerm) {
+        return true;
+      }
 
-    const haystack = `${item.id} ${toEntityHeadline(item, dataset)} ${toEntitySubline(item, dataset)}`.toLowerCase();
-    return haystack.includes(searchTerm);
-  });
-  $: selectedEntity = selectedId
-    ? (selectedDataset === 'project' ? projects : goals).find((item) => item.id === selectedId) ?? null
-    : null;
-  $: selectedArchived = selectedEntity?.is_archived === true;
+      const haystack = `${item.id} ${toEntityHeadline(item, dataset)} ${toEntitySubline(item, dataset)}`.toLowerCase();
+      return haystack.includes(searchTerm);
+    })
+  );
+  const selectedEntity: EntityItem | null = $derived(
+    selectedId
+      ? (selectedDataset === 'project' ? projects : goals).find((item) => item.id === selectedId) ?? null
+      : null
+  );
+  const selectedArchived = $derived(selectedEntity?.is_archived === true);
 
   function authHeaders() {
     const headers: Record<string, string> = {
@@ -452,7 +450,7 @@
               Refreshed {formatRelative(lastLoadedAt, now)}
             </span>
           {/if}
-          <button class="refresh-button" on:click={() => loadData()} disabled={loading}>Refresh</button>
+          <button class="refresh-button" onclick={() => loadData()} disabled={loading}>Refresh</button>
         </div>
 
         <details class="token-auth">
@@ -490,7 +488,7 @@
             aria-selected={dataset === 'project'}
             aria-controls="content-list-panel"
             class:active={dataset === 'project'}
-            on:click={() => setDataset('project')}
+            onclick={() => setDataset('project')}
             disabled={loading}
           >
             Projects ({projects.length})
@@ -501,7 +499,7 @@
             aria-selected={dataset === 'goal'}
             aria-controls="content-list-panel"
             class:active={dataset === 'goal'}
-            on:click={() => setDataset('goal')}
+            onclick={() => setDataset('goal')}
             disabled={loading}
           >
             Goals ({goals.length})
@@ -528,7 +526,7 @@
         </label>
 
         <div class="list-toolbar">
-          <button class="new-button" on:click={() => startNew(dataset)} disabled={loading}>
+          <button class="new-button" onclick={() => startNew(dataset)} disabled={loading}>
             + New {entityTitle[dataset]}
           </button>
           <label class="archive-toggle">
@@ -544,7 +542,7 @@
             {#each filteredItems as item (item.id)}
               <li class:selected={selectedDataset === dataset && selectedId === item.id}>
                 <button
-                  on:click={() => selectEntity(item.id, dataset)}
+                  onclick={() => selectEntity(item.id, dataset)}
                   disabled={loading}
                   title={item.id}
                 >
@@ -569,9 +567,9 @@
               : `New ${entityTitle[dataset]}`}
           </h2>
           <div class="editor-head-actions">
-            <button on:click={formatEditorJson} disabled={loading}>Format JSON</button>
+            <button onclick={formatEditorJson} disabled={loading}>Format JSON</button>
             {#if selectedId}
-              <button class="ghost" on:click={closeEditor} disabled={loading} aria-label="Close editor">
+              <button class="ghost" onclick={closeEditor} disabled={loading} aria-label="Close editor">
                 Close
               </button>
             {/if}
@@ -606,7 +604,7 @@
           Use Archive/Restore — don't edit <code>is_archived</code> fields by hand.
         </p>
 
-        <textarea bind:value={editorJson} spellcheck="false" on:input={handleEditorInput}></textarea>
+        <textarea bind:value={editorJson} spellcheck="false" oninput={handleEditorInput}></textarea>
 
         {#if editorError}
           <p class="editor-state error">JSON error: {editorError}</p>
@@ -617,13 +615,13 @@
         {/if}
 
         <div class="editor-actions">
-          <button class="primary" on:click={saveEntity} disabled={loading || editorError.length > 0}>
+          <button class="primary" onclick={saveEntity} disabled={loading || editorError.length > 0}>
             {selectedId ? 'Save Changes' : `Create ${entityTitle[dataset]}`}
           </button>
-          <button on:click={archiveSelected} disabled={loading || !selectedId || selectedArchived}>
+          <button onclick={archiveSelected} disabled={loading || !selectedId || selectedArchived}>
             Archive
           </button>
-          <button on:click={restoreSelected} disabled={loading || !selectedId || !selectedArchived}>
+          <button onclick={restoreSelected} disabled={loading || !selectedId || !selectedArchived}>
             Restore
           </button>
         </div>
@@ -641,7 +639,7 @@
               <span class={`action-pill action-${event.action}`}>{event.action}</span>
               <button
                 class="entity-ref"
-                on:click={() => selectEntity(event.entity_id, event.entity_type as EditorEntity)}
+                onclick={() => selectEntity(event.entity_id, event.entity_type as EditorEntity)}
                 disabled={loading}
                 title={`Open ${event.entity_type} ${event.entity_id}`}
               >

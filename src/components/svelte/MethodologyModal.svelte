@@ -1,13 +1,14 @@
 <script lang="ts">
   import Portal from './Portal.svelte';
 
-  export let open = false;
+  let { open = $bindable(false) }: { open?: boolean } = $props();
 
-  let modalContent: HTMLDivElement | null = null;
-  let closeButton: HTMLButtonElement | null = null;
+  let modalContent: HTMLDivElement | null = $state(null);
+  let closeButton: HTMLButtonElement | null = $state(null);
   let lastFocused: HTMLElement | null = null;
 
-  $: if (typeof document !== 'undefined') {
+  $effect(() => {
+    if (typeof document === 'undefined') return;
     if (open) {
       lastFocused = (document.activeElement as HTMLElement) ?? null;
       document.body.style.overflow = 'hidden';
@@ -18,7 +19,7 @@
       lastFocused?.focus();
       lastFocused = null;
     }
-  }
+  });
 
   function close() {
     open = false;
@@ -66,21 +67,21 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 {#if open}
   <Portal>
     <div
       class="modal-backdrop"
-      on:click={handleBackdropClick}
-      on:keydown={handleBackdropKeydown}
+      onclick={handleBackdropClick}
+      onkeydown={handleBackdropKeydown}
       tabindex="-1"
       role="dialog"
       aria-modal="true"
       aria-labelledby="methodology-title"
     >
       <div class="modal-content" bind:this={modalContent}>
-        <button class="modal-close" on:click={close} aria-label="Close" bind:this={closeButton}>
+        <button class="modal-close" onclick={close} aria-label="Close" bind:this={closeButton}>
           &times;
         </button>
         <article class="methodology-article">

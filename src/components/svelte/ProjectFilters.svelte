@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
-  export let availableModes: string[] = [];
-  export let selectedModes: string[] = [];
-
-  const dispatch = createEventDispatcher();
+  let {
+    availableModes = [],
+    selectedModes = $bindable<string[]>([]),
+    onchange,
+  }: {
+    availableModes?: string[];
+    selectedModes?: string[];
+    onchange?: (detail: { selectedModes: string[] }) => void;
+  } = $props();
 
   function toggle(mode: string) {
     if (selectedModes.includes(mode)) {
@@ -12,25 +15,25 @@
     } else {
       selectedModes = [...selectedModes, mode];
     }
-    dispatch('change', { selectedModes });
+    onchange?.({ selectedModes });
   }
 
   function clearAll() {
     selectedModes = [];
-    dispatch('change', { selectedModes });
+    onchange?.({ selectedModes });
   }
 </script>
 
 <fieldset class="project-filters text-xs text-neutral-300">
   <legend class="sr-only">Filter projects by mode</legend>
   <div class="flex items-center gap-2 mb-2">
-    <button type="button" class="text-xs underline" on:click={clearAll}>Show all</button>
+    <button type="button" class="text-xs underline" onclick={clearAll}>Show all</button>
   </div>
 
   <div class="grid grid-cols-2 gap-2">
     {#each availableModes as mode}
       <label class="inline-flex items-center gap-2">
-        <input type="checkbox" checked={selectedModes.includes(mode)} on:change={() => toggle(mode)} />
+        <input type="checkbox" checked={selectedModes.includes(mode)} onchange={() => toggle(mode)} />
         <span class="capitalize">{mode.replace(/-/g, ' ')}</span>
       </label>
     {/each}

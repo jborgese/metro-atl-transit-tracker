@@ -1,7 +1,5 @@
 <script lang="ts">
   import DebugBadge from './DebugBadge.svelte';
-  // Set this to true to show the debug panel
-  let showDebugPanel = false;
   import {
     handleCountySelection,
     handleMapClick,
@@ -10,9 +8,7 @@
   } from "../../lib/map/countyPanelHandlers";
   import { loadCountyMetadata, loadProjectsMetadata } from "../../lib/map/metadataLoader";
   import { getMetroCountyBounds } from "../../lib/map/getMetroCountyBounds";
-  import { onMount, tick, createEventDispatcher } from "svelte";
-    // Svelte event dispatcher for parent communication
-    const dispatch = createEventDispatcher();
+  import { onMount, tick } from "svelte";
   import maplibregl, { type StyleSpecification } from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { initMetroMap } from "../../lib/map/initMetroMap";
@@ -26,11 +22,20 @@
 
   const log = createLogger("MetroMap");
 
-  export let title = "Metro Atlanta map";
-  export const subtitle =
-    "Interactive county/region map will load here (MapLibre next).";
-  export let height = "clamp(18rem, 45vh, 34rem)";
-  export let desktopHeight = "clamp(22rem, 58vh, 44rem)";
+  // Set this to true to show the debug panel
+  const showDebugPanel = false;
+
+  let {
+    title = "Metro Atlanta map",
+    height = "clamp(18rem, 45vh, 34rem)",
+    desktopHeight = "clamp(22rem, 58vh, 44rem)",
+    oncountySelected,
+  }: {
+    title?: string;
+    height?: string;
+    desktopHeight?: string;
+    oncountySelected?: (detail: { geoid: string | null }) => void;
+  } = $props();
 
   const fallbackStyle: StyleSpecification = {
     version: 8,
@@ -49,29 +54,26 @@
   let map: maplibregl.Map | null = null;
   let ro: ResizeObserver | null = null;
   // County metadata (loaded from public/data/geo/counties-metadata.json)
-  let countyMetadata: any[] = [];
+  let countyMetadata: any[] = $state([]);
   let countyMetadataMap: Record<string, any> = {};
-  let selectedCounty: any = null;
-  let projectsMetadata: any[] = [];
+  let selectedCounty: any = $state(null);
+  let projectsMetadata: any[] = $state([]);
   // memoized map from county geoid -> projects list for fast lookup
-  let projectsByCounty: Record<string, any[]> = {};
+  let projectsByCounty: Record<string, any[]> = $state({});
   // lazy-load state for projects metadata
-  let projectsLoaded = false;
-  let projectsLoading = false;
+  let projectsLoaded = $state(false);
+  let projectsLoading = $state(false);
+
+  let panelEl: HTMLElement | null = $state(null);
+  let closeBtn: HTMLButtonElement | null = $state(null);
+
   // derived related projects for the selected county
-  let relatedProjects: any[] = [];
-
-
-  let panelEl: HTMLElement | null = null;
-  let closeBtn: HTMLButtonElement | null = null;
-
-  // Controls whether to show all related projects in the panel
-  let showAllProjects = false;
-
   // Use precomputed lookup to avoid scanning the full projects array on each selection
-  $: relatedProjects = selectedCounty && projectsByCounty
-    ? (projectsByCounty[String(selectedCounty.geoid)] || [])
-    : [];
+  const relatedProjects = $derived(
+    selectedCounty && projectsByCounty
+      ? (projectsByCounty[String(selectedCounty.geoid)] || [])
+      : []
+  );
 
   // Fetch projects metadata once (lazy). Called on first county selection or scheduled idle.
   async function fetchProjectsIfNeeded({ background = false } = {}) {
@@ -84,18 +86,19 @@
       else log.info('projects:loaded', { count: projectsMetadata.length, background });
 
       // Build lookup
-      projectsByCounty = {};
+      const next: Record<string, any[]> = {};
       if (projectsMetadata && projectsMetadata.length) {
         for (const proj of projectsMetadata) {
           const rc = proj.related_counties;
           if (!rc || !Array.isArray(rc)) continue;
           for (const g of rc) {
             const key = String(g);
-            if (!projectsByCounty[key]) projectsByCounty[key] = [];
-            projectsByCounty[key].push(proj);
+            if (!next[key]) next[key] = [];
+            next[key].push(proj);
           }
         }
       }
+      projectsByCounty = next;
       projectsLoaded = true;
     } catch (e) {
       log.warn('projects:load-error', e);
@@ -105,30 +108,38 @@
   }
 
   // Trigger lazy load when a county is first selected
-  $: if (selectedCounty && !projectsLoaded && !projectsLoading) {
-    fetchProjectsIfNeeded();
-  }
+  $effect(() => {
+    if (selectedCounty && !projectsLoaded && !projectsLoading) {
+      fetchProjectsIfNeeded();
+    }
+  });
 
   // Emit event when selectedCounty changes (including deselection)
-  $: dispatch('countySelected', { geoid: selectedCounty?.geoid ? String(selectedCounty.geoid) : null });
+  $effect(() => {
+    oncountySelected?.({ geoid: selectedCounty?.geoid ? String(selectedCounty.geoid) : null });
+  });
 
   // UI: available project modes and currently selected modes for filtering
-  let availableModes: string[] = [];
-  let selectedModes: string[] = [];
-  // filtered list derived from relatedProjects + selectedModes
-  let relatedProjectsFiltered: any[] = [];
+  const selectedModes: string[] = [];
 
-  $: debugAvailableCount = availableModes ? availableModes.length : 0;
-  $: debugRelatedCount = relatedProjects ? relatedProjects.length : 0;
-  $: debugSelectedKey = selectedCounty ? (selectedCounty.geoid ?? selectedCounty.name ?? 'unknown') : 'none';
+  const availableModes = $derived(
+    projectsMetadata && projectsMetadata.length
+      ? Array.from(new Set(projectsMetadata.flatMap((p: any) => p.modes || []))).sort()
+      : []
+  );
 
-  $: availableModes = projectsMetadata && projectsMetadata.length
-    ? Array.from(new Set(projectsMetadata.flatMap((p: any) => p.modes || []))).sort()
-    : [];
+  const debugAvailableCount = $derived(availableModes ? availableModes.length : 0);
+  const debugRelatedCount = $derived(relatedProjects ? relatedProjects.length : 0);
+  const debugSelectedKey = $derived(
+    selectedCounty ? (selectedCounty.geoid ?? selectedCounty.name ?? 'unknown') : 'none'
+  );
 
-  $: relatedProjectsFiltered = selectedModes && selectedModes.length
-    ? relatedProjects.filter((p: any) => (p.modes || []).some((m: string) => selectedModes.indexOf(m) !== -1))
-    : relatedProjects;
+  // filtered list derived from relatedProjects + selectedModes (currently unused in template)
+  const _relatedProjectsFiltered = $derived(
+    selectedModes && selectedModes.length
+      ? relatedProjects.filter((p: any) => (p.modes || []).some((m: string) => selectedModes.indexOf(m) !== -1))
+      : relatedProjects
+  );
 
 
   function closePanel() {
@@ -281,7 +292,7 @@
               setTimeout(doIdle, 3000);
             }
           }
-        } catch (e) {
+        } catch {
           /* ignore */
         }
 
@@ -297,7 +308,7 @@
       ro?.disconnect();
       ro = null;
       if (map) {
-        try { (map as any).__countyKeyboardActivate = undefined } catch (e) { /* ignore */ }
+        try { (map as any).__countyKeyboardActivate = undefined } catch { /* ignore */ }
       }
       destroyMap("unmount");
       log.info("mount:cleanup");
@@ -318,16 +329,18 @@
     selectedCounty = null;
   }
 
-  $: if (selectedCounty) {
-    // Focus the close button when the panel opens
-    tick().then(() => closeBtn?.focus());
-    // Preload any logos referenced by the county to avoid delayed image paints
-    try {
-      preloadLogosForCounty(selectedCounty);
-    } catch (e) {
-      /* ignore */
+  $effect(() => {
+    if (selectedCounty) {
+      // Focus the close button when the panel opens
+      tick().then(() => closeBtn?.focus());
+      // Preload any logos referenced by the county to avoid delayed image paints
+      try {
+        preloadLogosForCounty(selectedCounty);
+      } catch {
+        /* ignore */
+      }
     }
-  }
+  });
 
   // Insert <link rel="preload" as="image"> tags for logos used by a county
   const _preloadedLogoHrefs = new Set<string>();
@@ -379,7 +392,7 @@
         <button
           type="button"
           class="select-center-button absolute top-2 right-2 z-40 rounded bg-neutral-900/80 px-3 py-2 text-xs text-neutral-100 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          on:click={selectCenteredCounty}
+          onclick={selectCenteredCounty}
         >
           Select county at map center
         </button>
@@ -392,7 +405,7 @@
         {/if}
         {#if selectedCounty}
           <aside bind:this={panelEl} class="map-panel-wrapper absolute top-4 left-4 z-50">
-            <button bind:this={closeBtn} aria-label="Close county panel" class="text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2 w-8 h-8 flex items-center justify-center text-xl leading-none" on:click={closePanel}>&times;</button>
+            <button bind:this={closeBtn} aria-label="Close county panel" class="text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2 w-8 h-8 flex items-center justify-center text-xl leading-none" onclick={closePanel}>&times;</button>
             <MetroCountyPanel county={selectedCounty} />
           </aside>
         {/if}

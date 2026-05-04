@@ -2,7 +2,7 @@
   import BaseLayout from '../../layouts/BaseLayout.svelte';
   import type { PageData } from './$types';
 
-  export let data: PageData;
+  let { data }: { data: PageData } = $props();
 </script>
 
 <BaseLayout title="Public Change History | Metro ATL Transit Tracker">

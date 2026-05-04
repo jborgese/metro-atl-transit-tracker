@@ -1,14 +1,22 @@
-<script context="module" lang="ts">
+<script module lang="ts">
   import "../styles/global.css";
 </script>
 
 <script lang="ts">
   import MethodologyModal from '../components/svelte/MethodologyModal.svelte';
+  import type { Snippet } from 'svelte';
 
-  export let title: string = 'Metro Atlanta Interface for Transit Advocacy Intelligence';
-  export let description: string = 'A public, data-driven Metro Atlanta transit advocacy intelligence hub.';
+  let {
+    title = 'Metro Atlanta Interface for Transit Advocacy Intelligence',
+    description = 'A public, data-driven Metro Atlanta transit advocacy intelligence hub.',
+    children,
+  }: {
+    title?: string;
+    description?: string;
+    children?: Snippet;
+  } = $props();
 
-  let methodologyOpen = false;
+  let methodologyOpen = $state(false);
 </script>
 
 <svelte:head>
@@ -45,13 +53,13 @@
     <nav class="site-nav" aria-label="Primary">
       <a class="site-nav-link" href="/history">History</a>
       <a class="site-nav-link" href="/admin" data-sveltekit-reload>Admin</a>
-      <button class="site-nav-link" on:click={() => methodologyOpen = true}>Methodology</button>
+      <button class="site-nav-link" onclick={() => methodologyOpen = true}>Methodology</button>
     </nav>
   </div>
 </header>
 
 <main id="content" class="main-content">
-  <slot />
+  {@render children?.()}
 </main>
 
 <MethodologyModal bind:open={methodologyOpen} />

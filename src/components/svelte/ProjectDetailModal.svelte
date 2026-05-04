@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, tick } from 'svelte';
+  import { tick } from 'svelte';
   import Portal from './Portal.svelte';
   import type { Goal, Project } from '@/types/content';
   import { statusLabel, getStatusColor, getStatusTextColor } from '@/utils/statusHelpers';
@@ -7,32 +7,42 @@
   import { formatDate, formatTimestamp } from '@/utils/dateFormat';
   import { getRelatedGoals } from '@/utils/projectRelations';
 
-  export let open = false;
-  export let project: Project | null = null;
-  export let goals: Goal[] = [];
-  export let countyNames: Record<string, string> = {};
+  let {
+    open = $bindable(false),
+    project = null,
+    goals = [],
+    countyNames = {},
+    onclose,
+  }: {
+    open?: boolean;
+    project?: Project | null;
+    goals?: Goal[];
+    countyNames?: Record<string, string>;
+    onclose?: () => void;
+  } = $props();
 
-  const dispatch = createEventDispatcher<{ close: void }>();
-
-  let closeButton: HTMLButtonElement | null = null;
+  let closeButton: HTMLButtonElement | null = $state(null);
   let previouslyFocused: HTMLElement | null = null;
 
-  $: if (typeof document !== 'undefined') {
+  $effect(() => {
+    if (typeof document === 'undefined') return;
     if (open) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-  }
+  });
 
-  $: if (open && typeof document !== 'undefined') {
-    previouslyFocused = (document.activeElement as HTMLElement) ?? null;
-    tick().then(() => closeButton?.focus());
-  }
+  $effect(() => {
+    if (open && typeof document !== 'undefined') {
+      previouslyFocused = (document.activeElement as HTMLElement) ?? null;
+      tick().then(() => closeButton?.focus());
+    }
+  });
 
   function close() {
     open = false;
-    dispatch('close');
+    onclose?.();
     if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
       previouslyFocused.focus();
     }
@@ -97,9 +107,9 @@
     }
   }
 
-  $: milestones = project ? normalizeMilestones(project.milestones) : [];
-  $: relatedGoals = project ? getRelatedGoals(project, goals) : [];
-  $: timelineText = (() => {
+  const milestones = $derived(project ? normalizeMilestones(project.milestones) : []);
+  const relatedGoals = $derived(project ? getRelatedGoals(project, goals) : []);
+  const timelineText = $derived.by(() => {
     if (!project) return '';
     const start = formatDate(project.start_date);
     const end = project.end_date ? formatDate(project.end_date) : '';
@@ -107,17 +117,17 @@
     if (start && !end) return `${start} → ongoing`;
     if (!start && end) return `through ${end}`;
     return '';
-  })();
+  });
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 {#if open && project}
   <Portal>
     <div
       class="modal-backdrop"
-      on:click={handleBackdropClick}
-      on:keydown={handleBackdropKeydown}
+      onclick={handleBackdropClick}
+      onkeydown={handleBackdropKeydown}
       tabindex="-1"
       role="dialog"
       aria-modal="true"
@@ -127,7 +137,7 @@
         <button
           bind:this={closeButton}
           class="modal-close"
-          on:click={close}
+          onclick={close}
           aria-label="Close project details"
           type="button"
         >

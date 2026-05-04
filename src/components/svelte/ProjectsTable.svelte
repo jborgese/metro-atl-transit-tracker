@@ -1,27 +1,34 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import type { Project } from './types';
   import { statusLabel } from '@/utils/statusHelpers';
 
-  export let projects: Project[] = [];
-  export let selectedCounty: string | null = null;
-
-  const dispatch = createEventDispatcher<{ selectProject: { project: Project } }>();
+  let {
+    projects = [],
+    selectedCounty = null,
+    onselectProject,
+  }: {
+    projects?: Project[];
+    selectedCounty?: string | null;
+    onselectProject?: (detail: { project: Project }) => void;
+  } = $props();
 
   // Group projects by lead organization name
-  let grouped: Record<string, Project[]> = {};
-  $: filtered = selectedCounty
-    ? projects.filter((p) => p.related_counties && p.related_counties.includes(selectedCounty))
-    : projects;
-  $: grouped = filtered.reduce((acc: Record<string, Project[]>, p: Project) => {
-    const org = p.lead_org?.name || 'Other';
-    if (!acc[org]) acc[org] = [];
-    acc[org].push(p);
-    return acc;
-  }, {});
+  const filtered = $derived(
+    selectedCounty
+      ? projects.filter((p) => p.related_counties && p.related_counties.includes(selectedCounty))
+      : projects
+  );
+  const grouped = $derived(
+    filtered.reduce((acc: Record<string, Project[]>, p: Project) => {
+      const org = p.lead_org?.name || 'Other';
+      if (!acc[org]) acc[org] = [];
+      acc[org].push(p);
+      return acc;
+    }, {})
+  );
 
   function selectProject(project: Project) {
-    dispatch('selectProject', { project });
+    onselectProject?.({ project });
   }
 
   function handleRowKeydown(project: Project, event: KeyboardEvent) {
@@ -55,8 +62,8 @@
                   role="button"
                   tabindex="0"
                   aria-label="View details for {project.title}"
-                  on:click={() => selectProject(project)}
-                  on:keydown={(e) => handleRowKeydown(project, e)}
+                  onclick={() => selectProject(project)}
+                  onkeydown={(e) => handleRowKeydown(project, e)}
                 >
                   <td data-label="Project">{project.title}</td>
                   <td data-label="Status">{statusLabel(project.status)}</td>

@@ -1,18 +1,23 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import type { Goal, Project } from './types';
   import { statusLabel, getStatusColor, getStatusTextColor } from '@/utils/statusHelpers';
   import { countyOrder, getCountyName as lookupCountyName } from '@/utils/countyLookup';
 
-  export let goals: Goal[] = [];
-  export let projects: Project[] = [];
-  export let selectedCounty: string | null = null;
-  export let countyNames: Record<string, string> = {};
-
-  const dispatch = createEventDispatcher<{
-    clearCounty: void;
-    selectProject: { project: Project };
-  }>();
+  let {
+    goals = [],
+    projects = [],
+    selectedCounty = null,
+    countyNames = {},
+    onclearCounty,
+    onselectProject,
+  }: {
+    goals?: Goal[];
+    projects?: Project[];
+    selectedCounty?: string | null;
+    countyNames?: Record<string, string>;
+    onclearCounty?: () => void;
+    onselectProject?: (detail: { project: Project }) => void;
+  } = $props();
 
   function getCountyName(geoid: string): string {
     return lookupCountyName(geoid, countyNames);
@@ -23,7 +28,7 @@
   }
 
   function selectProject(project: Project) {
-    dispatch('selectProject', { project });
+    onselectProject?.({ project });
   }
 
   function handleProjectCardClick(project: Project, event: MouseEvent) {
@@ -46,17 +51,19 @@
   }
 
   // Get regional goals (goals with no specific county)
-  $: regionalGoals = goals.filter(isRegionalGoal);
+  const regionalGoals = $derived(goals.filter(isRegionalGoal));
 
   // Filter goals by selected county (excludes regional goals to avoid duplication)
-  $: filtered = selectedCounty
-    ? goals.filter((g) => g.related_counties && g.related_counties.includes(selectedCounty) && !isRegionalGoal(g))
-    : goals;
+  const filtered = $derived(
+    selectedCounty
+      ? goals.filter((g) => g.related_counties && g.related_counties.includes(selectedCounty) && !isRegionalGoal(g))
+      : goals
+  );
 
   // Group goals by county (only used when no county is selected)
   // Includes all counties, even those without goals
   // Excludes regional goals (they're shown separately)
-  $: groupedByCounty = !selectedCounty ? groupGoalsByCounty(goals) : null;
+  const groupedByCounty = $derived(!selectedCounty ? groupGoalsByCounty(goals) : null);
 
   function groupGoalsByCounty(goalsList: Goal[]): Map<string, Goal[]> {
     const grouped = new Map<string, Goal[]>();
@@ -161,7 +168,7 @@
       <button
         type="button"
         class="clear-filter"
-        on:click={() => dispatch('clearCounty')}
+        onclick={() => onclearCounty?.()}
       >
         Show all counties
       </button>
@@ -235,8 +242,8 @@
                     tabindex="0"
                     aria-label="View details for {project.title}"
                     style="--status-color: {getStatusColor(project.status)}"
-                    on:click={(e) => handleProjectCardClick(project, e)}
-                    on:keydown={(e) => handleProjectCardKeydown(project, e)}
+                    onclick={(e) => handleProjectCardClick(project, e)}
+                    onkeydown={(e) => handleProjectCardKeydown(project, e)}
                   >
                     <div class="project-header">
                       <span class="project-indicator" aria-hidden="true">&rarr;</span>
@@ -341,8 +348,8 @@
                       tabindex="0"
                       aria-label="View details for {project.title}"
                       style="--status-color: {getStatusColor(project.status)}"
-                      on:click={(e) => handleProjectCardClick(project, e)}
-                      on:keydown={(e) => handleProjectCardKeydown(project, e)}
+                      onclick={(e) => handleProjectCardClick(project, e)}
+                      onkeydown={(e) => handleProjectCardKeydown(project, e)}
                     >
                       <div class="project-header">
                         <span class="project-indicator" aria-hidden="true">&rarr;</span>
@@ -447,8 +454,8 @@
                       tabindex="0"
                       aria-label="View details for {project.title}"
                       style="--status-color: {getStatusColor(project.status)}"
-                      on:click={(e) => handleProjectCardClick(project, e)}
-                      on:keydown={(e) => handleProjectCardKeydown(project, e)}
+                      onclick={(e) => handleProjectCardClick(project, e)}
+                      onkeydown={(e) => handleProjectCardKeydown(project, e)}
                     >
                       <div class="project-header">
                         <span class="project-indicator" aria-hidden="true">&rarr;</span>
@@ -552,8 +559,8 @@
                     tabindex="0"
                     aria-label="View details for {project.title}"
                     style="--status-color: {getStatusColor(project.status)}"
-                    on:click={(e) => handleProjectCardClick(project, e)}
-                    on:keydown={(e) => handleProjectCardKeydown(project, e)}
+                    onclick={(e) => handleProjectCardClick(project, e)}
+                    onkeydown={(e) => handleProjectCardKeydown(project, e)}
                   >
                     <div class="project-header">
                       <span class="project-indicator" aria-hidden="true">&rarr;</span>

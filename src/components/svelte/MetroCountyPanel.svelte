@@ -1,6 +1,6 @@
 <script lang="ts">
   import { orgLogos } from '../../data/static/orgLogos';
-  export let county: any;
+  let { county }: { county: any } = $props();
 
   // Helper to get logo URL by agency/group name
   function getLogo(name: string): string | undefined {

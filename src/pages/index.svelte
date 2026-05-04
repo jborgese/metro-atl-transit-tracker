@@ -6,30 +6,31 @@ import GoalsTable from '../components/svelte/GoalsTable.svelte';
 import ProjectDetailModal from '../components/svelte/ProjectDetailModal.svelte';
 import type { Goal, Project } from '@/types/content';
 
-export let data: {
-  projects: Project[];
-  goals: Goal[];
-  usingFallback?: boolean;
-};
+let { data }: {
+  data: {
+    projects: Project[];
+    goals: Goal[];
+    usingFallback?: boolean;
+  };
+} = $props();
 
-let projects: Project[] = [];
-let goals: Goal[] = [];
+const projects = $derived(data?.projects ?? []);
+const goals = $derived(data?.goals ?? []);
 
-$: projects = data?.projects ?? [];
-$: goals = data?.goals ?? [];
+let selectedCounty: string | null = $state(null);
+let mapRef: MetroMap | undefined = $state();
 
-let selectedCounty: string | null = null;
-let mapRef: MetroMap;
+let selectedProjectId: string | null = $state(null);
+let projectModalOpen = $state(false);
 
-let selectedProjectId: string | null = null;
-let projectModalOpen = false;
+const selectedProject = $derived(
+  selectedProjectId
+    ? projects.find((p) => p.id === selectedProjectId) ?? null
+    : null
+);
 
-$: selectedProject = selectedProjectId
-  ? projects.find((p) => p.id === selectedProjectId) ?? null
-  : null;
-
-function handleCountySelected(event: CustomEvent<{ geoid: string | null }>) {
-  selectedCounty = event.detail.geoid;
+function handleCountySelected(detail: { geoid: string | null }) {
+  selectedCounty = detail.geoid;
 }
 
 function handleClearCounty() {
@@ -49,8 +50,8 @@ function closeProject() {
   syncUrl(null);
 }
 
-function handleSelectProject(event: CustomEvent<{ project: Project }>) {
-  openProject(event.detail.project);
+function handleSelectProject(detail: { project: Project }) {
+  openProject(detail.project);
 }
 
 function syncUrl(projectId: string | null) {
@@ -94,13 +95,13 @@ onMount(() => {
         Showing a cached snapshot of projects and goals — live data is temporarily unavailable.
       </p>
     {/if}
-    <MetroMap bind:this={mapRef} on:countySelected={handleCountySelected} />
+    <MetroMap bind:this={mapRef} oncountySelected={handleCountySelected} />
     <GoalsTable
       {goals}
       {projects}
       {selectedCounty}
-      on:clearCounty={handleClearCounty}
-      on:selectProject={handleSelectProject}
+      onclearCounty={handleClearCounty}
+      onselectProject={handleSelectProject}
     />
   </section>
 </BaseLayout>
@@ -109,5 +110,5 @@ onMount(() => {
   bind:open={projectModalOpen}
   project={selectedProject}
   {goals}
-  on:close={closeProject}
+  onclose={closeProject}
 />
