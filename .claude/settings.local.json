@@ -63,7 +63,10 @@
       "PowerShell(git push)",
       "PowerShell(& \"C:\\\\Users\\\\jared\\\\.vscode\\\\extensions\\\\anthropic.claude-code-2.1.172-win32-x64\\\\resources\\\\native-binary\\\\claude.exe\" plugin marketplace add cloudflare/skills)",
       "PowerShell(& \"C:\\\\Users\\\\jared\\\\.vscode\\\\extensions\\\\anthropic.claude-code-2.1.172-win32-x64\\\\resources\\\\native-binary\\\\claude.exe\" plugin install cloudflare@cloudflare)",
-      "PowerShell(Test-Path node_modules; if \\(Test-Path node_modules\\) { \\(Get-ChildItem node_modules -Directory | Measure-Object\\).Count })"
+      "PowerShell(Test-Path node_modules; if \\(Test-Path node_modules\\) { \\(Get-ChildItem node_modules -Directory | Measure-Object\\).Count })",
+      "PowerShell($env:PATH = \"$env:LOCALAPPDATA\\\\node-portable\\\\node-v22.22.3-win-x64;$env:PATH\"; npm install)",
+      "PowerShell(node --version)",
+      "PowerShell($env:PATH = \"$env:LOCALAPPDATA\\\\node-portable\\\\node-v22.22.3-win-x64;$env:PATH\"; node -e \"import\\('./svelte.config.js'\\).then\\(m => console.log\\('config loaded OK:', typeof m.default\\)\\).catch\\(e => { console.error\\(e.message\\); exit\\(1\\) }\\)\")"
     ]
   }
 }
