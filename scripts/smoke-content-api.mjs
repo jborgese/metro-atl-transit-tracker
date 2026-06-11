@@ -108,6 +108,26 @@ async function run() {
     );
     assert.equal(restoreResponse.data?.data?.is_archived, false, 'Restore did not set is_archived=false');
 
+    const feedbackResponse = await requestJson(`${baseUrl}/api/feedback`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Smoke test feedback submission', category: 'general' }),
+    });
+    assert.equal(feedbackResponse.status, 201, `POST /api/feedback failed: ${feedbackResponse.text}`);
+    assert.ok(feedbackResponse.data?.data?.id, 'Feedback submission should return an id');
+
+    const honeypotResponse = await requestJson(`${baseUrl}/api/feedback`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Smoke honeypot probe', website: 'https://spam.example' }),
+    });
+    assert.equal(honeypotResponse.status, 201, `Honeypot POST /api/feedback failed: ${honeypotResponse.text}`);
+    assert.equal(
+      honeypotResponse.data?.data?.id,
+      undefined,
+      'Honeypot submission should not be stored or return an id'
+    );
+
     console.log('[smoke] Smoke tests passed.');
   } finally {
     await devServer.stop();

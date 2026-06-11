@@ -14,7 +14,10 @@
 	"vars": {
 		"CF_ACCESS_TEAM_DOMAIN": "frootsnoops.cloudflareaccess.com",
 		"CF_ACCESS_AUD": "96f0e12e20cbdf4fd6f78aaecf0129add7fbc21883156fc4b2f703c4cccc3638",
-		"WRITE_RATE_LIMIT_ENABLED": "true"
+		"WRITE_RATE_LIMIT_ENABLED": "true",
+		"FEEDBACK_EMAIL_ENABLED": "true",
+		"FEEDBACK_FROM_ADDRESS": "feedback@maitai.observer",
+		"FEEDBACK_TO_ADDRESS": "jaredborgese@gmail.com"
 	},
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"workers_dev": false,
@@ -42,6 +45,15 @@
 			"migrations_table": "d1_migrations"
 		}
 	],
+	// Requires Email Routing enabled on maitai.observer with the destination
+	// address verified in the dashboard; `wrangler deploy` rejects the binding
+	// otherwise.
+	"send_email": [
+		{
+			"name": "SEND_EMAIL",
+			"destination_address": "jaredborgese@gmail.com"
+		}
+	],
 	"unsafe": {
 		"bindings": [
 			{
@@ -49,6 +61,12 @@
 				"type": "ratelimit",
 				"namespace_id": "1001",
 				"simple": { "limit": 30, "period": 60 }
+			},
+			{
+				"name": "FEEDBACK_LIMITER",
+				"type": "ratelimit",
+				"namespace_id": "1003",
+				"simple": { "limit": 5, "period": 60 }
 			}
 		]
 	},
@@ -58,8 +76,17 @@
 			"vars": {
 				"CF_ACCESS_TEAM_DOMAIN": "frootsnoops.cloudflareaccess.com",
 				"CF_ACCESS_AUD": "96f0e12e20cbdf4fd6f78aaecf0129add7fbc21883156fc4b2f703c4cccc3638",
-				"WRITE_RATE_LIMIT_ENABLED": "true"
+				"WRITE_RATE_LIMIT_ENABLED": "true",
+				"FEEDBACK_EMAIL_ENABLED": "true",
+				"FEEDBACK_FROM_ADDRESS": "feedback@maitai.observer",
+				"FEEDBACK_TO_ADDRESS": "jaredborgese@gmail.com"
 			},
+			"send_email": [
+				{
+					"name": "SEND_EMAIL",
+					"destination_address": "jaredborgese@gmail.com"
+				}
+			],
 			"d1_databases": [
 				{
 					"binding": "DB",
@@ -76,6 +103,12 @@
 						"type": "ratelimit",
 						"namespace_id": "1002",
 						"simple": { "limit": 30, "period": 60 }
+					},
+					{
+						"name": "FEEDBACK_LIMITER",
+						"type": "ratelimit",
+						"namespace_id": "1004",
+						"simple": { "limit": 5, "period": 60 }
 					}
 				]
 			}

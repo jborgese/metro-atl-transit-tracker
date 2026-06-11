@@ -386,6 +386,31 @@ a:hover {
   width: min(100%, var(--content-max));
   margin: clamp(2rem, 4vw, 3rem) auto 0;
   text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+}
+.site-footer-link {
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  font: inherit;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.site-footer-link:hover {
+  color: var(--text-on-dark);
+}
+.site-footer-link:focus-visible {
+  outline: none;
+  border-color: var(--atl-blue);
+  box-shadow: 0 0 0 3px rgba(66, 128, 196, 0.35);
 }
 .skip-link {
   position: absolute;

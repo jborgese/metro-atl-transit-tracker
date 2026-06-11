@@ -6,6 +6,7 @@ import {
   projectCreateSchema,
   projectPatchSchema,
 } from '$lib/server/content/validators';
+import { feedbackCreateSchema } from '$lib/server/feedback/validators';
 
 // Extend Zod with `.openapi()` BEFORE we touch any schemas in this module.
 // Zod 4 copies prototype methods onto each instance at construction time, so
@@ -70,6 +71,14 @@ export function buildOpenApiDocument(serverUrl = '/') {
   const historySchema = registry.register('HistoryEvent', historyEvent);
   const meSchema = registry.register('Me', meResponse);
   const meUpdateSchema = registry.register('MeUpdate', meUpdate);
+  const feedbackSchema = registry.register(
+    'FeedbackCreate',
+    withOpenApi(feedbackCreateSchema),
+  );
+  const feedbackResponse = registry.register(
+    'FeedbackResponse',
+    z.object({ data: z.object({ id: z.string().optional(), received: z.literal(true) }) }),
+  );
 
   const projectListResponse = registry.register(
     'ProjectListResponse',
@@ -346,6 +355,20 @@ export function buildOpenApiDocument(serverUrl = '/') {
   });
 
   registry.registerPath({
+    method: 'post',
+    path: '/api/feedback',
+    summary: 'Submit visitor feedback',
+    tags: ['feedback'],
+    request: { body: { content: jsonContent(feedbackSchema), required: true } },
+    responses: {
+      201: { description: 'Received', content: jsonContent(feedbackResponse) },
+      400: errorContent,
+      413: errorContent,
+      429: errorContent,
+    },
+  });
+
+  registry.registerPath({
     method: 'put',
     path: '/api/me',
     summary: 'Upsert the caller display name',
@@ -375,6 +398,7 @@ export function buildOpenApiDocument(serverUrl = '/') {
       { name: 'goals', description: 'Goal resources.' },
       { name: 'history', description: 'Append-only mutation log.' },
       { name: 'me', description: 'Authenticated caller profile.' },
+      { name: 'feedback', description: 'Public visitor feedback submissions.' },
     ],
   });
 }

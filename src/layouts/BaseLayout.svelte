@@ -3,6 +3,7 @@
 </script>
 
 <script lang="ts">
+  import FeedbackModal from '../components/svelte/FeedbackModal.svelte';
   import MethodologyModal from '../components/svelte/MethodologyModal.svelte';
   import type { Snippet } from 'svelte';
 
@@ -17,6 +18,7 @@
   } = $props();
 
   let methodologyOpen = $state(false);
+  let feedbackOpen = $state(false);
 </script>
 
 <svelte:head>
@@ -63,7 +65,9 @@
 </main>
 
 <MethodologyModal bind:open={methodologyOpen} />
+<FeedbackModal bind:open={feedbackOpen} />
 
 <footer class="site-footer">
-  Not affiliated with MARTA, ARC, GDOT, or any governing body.
+  <span>Not affiliated with MARTA, ARC, GDOT, or any governing body.</span>
+  <button class="site-footer-link" onclick={() => feedbackOpen = true}>Send feedback</button>
 </footer>

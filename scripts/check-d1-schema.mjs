@@ -90,6 +90,21 @@ async function run() {
       ],
     },
     {
+      type: 'table',
+      name: 'feedback',
+      sqlIncludes: [
+        'create table feedback',
+        "category text not null default 'general'",
+        'email_sent integer not null default 0 check (email_sent in (0, 1))',
+        'created_at text not null',
+      ],
+    },
+    {
+      type: 'index',
+      name: 'idx_feedback_created_at',
+      sqlIncludes: ['on feedback (created_at desc)'],
+    },
+    {
       type: 'index',
       name: 'idx_projects_archive_state',
       sqlIncludes: ['on projects (is_archived, updated_at desc)'],

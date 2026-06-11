@@ -21,6 +21,7 @@ describe('buildOpenApiDocument', () => {
       '/api/goals/{id}/restore',
       '/api/history',
       '/api/me',
+      '/api/feedback',
     ]) {
       expect(paths).toContain(expected);
     }
