@@ -28,7 +28,7 @@
     "maplibre-gl": "^5.16.0",
     "mimetext": "^3.0.28",
     "tailwindcss": "^4.1.18",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@asteasolutions/zod-to-openapi": "^8.5.0",
