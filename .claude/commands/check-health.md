@@ -14,7 +14,7 @@ If `$ARGUMENTS` is provided, limit the audit to that path and say so in the repo
 ## Step 1 — Run the scanners
 Use the project's own gates first — they are ground truth:
 - `npm run check` (svelte-check/typecheck) — any errors are findings.
-- `npx eslint . --format json` — note that `npm run lint` passes with up to **140 warnings**; the size and composition of that warning backlog is itself a debt signal worth tabulating by rule.
+- `npx eslint . --format json` — note that `npm run lint` passes with warnings up to the `--max-warnings` ceiling in `package.json`; the size and composition of that warning backlog is itself a debt signal worth tabulating by rule.
 - `npm run test:coverage` — report % by directory.
 - `npm run schema:check` — D1 schema drift.
 
