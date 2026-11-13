@@ -134,7 +134,7 @@ Design-quality review criteria live in `.claude/rules/design-review.md`, and Sve
 - **API calls out of markup and effects.** Page data loads in a `load` function with the `fetch` it receives. Writes and on-demand reads call the JSON API with `fetch` from event handlers or `onMount`, as `FeedbackModal.svelte` and the admin page do. There is no shared API client or error-monitoring service.
 - **Types.** Domain types are hand-written in `src/types/content.ts`, and the Zod schemas live in each domain's `validators.ts`; nothing infers one from the other, so change both together. Component-local prop types may stay in the component.
 - **Derived values, not effects.** Compute read-only values with `$derived` or a pure helper, never with an `$effect` that assigns.
-- **Stacking.** There is no z-index scale yet. Read the values the existing overlays use (`Portal.svelte` and the modals) before picking one, and do not add a new tier without need.
+- **Stacking.** Use the `--z-*` tokens ([`design-tokens.md`](design-tokens.md) → Stacking), never a raw `z-index` number, and do not add a new tier without need.
 
 ## APIs And Data
 
@@ -217,7 +217,6 @@ When no row covers the case: match the file or folder you are editing, use the c
 | Hardcoded host and limits | `src/hooks.server.ts` hardcodes the apex host (`maitai.observer`) and mirrors the `WRITE_LIMITER` limit (30 per 60 s) for response headers. | Keep these values in step with `wrangler.jsonc` when either changes. |
 | `public/` vs `static/` | SvelteKit serves `static/`. `public/` is gitignored apart from two tracked favicons. | Put served assets in `static/`. |
 | Workers test pool | `@cloudflare/vitest-pool-workers` is installed, but `vitest.config.ts` does not use it, so unit tests run in Node and get no real D1. | Fake D1 and bindings in a hand-built `RequestEvent`, as the route tests do. Real D1 coverage belongs in the smoke and integration scripts. |
-| z-index | Overlays use per-file values from `z-40` up to `200000`; there is no scale. | Reuse an existing overlay's value; propose a scale in its own change. |
 
 ## Anti-Patterns
 
