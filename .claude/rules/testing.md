@@ -16,7 +16,7 @@ Apply when writing or reviewing tests. Cross-cutting principles (test logic at t
 - When running `vitest` directly, always use `npx vitest run`, which avoids watch mode.
 - Unit tests are colocated next to the module as `*.test.ts` (`vitest.config.ts` includes `src/**/*.{test,spec}.ts`) and run in Node. Smoke and integration checks are Node scripts in `scripts/` that run against a local Wrangler worker and local D1.
 - Add or update tests in the same PR as the feature or fix.
-- Commands: `npm run test` (all unit tests), `npm run test -- <path>` (one file), `npm run test:coverage`, `npm run test:smoke`, `npm run test:integration`. CI does not run `npm run test`, so run it locally before you push.
+- Commands: `npm run test` (all unit tests), `npm run test -- <path>` (one file), `npm run test:coverage`, `npm run test:smoke`, `npm run test:integration`.
 
 ## What to Test
 

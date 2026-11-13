@@ -2,7 +2,7 @@
 
 ## Branch workflow
 
-`main` is the only long-lived branch. Pushes to `main` run CI (`ci-gates.yml`), the content snapshot in `backup-snapshots.yml`, and a Cloudflare Workers Build. Workers Builds also runs on every pushed branch. Whether the `main` build deploys to production is set in the Cloudflare dashboard (`AGENTS.md` → Deployment).
+`main` is the only long-lived branch. Pushes to `main` run CI (`ci-gates.yml`), the content snapshot in `backup-snapshots.yml`, and a Cloudflare Workers Build. Workers Builds also runs on every pushed branch. The `main` build deploys to production; builds of other branches upload a version without deploying it (`AGENTS.md` → Deployment).
 
 - Branch from and target PRs to `main` unless the user specifies otherwise.
 - **Branch names:** `chore/short-description`, or ask the user for the preferred name. The repo has no issue tracker, so there are no ticket-key branches. Dependabot opens its own `dependabot/...` branches.

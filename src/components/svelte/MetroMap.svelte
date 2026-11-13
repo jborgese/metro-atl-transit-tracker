@@ -331,7 +331,6 @@
   });
 
   // Insert <link rel="preload" as="image"> tags for logos used by a county
-  const _preloadedLogoHrefs = new Set<string>();
   function preloadLogosForCounty(county: any) {
     if (!county) return;
     const hrefs: string[] = [];
@@ -350,14 +349,13 @@
       for (const g of county.advocacy.groups) collect(g.name);
     }
     for (const h of hrefs) {
-      if (!_preloadedLogoHrefs.has(h)) {
+      if (!document.head.querySelector(`link[rel="preload"][href="${h}"]`)) {
         try {
           const link = document.createElement('link');
           link.rel = 'preload';
           link.as = 'image';
           link.href = h;
           document.head.appendChild(link);
-          _preloadedLogoHrefs.add(h);
         } catch (e) {
           /* ignore */
         }
