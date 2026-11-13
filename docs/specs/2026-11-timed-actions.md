@@ -1,6 +1,6 @@
 # Timed actions
 
-**Status:** In Review
+**Status:** Approved
 **Owner:** Jared B.
 **Last updated:** 2026-11-13
 **Related:** none (the repo has no tracker); design review notes are summarised in [Appendix D](#d-references)
