@@ -107,10 +107,10 @@ Line counts are signals, not rules. Split when a unit becomes hard to review or 
 
 ### Backend
 
-The backend is SvelteKit `+server.ts` endpoints and server `load` functions running on Cloudflare Workers. There are no queue consumers or scheduled handlers. Server code lives in `src/lib/server/<domain>/`. D1 comes from `getDb(event)` in `src/lib/server/content/repository.ts`; other bindings come from `event.platform.env`.
+The backend is SvelteKit `+server.ts` endpoints and server `load` functions running on Cloudflare Workers. There are no queue consumers or scheduled handlers. Server code lives in `src/lib/server/<domain>/`. D1 comes from `getDb(event)` in `src/lib/server/content/repository.ts`; other bindings come from `env` in `cloudflare:workers` (adapter-cloudflare 8 no longer sets `event.platform`).
 
 - Keep handlers thin: parse input, call domain logic, format the response. Domain logic lives in functions that take typed inputs, return typed outputs, and are testable without the Workers runtime.
-- Get D1 through `getDb(event)` instead of reading `platform.env.DB` in new handlers.
+- Get D1 through `getDb(event)` instead of reading `env.DB` from `cloudflare:workers` in new handlers.
 - Mappers and transforms are pure functions, not classes (`src/lib/server/content/mappers.ts`).
 - Grow file layout on demand: start in the entry file; when it is hard to review, extract domain-named siblings; move to `{domain}/` folders only when a cohesive domain or external API appears. Do not create domain folders or many sibling files upfront.
 - Error strategy follows the workflow: throw contextual errors where failure should stop the flow; log, continue, and isolate partial failures in best-effort paths (feedback email delivery logs the failure and still returns 201); otherwise match the result shape of sibling handlers in the same workflow.
@@ -120,7 +120,7 @@ The backend is SvelteKit `+server.ts` endpoints and server `load` functions runn
 
 There is no infrastructure-as-code tool. Cloudflare configuration is `wrangler.jsonc`: production at the top level, staging under `env.staging`. It holds the `DB` (D1), `SEND_EMAIL`, `WRITE_LIMITER`, and `FEEDBACK_LIMITER` bindings and the public `vars`. Changes to it need approval (`AGENTS.md` → Ask before).
 
-- Read environment-specific values from `$env/dynamic/*` or `event.platform.env`, not literals. `hooks.server.ts` is an intentional exception; see Legacy.
+- Read environment-specific values from `$app/env/private` or `$app/env/public` (declared in `src/env.ts`) or bindings from `cloudflare:workers`, not literals. `hooks.server.ts` is an intentional exception; see Legacy.
 - Renaming a binding or changing a `database_id` repoints live resources; treat it as a production change.
 
 ### UI
@@ -184,7 +184,7 @@ Migrations are `migrations/d1/NNNN_description.sql`, zero-padded and sequential 
 | Layer                                                        | Runner                                                                         | Location                                       | Mock at                                                                                                      |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Server modules (handlers, validators, mappers, OpenAPI spec) | Vitest in Node (`npm run test`)                                                | Colocated `src/lib/server/**/*.test.ts`        | `vi.mock` on `#lib/server/...` boundaries such as `auth/editor`; fake stores passed to the handler factories |
-| API routes                                                   | Vitest                                                                         | Colocated `src/routes/api/**/<name>.test.ts`   | `vi.mock` on domain modules; a hand-built `RequestEvent` with a fake D1 and limiter in `platform.env`        |
+| API routes                                                   | Vitest                                                                         | Colocated `src/routes/api/**/<name>.test.ts`   | `vi.mock` on domain modules; a fake D1 and limiter on a mocked `cloudflare:workers` `env`                    |
 | Hooks                                                        | Vitest                                                                         | `src/hooks.server.test.ts`                     | Hand-built `RequestEvent`                                                                                    |
 | Smoke                                                        | Node script + local Wrangler worker                                            | `scripts/smoke-content-api.mjs`                | Nothing; real local worker and local D1                                                                      |
 | Integration                                                  | Node script + local Wrangler worker                                            | `scripts/integration-content-api.mjs`          | Nothing                                                                                                      |
@@ -223,10 +223,10 @@ When no row covers the case: match the file or folder you are editing, use the c
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | A new `+server.ts` with inline CRUD logic for a content type        | The `make*Handlers(store)` factories in `handlers.ts`                                           |
 | New fat handlers with D1 queries and domain logic inline            | Queries in the domain's data module, logic in testable helpers under `src/lib/server/<domain>/` |
-| Reading `platform.env.DB` inline in new code                        | `getDb(event)`                                                                                  |
+| Reading `env.DB` from `cloudflare:workers` inline in new code       | `getDb(event)`                                                                                  |
 | Authorization only in `hooks.server.ts` or a layout `load`          | `requireEditorActor` / `requireAuthenticatedIdentity` inside each handler and server `load`     |
 | Writing content tables directly, or touching `content_history` rows | The content service, which appends the history event                                            |
-| Hardcoded environment values (URLs, resource IDs, addresses)        | `$env/dynamic/*` and `event.platform.env`                                                       |
+| Hardcoded environment values (URLs, resource IDs, addresses)        | `$app/env/*` (declared in `src/env.ts`) and `cloudflare:workers` bindings                       |
 | String-interpolated SQL with user input                             | `.bind()` parameters and the query helpers in `repository.ts`                                   |
 | Hex literals or a second styling approach                           | Scoped styles and the tokens in `src/styles/global.css`                                         |
 | Copying a legacy feature as the scaffold for new work               | The canonical reference for that layer                                                          |
@@ -261,7 +261,7 @@ When no row covers the case: match the file or folder you are editing, use the c
 ### Tests
 
 - `src/lib/server/content/handlers.test.ts` - handler factories with a fake store and `vi.mock` on auth
-- `src/routes/api/feedback/feedback.test.ts` - route test with a fake D1 and limiter in `platform.env`
+- `src/routes/api/feedback/feedback.test.ts` - route test with a fake D1 and limiter on a mocked `cloudflare:workers` `env`
 - `src/components/svelte/FeedbackModal.svelte.test.ts` - component test: render, query by label, stub `fetch`, assert the request body
 
 ## Maintenance

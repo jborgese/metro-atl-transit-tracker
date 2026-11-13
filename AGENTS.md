@@ -1,6 +1,6 @@
 # AGENTS.md — metro-atl-transit-tracker
 
-SvelteKit 2 app (Svelte 5 runes, TypeScript) that powers maitai.observer, a public transit-advocacy map and content hub for Metro Atlanta. It contains a MapLibre map, goals and history pages, an admin JSON editor, and JSON API endpoints backed by Cloudflare D1. It deploys to Cloudflare Workers and uses npm.
+SvelteKit 3 app (Svelte 5 runes, TypeScript) that powers maitai.observer, a public transit-advocacy map and content hub for Metro Atlanta. It contains a MapLibre map, goals and history pages, an admin JSON editor, and JSON API endpoints backed by Cloudflare D1. It deploys to Cloudflare Workers and uses npm.
 
 This file provides operational guidance for **all AI agents** (Cursor, Claude Code, Codex, Copilot, etc.). **Canonical coding patterns** live in [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md); area-specific rules live in `.claude/rules/*.md`. Human contributor conventions start in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
@@ -10,7 +10,7 @@ This file provides operational guidance for **all AI agents** (Cursor, Claude Co
 
 ## Setup
 
-**Prerequisites:** Node.js 22+ (CI uses Node 22; no version file is pinned), npm, and Wrangler (a dev dependency; run it with `npx wrangler`).
+**Prerequisites:** Node.js 22.17+ (SvelteKit 3's minimum; CI uses the latest Node 22; no version file is pinned), npm, and Wrangler (a dev dependency; run it with `npx wrangler`).
 
 ```bash
 npm install
