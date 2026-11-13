@@ -65,6 +65,7 @@
 
   let panelEl: HTMLElement | null = $state(null);
   let closeBtn: HTMLButtonElement | null = $state(null);
+  let mapUnavailable = $state(false);
 
   // derived related projects for the selected county
   // Use precomputed lookup to avoid scanning the full projects array on each selection
@@ -289,6 +290,7 @@
         safeResize();
       } catch (e) {
         log.error('map:construct-failed', e);
+        mapUnavailable = true;
       }
     })();
 
@@ -370,9 +372,9 @@
 </script>
 
 <section aria-label={title}>
-  <div class="relative rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
+  <div>
     <div
-      class="map-frame relative w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950"
+      class="map-frame"
       style={`--map-height: ${height}; --map-height-desktop: ${desktopHeight};`}
       aria-label="Metro Atlanta map"
     >
@@ -380,13 +382,11 @@
            MapLibre's own canvas handles keyboard pan/zoom (arrows, +/-) and
            is exposed to assistive tech without a role="application" wrapper. -->
       <div class="map-container" bind:this={mapEl}>
-        <button
-          type="button"
-          class="select-center-button absolute top-2 right-2 z-40 rounded bg-neutral-900/80 px-3 py-2 text-xs text-neutral-100 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          onclick={selectCenteredCounty}
-        >
-          Select county at map center
-        </button>
+        {#if !mapUnavailable}
+          <button type="button" class="select-center-button" onclick={selectCenteredCounty}>
+            Select county at map center
+          </button>
+        {/if}
         {#if showDebugPanel}
           <DebugBadge
             selectedCountyKey={debugSelectedKey}
@@ -395,17 +395,22 @@
           />
         {/if}
         {#if selectedCounty}
-          <aside bind:this={panelEl} class="map-panel-wrapper absolute top-4 left-4 z-50">
-            <button
-              bind:this={closeBtn}
-              aria-label="Close county panel"
-              class="text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2 w-8 h-8 flex items-center justify-center text-xl leading-none"
-              onclick={closePanel}>&times;</button
+          <aside bind:this={panelEl} class="map-panel-wrapper">
+            <button bind:this={closeBtn} aria-label="Close county panel" onclick={closePanel}
+              >&times;</button
             >
             <MetroCountyPanel county={selectedCounty} />
           </aside>
         {/if}
       </div>
+      {#if mapUnavailable}
+        <p class="map-unavailable" role="status">
+          <span>
+            The interactive map couldn't start in this browser. Try another browser or turn on
+            hardware acceleration; the county goals below still work.
+          </span>
+        </p>
+      {/if}
     </div>
   </div>
 </section>
@@ -418,7 +423,48 @@
   }
 
   .map-frame {
+    position: relative;
     height: var(--map-height);
+  }
+
+  .map-unavailable {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    padding: 1.5rem;
+    text-align: center;
+    background: var(--surface-1);
+    color: var(--text-muted);
+  }
+
+  .map-unavailable span {
+    max-width: var(--content-narrow);
+  }
+
+  .select-center-button {
+    position: absolute;
+    top: 10px;
+    right: calc(10px + 29px + 10px);
+    z-index: var(--z-map-control);
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.375rem;
+    background: var(--surface-2);
+    color: var(--text-on-dark);
+    font-size: 0.75rem;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  .select-center-button:hover {
+    border-color: var(--border-strong);
+  }
+
+  .select-center-button:focus-visible {
+    outline: 2px solid var(--atl-blue);
+    outline-offset: 2px;
   }
 
   @media (min-width: 1024px) {

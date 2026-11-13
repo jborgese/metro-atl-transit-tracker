@@ -64,7 +64,7 @@ npm run dev
 - `src/lib/map/`: MapLibre setup and layer helpers, plain TypeScript called from components
 - `src/lib/server/`: server-only code: `auth/` (Cloudflare Access JWT, `requireEditorActor`), `content/` (projects, goals, history, profiles), `feedback/`, `openapi/`
 - `src/routes/`: pages (`/`, `/history`, `/admin`) and JSON API endpoints under `src/routes/api/`
-- `src/styles/global.css`: design tokens (CSS custom properties) and the Tailwind imports
+- `src/styles/global.css`: design tokens (CSS custom properties) and shared base styles; `src/styles/preflight.css` is the CSS reset it imports (copied from Tailwind CSS)
 - `src/types/`: shared, type-only declarations with a barrel at `src/types/index.ts`
 - `src/utils/`: isomorphic helpers (status colors, date formatting, logger, county lookup)
 - `static/`: assets SvelteKit serves as-is
@@ -105,7 +105,7 @@ Follow [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) for cross-cutting 
 **Repo-specific reminders:**
 
 - Imports: `$lib/...`, `@/...`, and relative paths coexist; match the file you are editing (`docs/CODING_STANDARDS.md` → Legacy).
-- Styling is Tailwind 4 utilities plus the CSS custom-property tokens in `src/styles/global.css`. Do not add hex literals ([`docs/design-tokens.md`](docs/design-tokens.md)). The site is dark-only.
+- Styling is scoped `<style>` blocks and `src/styles/global.css`, built on the CSS custom-property tokens defined there. There is no utility-class framework. Do not add hex literals ([`docs/design-tokens.md`](docs/design-tokens.md)). The site is dark-only.
 - Every API input is validated with Zod; responses are `{ data }` for items and `{ data, meta: { count } }` for lists.
 - D1 queries use bound parameters (`.bind()`) only.
 - Content writes go through the content service so they append a history event; never write the content tables directly.
@@ -255,7 +255,7 @@ For review passes, prefer role separation and `readonly` review before model sep
 | Backup, retention, and restore runbooks                                      | [`docs/backup-retention-policy.md`](docs/backup-retention-policy.md)                                                                   |
 | CI gates                                                                     | [`docs/ci-gate-policy.md`](docs/ci-gate-policy.md)                                                                                     |
 | Design review principles                                                     | [`.claude/rules/design-review.md`](.claude/rules/design-review.md)                                                                     |
-| Design tokens and styling (Tailwind 4 + tokens)                              | [`docs/design-tokens.md`](docs/design-tokens.md)                                                                                       |
+| Design tokens and styling (scoped CSS + tokens)                              | [`docs/design-tokens.md`](docs/design-tokens.md)                                                                                       |
 | Doc edits                                                                    | [`.claude/rules/doc-review.md`](.claude/rules/doc-review.md)                                                                           |
 | Functional programming                                                       | [`.claude/rules/functional-programming.md`](.claude/rules/functional-programming.md)                                                   |
 | Git branch naming and GitHub operations                                      | [`.claude/rules/github-operations.md`](.claude/rules/github-operations.md)                                                             |

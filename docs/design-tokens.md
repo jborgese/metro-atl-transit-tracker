@@ -7,7 +7,6 @@ The Atlanta-1996 design system is expressed as CSS custom properties on `:root` 
 ## How to use
 
 - In `.svelte` and `.css` files: `color: var(--text-on-dark); background: var(--surface-1);`
-- In Tailwind utility contexts where no shade is a faithful match, use the token via arbitrary value: `bg-[color:var(--surface-1)]` or `border-[color:var(--border-subtle)]`.
 - Do not hardcode brand hexes outside [global.css](../src/styles/global.css) and [src/utils/statusHelpers.ts](../src/utils/statusHelpers.ts) (see "Status badges" below).
 
 ## Color scheme: dark-only
@@ -85,17 +84,18 @@ Inter and Merriweather are loaded via `<link rel="preconnect">` + `<link rel="st
 | `--section-gap`     | `clamp(1.5rem, 3vw, 2.75rem)`  | Vertical rhythm between sections. |
 | `--header-gap`      | `clamp(0.75rem, 2vw, 1.25rem)` | Space inside header rows.         |
 
-### Stacking (5)
+### Stacking (6)
 
 Every `z-index` uses one of these tiers, lowest to highest. A new overlay reuses the tier it sits with; add a tier only when no existing one orders it correctly.
 
-| Token                  | Value    | Use when                                                  |
-| ---------------------- | -------- | --------------------------------------------------------- |
-| `--z-skip-link`        | `10001`  | The focused skip link.                                    |
-| `--z-map-county-panel` | `10050`  | `.county-panel-content` inside `.map-container`.          |
-| `--z-debug`            | `99999`  | `DebugBadge.svelte`.                                      |
-| `--z-county-panel`     | `100000` | `.county-panel-content` outside the map (fixed position). |
-| `--z-modal`            | `200000` | Modal backdrops rendered through `Portal.svelte`.         |
+| Token                  | Value    | Use when                                                          |
+| ---------------------- | -------- | ----------------------------------------------------------------- |
+| `--z-map-control`      | `10`     | App controls layered on the map canvas (`.select-center-button`). |
+| `--z-skip-link`        | `10001`  | The focused skip link.                                            |
+| `--z-map-county-panel` | `10050`  | `.county-panel-content` inside `.map-container`.                  |
+| `--z-debug`            | `99999`  | `DebugBadge.svelte`.                                              |
+| `--z-county-panel`     | `100000` | `.county-panel-content` outside the map (fixed position).         |
+| `--z-modal`            | `200000` | Modal backdrops rendered through `Portal.svelte`.                 |
 
 ## Status badges (cross-reference)
 

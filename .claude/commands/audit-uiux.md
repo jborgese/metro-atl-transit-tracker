@@ -11,7 +11,7 @@ If `$ARGUMENTS` is provided, limit the audit to that route or component subtree 
 
 @.claude/snippets/project-context.md
 
-Frontend specifics for this audit: Svelte 5 components under `src/components` and `src/routes`, Tailwind CSS 4 utility styling (theme in `tailwind.config.ts` and `src/styles`), SSR on Cloudflare Workers (so Core Web Vitals are shaped by server render + hydration, not a pure SPA bundle), and MapLibre GL for the map — give the map's keyboard/screen-reader story explicit attention, since canvas-based maps are a common accessibility hole.
+Frontend specifics for this audit: Svelte 5 components under `src/components` and `src/routes`, scoped Svelte styles on CSS custom-property tokens (`src/styles/global.css`, `docs/design-tokens.md`), SSR on Cloudflare Workers (so Core Web Vitals are shaped by server render + hydration, not a pure SPA bundle), and MapLibre GL for the map — give the map's keyboard/screen-reader story explicit attention, since canvas-based maps are a common accessibility hole.
 
 ## Step 1 — Accessibility (WCAG 2.2 AA)
 
