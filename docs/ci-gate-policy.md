@@ -16,21 +16,25 @@ Pass criteria: `svelte-check` reports zero errors.
 Command: `npm run lint`
 Pass criteria: ESLint exits cleanly with zero warnings.
 
-3. Schema Check
+3. Unit Tests
+Command: `npm run test`
+Pass criteria: every Vitest test passes.
+
+4. Schema Check
 Command: `npm run schema:check`
 Pass criteria:
 - Local D1 migrations apply successfully.
 - Required tables, indexes, and immutability triggers exist in `sqlite_master`.
 - Expected SQL constraints for payload JSON validity and archive/history invariants are present.
 
-4. Smoke Test
+5. Smoke Test
 Command: `npm run test:smoke`
 Pass criteria:
 - Worker starts locally with Wrangler.
 - Public read routes return valid responses.
 - Project write/archive/restore flow succeeds end-to-end.
 
-5. Integration Test
+6. Integration Test
 Command: `npm run test:integration`
 Pass criteria:
 - Mutation history ordering invariants hold for projects and goals.

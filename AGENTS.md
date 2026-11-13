@@ -123,7 +123,7 @@ See [`.claude/rules/github-operations.md`](.claude/rules/github-operations.md) f
 - **Branch names:** `chore/short-description` (or ask the user). The repo has no issue tracker, so there are no ticket-key branches.
 - Keep commits and PRs focused; avoid bundling unrelated changes.
 - Write descriptive commit messages; no WIP commits in final PRs.
-- All required CI checks must pass before a PR can merge. `.github/workflows/ci-gates.yml` runs three jobs on every PR and on pushes to `main`. **Quality Checks** runs typecheck, lint, and schema check; **Smoke Test** and **Integration Test** follow it. It does not run `npm run test`, so run that locally.
+- All required CI checks must pass before a PR can merge. `.github/workflows/ci-gates.yml` runs three jobs on every PR and on pushes to `main`. **Quality Checks** runs typecheck, lint, unit tests, and schema check; **Smoke Test** and **Integration Test** follow it.
 
 Pushes to `main` also trigger `.github/workflows/backup-snapshots.yml`, which snapshots `data/content/*` to R2, and a Cloudflare Workers Build that may deploy (see Deployment).
 
