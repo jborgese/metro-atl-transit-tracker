@@ -94,8 +94,8 @@ export function getClientKey(event: RequestEvent): string {
   return 'unknown';
 }
 
-function getWriteLimiter(): WriteRateLimit | undefined {
-  const candidate = env.WRITE_LIMITER;
+export function getRateLimiter(bindingName: string): WriteRateLimit | undefined {
+  const candidate = env[bindingName];
   if (
     candidate &&
     typeof candidate === 'object' &&
@@ -103,6 +103,7 @@ function getWriteLimiter(): WriteRateLimit | undefined {
   ) {
     return candidate as WriteRateLimit;
   }
+  console.warn(`[rate-limit] ${bindingName} binding unavailable; requests are not rate limited`);
   return undefined;
 }
 
@@ -156,7 +157,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     return response;
   }
 
-  const limiter = getWriteLimiter();
+  const limiter = getRateLimiter('WRITE_LIMITER');
   const { allowed } = await checkWriteRateLimit(limiter, getClientKey(event));
   if (!allowed) {
     const response = json({ error: 'Too Many Requests' }, { status: 429 });
