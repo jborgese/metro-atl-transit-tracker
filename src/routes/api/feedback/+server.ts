@@ -1,5 +1,5 @@
 import { WRITE_RATE_LIMIT_ENABLED } from '$app/env/private';
-import { json, type RequestHandler } from '@sveltejs/kit';
+import type { RequestHandler } from '@sveltejs/kit';
 import { checkWriteRateLimit, getClientKey, getRateLimiter } from '../../../hooks.server';
 import { ContentStoreError } from '#lib/server/content/errors.ts';
 import { readJsonBody, toHttpError } from '#lib/server/content/http.ts';
@@ -17,7 +17,7 @@ export const POST: RequestHandler = async (event) => {
     // Bots that fill the hidden field get a success response with no side
     // effects, so the trap stays invisible.
     if (isHoneypotTripped(payload)) {
-      return json({ data: { received: true } }, { status: 201 });
+      return Response.json({ data: { received: true } }, { status: 201 });
     }
 
     const parsed = toFeedbackCreate(payload);
@@ -39,11 +39,11 @@ export const POST: RequestHandler = async (event) => {
       await markEmailSent(row.id);
     }
 
-    const response = json({ data: { id: row.id, received: true } }, { status: 201 });
+    const response = Response.json({ data: { id: row.id, received: true } }, { status: 201 });
     return response;
   } catch (err) {
     if (err instanceof ContentStoreError && err.status === 429) {
-      return json(
+      return Response.json(
         { message: err.message },
         { status: 429, headers: { 'Retry-After': String(FEEDBACK_LIMIT_WINDOW_SECONDS) } },
       );

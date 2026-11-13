@@ -1,4 +1,4 @@
-import { json, redirect, type RequestEvent } from '@sveltejs/kit';
+import { redirect, type RequestEvent } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit/hooks';
 import { WRITE_RATE_LIMIT_ENABLED } from '$app/env/private';
 import { env } from 'cloudflare:workers';
@@ -139,7 +139,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
 
   if (isCrossOriginWrite(event)) {
-    const response = json({ error: 'Forbidden' }, { status: 403 });
+    const response = Response.json({ error: 'Forbidden' }, { status: 403 });
     applySecurityHeaders(response.headers);
     return response;
   }
@@ -160,7 +160,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   const limiter = getRateLimiter('WRITE_LIMITER');
   const { allowed } = await checkWriteRateLimit(limiter, getClientKey(event));
   if (!allowed) {
-    const response = json({ error: 'Too Many Requests' }, { status: 429 });
+    const response = Response.json({ error: 'Too Many Requests' }, { status: 429 });
     applyRateLimitHeaders(response.headers, false);
     applySecurityHeaders(response.headers);
     response.headers.set('Retry-After', String(WRITE_LIMIT_WINDOW_SECONDS));
