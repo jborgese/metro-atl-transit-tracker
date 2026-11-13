@@ -26,11 +26,15 @@ const goals = [
   },
 ] as unknown as Goal[];
 
+const firstCells = (container: HTMLElement) =>
+  [...container.querySelectorAll('tr.goal-row td:first-child')].map((n) => n.textContent?.trim());
+
 describe('GoalsTable', () => {
   it('renders each goal once per table with its project card, no county selected', () => {
     const { container } = render(GoalsTable, { props: { goals, projects } });
     expect(container.querySelectorAll('tr.goal-row')).toHaveLength(2);
     expect(container.querySelectorAll('.project-card')).toHaveLength(2);
+    expect(firstCells(container)).toEqual(['Regional goal', 'County goal']);
   });
 
   it('renders the selected county then regional', () => {
@@ -39,6 +43,18 @@ describe('GoalsTable', () => {
     });
     expect(container.querySelectorAll('tr.goal-row')).toHaveLength(2);
     expect(container.querySelectorAll('.project-card')).toHaveLength(2);
+    expect(firstCells(container)).toEqual(['County goal', 'Regional goal']);
+    const infos = [...container.querySelectorAll('.contact-info')].map((n) =>
+      n.textContent?.trim(),
+    );
+    expect(infos).toEqual(['(call first)', '(call first)']);
+  });
+
+  it('opens a project on click', async () => {
+    const onselectProject = vi.fn();
+    const { container } = render(GoalsTable, { props: { goals, projects, onselectProject } });
+    await fireEvent.click(container.querySelector('.project-card')!);
+    expect(onselectProject).toHaveBeenCalledWith({ project: projects[0] });
   });
 
   it('opens a project from the keyboard', async () => {

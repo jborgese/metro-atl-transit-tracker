@@ -76,14 +76,14 @@ As an editor, I want to add an ask with a description, optional link, optional l
 
 ### 4.1 Summary
 
-A new content type, called "Action" in the admin and `timed_action` everywhere it is stored or served, with its own table, API routes and admin tab. The public page shows a live action as a slim amber banner under its goal. "Live" is a pure rule evaluated on every read (not archived, last day not past in Atlanta, goal not archived), so the page cannot show an expired ask. An expired row is archived for real, with a history event credited to `system`, by a guarded sweep that runs before the History page, the admin list, a single-item read or any write answers. This beats a scheduled job, which the current Cloudflare adapter cannot host without replacing the Worker entry and the deploy command.
+A new content type, called "Action" in the admin and `timed_action` everywhere it is stored or served, with its own table, API routes and admin tab. The public page shows a live action as a slim amber banner under its goal. "Live" is a pure rule evaluated on every read (not archived, last day not past in Atlanta, goal not archived), so the page cannot show an expired ask. An expired row is archived for real, with a history event credited to `system`, by a guarded sweep that runs before the History page, the admin list, a single-item read or any timed-action write answers. This beats a scheduled job, which the current Cloudflare adapter cannot host without replacing the Worker entry and the deploy command.
 
 ### 4.2 Diagram
 
 ```mermaid
 flowchart LR
   V[Visitor: home page] -->|GET /api/timed-actions| L[Default list: live rule only, no writes]
-  E[Editor: admin tab] -->|list with includeArchived, item read, any write| S[Sweep expired rows]
+  E[Editor: admin tab] -->|list with includeArchived, item read, any timed-action write| S[Sweep expired rows]
   H[Anyone: History page] -->|GET /api/history| S
   S -->|conditional archive + one history event, actor system| D[(timed_actions + content_history)]
   L --> D
@@ -320,7 +320,7 @@ Built from `makeCollectionHandlers`, `makeItemHandlers` and `makeRestoreHandler`
 
 **Callouts:**
 
-- **Map entity types to labels:** Project, Goal, Timed action. The page currently prints the raw `entity_type` under a column that is itself headed "Action".
+- **Map entity types to labels:** Project, Goal, Timed action. The page currently prints the raw `entity_type:entity_id` under its "Entity" column, next to a separate "Action" column that holds the verb.
 - **Update the intro sentence,** which says the log covers "project and goal edits".
 - **`system` is a new actor value.** It has no profile, so it displays as written.
 
@@ -424,7 +424,8 @@ As an editor, I need to create and manage timed actions through the API so that 
 
 - **Unit (Vitest):** everything that needs no database: the live rule with a set clock (last day, day after, both daylight-saving weekends), the validators, id generation, and handler auth and status codes against a fake store. The Vitest setup stubs `cloudflare:workers` with an empty `env`, so `getDb()` throws there and service code cannot be unit-tested as it stands.
 - **Integration (local Wrangler worker, `scripts/integration-content-api.mjs` and the smoke script):** everything that touches D1: create, list, replace-on-update, archive no-op, restore 409, and the sweep writing exactly one `system` event. The API rejects past dates, so insert the expired rows with a local `wrangler d1 execute`.
-  **Legacy / migration handling:** none beyond Ticket 2.
+
+**Legacy / migration handling:** none beyond Ticket 2.
 
 **Definition of done:** `npm run ci:gate:full` passes; the routes answer on production with an empty list.
 **Rollback / feature flag:** revert the PR; the table keeps any rows and nothing reads them.
