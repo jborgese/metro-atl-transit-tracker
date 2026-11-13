@@ -1,11 +1,11 @@
 import { WRITE_RATE_LIMIT_ENABLED } from '$app/env/private';
 import { json, type RequestEvent, type RequestHandler } from '@sveltejs/kit';
 import { checkWriteRateLimit, getClientKey, type WriteRateLimit } from '../../../hooks.server';
-import { ContentStoreError } from '$lib/server/content/errors';
-import { readJsonBody, toHttpError } from '$lib/server/content/http';
-import { sendFeedbackEmail } from '$lib/server/feedback/email';
-import { insertFeedback, markEmailSent } from '$lib/server/feedback/store';
-import { isHoneypotTripped, toFeedbackCreate } from '$lib/server/feedback/validators';
+import { ContentStoreError } from '#lib/server/content/errors.ts';
+import { readJsonBody, toHttpError } from '#lib/server/content/http.ts';
+import { sendFeedbackEmail } from '#lib/server/feedback/email.ts';
+import { insertFeedback, markEmailSent } from '#lib/server/feedback/store.ts';
+import { isHoneypotTripped, toFeedbackCreate } from '#lib/server/feedback/validators.ts';
 
 // Mirror of the `simple` block on the FEEDBACK_LIMITER binding in wrangler.jsonc.
 const FEEDBACK_LIMIT_WINDOW_SECONDS = 60;

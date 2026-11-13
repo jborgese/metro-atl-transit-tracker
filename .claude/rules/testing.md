@@ -46,7 +46,7 @@ Apply when writing or reviewing tests. Cross-cutting principles (test logic at t
 
 The repo's handlers come in two shapes, and each has its own test pattern:
 
-- **Handler factories** (`makeCollectionHandlers(store)` and siblings in `src/lib/server/content/handlers.ts`): pass a fake store whose methods are `vi.fn()`. Mock only auth with `vi.mock('$lib/server/auth/editor')`. See `handlers.test.ts`.
+- **Handler factories** (`makeCollectionHandlers(store)` and siblings in `src/lib/server/content/handlers.ts`): pass a fake store whose methods are `vi.fn()`. Mock only auth with `vi.mock('#lib/server/auth/editor.ts')`. See `handlers.test.ts`.
 - **Hand-written `+server.ts` handlers**: `vi.mock` the domain modules they import, then `await import('./+server')`. Pass a hand-built `RequestEvent` whose `platform.env` holds a fake `DB` and limiter where the handler reads them. See `src/routes/api/feedback/feedback.test.ts` and `src/routes/api/me/me.test.ts`.
 - Declare mock functions with `vi.hoisted` so they exist when the hoisted `vi.mock` factory runs.
 - **Do** reset mocks in `beforeEach` (`mockClear()` plus a default `mockImplementation`, or `vi.clearAllMocks()`), so cases do not share state.
@@ -57,7 +57,7 @@ A factory test has this shape; `makeEvent` builds a minimal `RequestEvent`, as i
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireEditorActor = vi.hoisted(() => vi.fn(async () => 'tester@example.test'));
-vi.mock('$lib/server/auth/editor', () => ({ requireEditorActor }));
+vi.mock('#lib/server/auth/editor.ts', () => ({ requireEditorActor }));
 
 const { makeCollectionHandlers } = await import('./handlers');
 

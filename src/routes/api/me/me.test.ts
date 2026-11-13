@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
-import { ContentStoreError } from '$lib/server/content/errors';
+import { ContentStoreError } from '#lib/server/content/errors.ts';
 
 type Profile = { identity: string; display_name: string; updated_at: string };
 
@@ -28,8 +28,8 @@ const deleteProfile = vi.hoisted(() =>
   vi.fn(async (_event: unknown, _identity: string): Promise<void> => undefined),
 );
 
-vi.mock('$lib/server/auth/editor', () => ({ requireAuthenticatedIdentity }));
-vi.mock('$lib/server/content/profiles', () => ({ getProfile, upsertProfile, deleteProfile }));
+vi.mock('#lib/server/auth/editor.ts', () => ({ requireAuthenticatedIdentity }));
+vi.mock('#lib/server/content/profiles.ts', () => ({ getProfile, upsertProfile, deleteProfile }));
 
 const { GET, PUT } = await import('./+server');
 

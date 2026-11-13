@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
 
 const sendFeedbackEmail = vi.hoisted(() => vi.fn(async (): Promise<boolean> => false));
-vi.mock('$lib/server/feedback/email', () => ({ sendFeedbackEmail }));
+vi.mock('#lib/server/feedback/email.ts', () => ({ sendFeedbackEmail }));
 
 const { POST } = await import('./+server');
 

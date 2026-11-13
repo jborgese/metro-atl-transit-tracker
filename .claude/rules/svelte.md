@@ -88,14 +88,14 @@ These are unchanged in runes mode: `bind:this`, `bind:value`/`bind:checked` (to 
 
 ## TypeScript
 
-- Use `<script lang="ts">`. `svelte.config.js` calls `vitePreprocess()` without `script: true`, so Svelte compiles component TypeScript itself and accepts only type-level features: no `enum`, no constructor parameter properties.
+- Use `<script lang="ts">`. `vite.config.js` passes `vitePreprocess()` without `script: true`, so Svelte compiles component TypeScript itself and accepts only type-level features: no `enum`, no constructor parameter properties.
 - Type component references as `Component<Props>`, and read another component's props with `ComponentProps`.
 - A component that wraps a native element extends that element's attribute type from `svelte/elements` (for example `HTMLButtonAttributes`) and spreads the rest props onto it.
 - Type-check with `npm run typecheck` (`svelte-kit sync && svelte-check`), which covers `.svelte` files.
 
 ## SvelteKit
 
-- **Server code stays on the server.** Secrets, D1 access, and private environment variables live in server-only modules: files named `*.server.ts` or modules under `src/lib/server/` (`$lib/server/...`). SvelteKit refuses to bundle those, or `$env/*/private`, into client code. Whatever a `load` function returns is sent to the browser, so return only what the page needs.
+- **Server code stays on the server.** Secrets, D1 access, and private environment variables live in server-only modules: files named `*.server.ts` or modules in a `server/` directory (`#lib/server/...`). SvelteKit refuses to bundle those, or `$app/env/private`, into client code. Whatever a `load` function returns is sent to the browser, so return only what the page needs.
 - **Pick the `load` by what it needs.** Server `load` (`+page.server.ts`) for auth and private data, as `src/routes/admin/+page.server.ts` does. Universal `load` (`+page.ts`) for public data and fetching this app's own API, as `src/routes/+page.ts` does. Call the `fetch` that `load` receives, not the global one.
 - **`load` is pure.** It returns data; it never writes to module state.
 - **No waterfalls.** Start independent requests together (`Promise.all` in `src/routes/+page.ts`), and call `await parent()` after your own requests unless you need its result first.
@@ -107,7 +107,7 @@ These are unchanged in runes mode: `bind:this`, `bind:value`/`bind:checked` (to 
 - **App state comes from `$app/state`** (`page`, `navigating`, `updated`; SvelteKit 2.12+). `$app/stores` is deprecated. The repo imports neither today. State that should survive a reload or be shareable goes in the URL, as the selected project does on `/`.
 - **Route types come from `./$types`.** Pages use `PageData`, `PageLoad`, and `PageServerLoad`; the installed version also generates `PageProps`. API handlers in this repo are typed with `RequestHandler` from `@sveltejs/kit`; match the file.
 - **Environment.** Variables come from `$env/dynamic/private` and `$env/dynamic/public` (for example `PUBLIC_MAPTILER_KEY`). Cloudflare bindings come from `event.platform.env`: `DB` (D1, through `getDb`), `WRITE_LIMITER`, `FEEDBACK_LIMITER`, and `SEND_EMAIL`. Public values are declared in `wrangler.jsonc` `vars`, and `.env.example` documents local ones.
-- **Imports.** `$lib/...` and the `@/...` alias from `svelte.config.js` work; `#lib/...` does not. Which style a file uses varies, so match the file (`docs/CODING_STANDARDS.md` → Legacy).
+- **Imports.** `#lib/...` (with the `.ts` extension, declared in `package.json` `imports`) and the `@/...` alias from `vite.config.js` work; SvelteKit 3 no longer provides `$lib/...`. Which style a file uses varies, so match the file (`docs/CODING_STANDARDS.md` → Legacy).
 
 ## Checks And Tooling
 

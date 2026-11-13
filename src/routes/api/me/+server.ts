@@ -1,8 +1,8 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { requireAuthenticatedIdentity } from '$lib/server/auth/editor';
-import { ContentStoreError } from '$lib/server/content/errors';
-import { readJsonBody, toHttpError } from '$lib/server/content/http';
-import { deleteProfile, getProfile, upsertProfile } from '$lib/server/content/profiles';
+import { requireAuthenticatedIdentity } from '#lib/server/auth/editor.ts';
+import { ContentStoreError } from '#lib/server/content/errors.ts';
+import { readJsonBody, toHttpError } from '#lib/server/content/http.ts';
+import { deleteProfile, getProfile, upsertProfile } from '#lib/server/content/profiles.ts';
 
 interface MeResponse {
   identity: string;

@@ -104,7 +104,7 @@ Follow [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) for cross-cutting 
 
 **Repo-specific reminders:**
 
-- Imports: `$lib/...`, `@/...`, and relative paths coexist; match the file you are editing (`docs/CODING_STANDARDS.md` → Legacy).
+- Imports: `#lib/...`, `@/...`, and relative paths coexist; match the file you are editing (`docs/CODING_STANDARDS.md` → Legacy).
 - Styling is scoped `<style>` blocks and `src/styles/global.css`, built on the CSS custom-property tokens defined there. There is no utility-class framework. Do not add hex literals ([`docs/design-tokens.md`](docs/design-tokens.md)). The site is dark-only.
 - Every API input is validated with Zod; responses are `{ data }` for items and `{ data, meta: { count } }` for lists.
 - D1 queries use bound parameters (`.bind()`) only.
