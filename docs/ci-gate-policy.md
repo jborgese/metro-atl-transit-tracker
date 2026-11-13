@@ -14,7 +14,7 @@ Pass criteria: `svelte-check` reports zero errors.
 
 2. Lint
 Command: `npm run lint`
-Pass criteria: ESLint exits cleanly with zero warnings.
+Pass criteria: ESLint reports zero errors and no more warnings than the `--max-warnings` ceiling in the `lint` script in `package.json`. Every warning comes from a backlog rule demoted to `warn` in `eslint.config.cjs`. The ceiling only goes down: a PR that clears a backlog rule's warnings promotes that rule to `error` and lowers the ceiling by the same count.
 
 3. Unit Tests
 Command: `npm run test`
