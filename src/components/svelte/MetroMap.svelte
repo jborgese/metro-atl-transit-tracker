@@ -443,6 +443,30 @@
     max-width: var(--content-narrow);
   }
 
+  .select-center-button {
+    position: absolute;
+    top: 10px;
+    right: calc(10px + 29px + 10px);
+    z-index: var(--z-map-control);
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.375rem;
+    background: var(--surface-2);
+    color: var(--text-on-dark);
+    font-size: 0.75rem;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  .select-center-button:hover {
+    border-color: var(--border-strong);
+  }
+
+  .select-center-button:focus-visible {
+    outline: 2px solid var(--atl-blue);
+    outline-offset: 2px;
+  }
+
   @media (min-width: 1024px) {
     .map-frame {
       height: var(--map-height-desktop);
