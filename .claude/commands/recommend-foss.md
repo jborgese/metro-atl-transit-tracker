@@ -13,20 +13,26 @@ If `$ARGUMENTS` is provided, focus the analysis on that capability or path and s
 
 The dependency tree is deliberately small (jose, zod, maplibre-gl, tailwindcss at runtime), so expect a fair amount of hand-rolled capability. Likely candidates to inspect: auth/session handling (built on `jose`), rate limiting, GTFS/transit feed ingestion and parsing, caching layers, the D1 query layer (raw SQL vs a query builder like Drizzle, which has first-class D1 support), and OpenAPI route wiring. Constraint that shapes every recommendation: **the runtime is Cloudflare Workers** — candidates must work without Node-only APIs.
 
-## Step 1 — Inventory what the repo *does*
+## Step 1 — Inventory what the repo _does_
+
 Identify the major capabilities the codebase implements (e.g., HTTP routing, auth, validation, observability, retries, caching, scheduling, data ingestion, search). For each, note whether it is:
+
 - Built on a well-known framework (SvelteKit itself covers routing/SSR).
 - Glued together with smaller libs.
 - Hand-rolled.
 
 ## Step 2 — Identify hand-rolled or thin-glue capabilities
+
 For each hand-rolled capability that has a mature FOSS alternative:
+
 - Estimate LOC under maintenance.
 - Estimate test coverage of that bespoke code.
 - List any signals it is buggy or stale (TODOs, recent fixes, "we should replace this" comments).
 
 ## Step 3 — Recommend candidates
+
 For each opportunity, list 2–3 FOSS candidates with:
+
 - **License** (MIT/Apache-2.0/BSL/AGPL — flag anything that may not be permissive).
 - **Maintenance signal** — last release, GitHub stars trend, open-vs-closed issue ratio. Use `gh repo view <owner>/<repo> --json` if `gh` is available, otherwise note "verify maintenance status".
 - **Workers compatibility** — verified, claimed, or unknown.
@@ -37,7 +43,9 @@ For each opportunity, list 2–3 FOSS candidates with:
 Bias toward libraries already in the dependency tree's neighborhood (Zod-native, SvelteKit-native, Cloudflare-native).
 
 ## Step 4 — Report
-Use the shared skeleton below. Severity here reflects *opportunity magnitude*, not defect severity:
+
+Use the shared skeleton below. Severity here reflects _opportunity magnitude_, not defect severity:
+
 - 🟠 **High** — replacing bespoke code that is buggy, security-relevant, or actively costing dev time.
 - 🟡 **Medium** — solid bespoke code but a FOSS option would reduce maintenance.
 - 🟢 **Low** — minor convenience swap.

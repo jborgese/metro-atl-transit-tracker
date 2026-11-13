@@ -1,10 +1,10 @@
 ---
 paths:
-  - "src/**/*.svelte"
-  - "src/**/*.svelte.ts"
-  - "src/routes/**/+*.ts"
-  - "src/hooks.server.ts"
-  - "src/lib/server/**/*.ts"
+  - 'src/**/*.svelte'
+  - 'src/**/*.svelte.ts'
+  - 'src/routes/**/+*.ts'
+  - 'src/hooks.server.ts'
+  - 'src/lib/server/**/*.ts'
 ---
 
 # Svelte Standards
@@ -25,15 +25,15 @@ Apply when writing or reviewing Svelte components (`.svelte`), rune modules (`.s
 - **Compute with `$derived`, never with an effect that assigns.** Use `$derived(expression)` for one expression and `$derived.by(() => { ... })` for more.
 - **`$effect` is an escape hatch** for syncing with something outside Svelte, such as a DOM measurement, `document.body.style` toggles, or a third-party library. Do not update state inside one, and do not wrap its body in a browser check; effects never run on the server. Reach for the alternative first:
 
-| Need | Use |
-|---|---|
-| A value computed from state or props | `$derived` |
-| A response to user input | The event handler, or a function binding (`bind:value={() => value, setValue}`, Svelte 5.9+) |
-| Setup and teardown tied to an element | `{@attach ...}` (Svelte 5.29+) |
-| One-time work when the component mounts, such as constructing the MapLibre map | `onMount` / `onDestroy` from `svelte` (the existing pattern in `MetroMap.svelte`) |
-| A listener on `window` or `document` | `<svelte:window>` / `<svelte:document>` |
-| Reading a reactive source outside Svelte | `createSubscriber` from `svelte/reactivity` |
-| Logging a value as it changes | `$inspect` |
+| Need                                                                           | Use                                                                                          |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| A value computed from state or props                                           | `$derived`                                                                                   |
+| A response to user input                                                       | The event handler, or a function binding (`bind:value={() => value, setValue}`, Svelte 5.9+) |
+| Setup and teardown tied to an element                                          | `{@attach ...}` (Svelte 5.29+)                                                               |
+| One-time work when the component mounts, such as constructing the MapLibre map | `onMount` / `onDestroy` from `svelte` (the existing pattern in `MetroMap.svelte`)            |
+| A listener on `window` or `document`                                           | `<svelte:window>` / `<svelte:document>`                                                      |
+| Reading a reactive source outside Svelte                                       | `createSubscriber` from `svelte/reactivity`                                                  |
+| Logging a value as it changes                                                  | `$inspect`                                                                                   |
 
 ```typescript
 // ❌ state kept in sync by an effect
@@ -70,19 +70,19 @@ const total = $derived(sumPrices(items));
 
 Every component is in runes mode. Do not introduce legacy syntax, in new files or changed ones. A component is in either runes mode or legacy mode, so one legacy line puts the whole file in legacy mode.
 
-| Legacy | Current |
-|---|---|
-| `let count = 0` as implicit state | `let count = $state(0)` |
-| `$:` statements | `$derived`; `$effect` only when nothing else fits |
-| `export let foo`, `$$props`, `$$restProps` | `let { foo }: { foo: Foo } = $props()`, with `...rest` for the remainder |
-| `export let open` bound by the parent (`bind:open`) | `let { open = $bindable(false) } = $props()` |
-| `on:click={...}` | `onclick={...}` |
-| `on:click\|preventDefault={fn}` | `onclick={(e) => { e.preventDefault(); fn(e); }}` |
-| `createEventDispatcher`; parent `on:select` | Callback prop `onselect`; parent passes `onselect={handler}` |
-| `<slot>`, named slots, `$$slots`, `<svelte:fragment>` | `{#snippet}` and `{@render}` |
-| `<svelte:component this={C}>` | `<C>` |
-| `<svelte:self>` | Import the component into itself |
-| `use:action` | `{@attach ...}` for new code; framework-provided actions such as `use:enhance` stay |
+| Legacy                                                | Current                                                                             |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `let count = 0` as implicit state                     | `let count = $state(0)`                                                             |
+| `$:` statements                                       | `$derived`; `$effect` only when nothing else fits                                   |
+| `export let foo`, `$$props`, `$$restProps`            | `let { foo }: { foo: Foo } = $props()`, with `...rest` for the remainder            |
+| `export let open` bound by the parent (`bind:open`)   | `let { open = $bindable(false) } = $props()`                                        |
+| `on:click={...}`                                      | `onclick={...}`                                                                     |
+| `on:click\|preventDefault={fn}`                       | `onclick={(e) => { e.preventDefault(); fn(e); }}`                                   |
+| `createEventDispatcher`; parent `on:select`           | Callback prop `onselect`; parent passes `onselect={handler}`                        |
+| `<slot>`, named slots, `$$slots`, `<svelte:fragment>` | `{#snippet}` and `{@render}`                                                        |
+| `<svelte:component this={C}>`                         | `<C>`                                                                               |
+| `<svelte:self>`                                       | Import the component into itself                                                    |
+| `use:action`                                          | `{@attach ...}` for new code; framework-provided actions such as `use:enhance` stay |
 
 These are unchanged in runes mode: `bind:this`, `bind:value`/`bind:checked` (to a `$bindable` prop or element), `onMount`/`onDestroy`, `tick()`, `{@const}`, `<svelte:head>`, `<svelte:window>`, and `<svelte:body>`.
 

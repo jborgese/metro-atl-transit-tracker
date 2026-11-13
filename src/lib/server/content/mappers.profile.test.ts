@@ -101,8 +101,12 @@ describe('applyProfileMapToHistoryEvent', () => {
     applyProfileMapToHistoryEvent(event, map);
     expect(event.actor).toBe('Foo Bar');
     expect((event.before as Record<string, unknown>).archived_by).toBe('Foo Bar');
-    expect(((event.before as Record<string, unknown>).provenance as Record<string, unknown>).created_by).toBe('Foo Bar');
-    expect(((event.after as Record<string, unknown>).provenance as Record<string, unknown>).updated_by).toBe('Foo Bar');
+    expect(
+      ((event.before as Record<string, unknown>).provenance as Record<string, unknown>).created_by,
+    ).toBe('Foo Bar');
+    expect(
+      ((event.after as Record<string, unknown>).provenance as Record<string, unknown>).updated_by,
+    ).toBe('Foo Bar');
   });
 
   it('handles null before/after blobs gracefully', () => {

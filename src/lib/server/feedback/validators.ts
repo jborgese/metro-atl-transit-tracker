@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { ContentStoreError } from '../content/errors';
 
-export const FEEDBACK_CATEGORIES = ['general', 'bug', 'data-correction', 'feature-request'] as const;
+export const FEEDBACK_CATEGORIES = [
+  'general',
+  'bug',
+  'data-correction',
+  'feature-request',
+] as const;
 
 export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number];
 
@@ -19,12 +24,7 @@ const noLineBreaks = (value: string) => !/[\r\n]/.test(value);
 
 export const feedbackCreateSchema = z.object({
   message: z.string().trim().min(5, 'must be at least 5 characters').max(4000),
-  name: z
-    .string()
-    .trim()
-    .max(120)
-    .refine(noLineBreaks, 'must not contain line breaks')
-    .optional(),
+  name: z.string().trim().max(120).refine(noLineBreaks, 'must not contain line breaks').optional(),
   email: z.union([z.email().max(254), z.literal('')]).optional(),
   category: z.enum(FEEDBACK_CATEGORIES).default('general'),
   page_url: z.string().trim().max(500).optional(),
@@ -45,7 +45,7 @@ export function toFeedbackCreate(input: unknown): FeedbackCreate {
   if (!parsed.success) {
     throw new ContentStoreError(
       400,
-      `feedback validation failed - ${zodErrorToMessage(parsed.error)}`
+      `feedback validation failed - ${zodErrorToMessage(parsed.error)}`,
     );
   }
 

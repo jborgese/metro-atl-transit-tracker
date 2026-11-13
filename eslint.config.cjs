@@ -167,7 +167,14 @@ module.exports = [
 
   // Root-level config files are CommonJS.
   {
-    files: ['*.config.{js,cjs,mjs,ts}', 'eslint.config.cjs', 'vitest.config.ts', 'tailwind.config.ts', 'svelte.config.js', 'vite.config.js'],
+    files: [
+      '*.config.{js,cjs,mjs,ts}',
+      'eslint.config.cjs',
+      'vitest.config.ts',
+      'tailwind.config.ts',
+      'svelte.config.js',
+      'vite.config.js',
+    ],
     languageOptions: {
       parser: tsParser,
       ecmaVersion: 2024,

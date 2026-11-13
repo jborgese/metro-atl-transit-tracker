@@ -17,7 +17,7 @@ export async function loadProjectsMetadata(url = '/api/projects') {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`projects fetch ${res.status}`);
     const payload = await res.json();
-    const projectsMetadata = Array.isArray(payload) ? payload : payload?.data ?? [];
+    const projectsMetadata = Array.isArray(payload) ? payload : (payload?.data ?? []);
     return { projectsMetadata };
   } catch (e) {
     return { projectsMetadata: [], error: e };

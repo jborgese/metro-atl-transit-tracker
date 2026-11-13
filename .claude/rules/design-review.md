@@ -1,10 +1,10 @@
 ---
 paths:
-  - "src/**/*.svelte"
-  - "src/routes/**/+page.ts"
-  - "src/components/**/*.ts"
-  - "src/lib/map/**/*.ts"
-  - "src/utils/**/*.ts"
+  - 'src/**/*.svelte'
+  - 'src/routes/**/+page.ts'
+  - 'src/components/**/*.ts'
+  - 'src/lib/map/**/*.ts'
+  - 'src/utils/**/*.ts'
 ---
 
 # Design-First Code Principles

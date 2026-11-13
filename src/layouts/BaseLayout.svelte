@@ -1,5 +1,5 @@
 <script module lang="ts">
-  import "../styles/global.css";
+  import '../styles/global.css';
 </script>
 
 <script lang="ts">
@@ -30,9 +30,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 </svelte:head>
 
-<a class="skip-link" href="#content">
-  Skip to content
-</a>
+<a class="skip-link" href="#content"> Skip to content </a>
 
 <header class="site-header">
   <div class="site-header-inner">
@@ -55,7 +53,7 @@
     <nav class="site-nav" aria-label="Primary">
       <a class="site-nav-link" href="/history">History</a>
       <a class="site-nav-link" href="/admin" data-sveltekit-reload>Admin</a>
-      <button class="site-nav-link" onclick={() => methodologyOpen = true}>Methodology</button>
+      <button class="site-nav-link" onclick={() => (methodologyOpen = true)}>Methodology</button>
     </nav>
   </div>
 </header>
@@ -69,5 +67,5 @@
 
 <footer class="site-footer">
   <span>Not affiliated with MARTA, ARC, GDOT, or any governing body.</span>
-  <button class="site-footer-link" onclick={() => feedbackOpen = true}>Send feedback</button>
+  <button class="site-footer-link" onclick={() => (feedbackOpen = true)}>Send feedback</button>
 </footer>

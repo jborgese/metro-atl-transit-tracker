@@ -124,7 +124,10 @@ function parseSchema<T>(schema: z.ZodType<T>, input: unknown, label: string): T 
     return parsed.data;
   }
 
-  throw new ContentStoreError(400, `${label} validation failed - ${zodErrorToMessage(parsed.error)}`);
+  throw new ContentStoreError(
+    400,
+    `${label} validation failed - ${zodErrorToMessage(parsed.error)}`,
+  );
 }
 
 export function assertNoForbiddenWriteFields(payload: Record<string, unknown>, label: string) {
@@ -132,7 +135,7 @@ export function assertNoForbiddenWriteFields(payload: Record<string, unknown>, l
     if (field in payload) {
       throw new ContentStoreError(
         400,
-        `${label} contains server-managed field "${field}". Use archive/restore endpoints instead.`
+        `${label} contains server-managed field "${field}". Use archive/restore endpoints instead.`,
       );
     }
   }

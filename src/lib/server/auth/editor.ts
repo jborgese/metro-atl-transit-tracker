@@ -189,11 +189,7 @@ function identityFromAccessPayload(payload: JWTPayload) {
   return null;
 }
 
-function hasPermission(
-  permission: EditorPermission,
-  identity: string | null,
-  rbac: RbacConfig
-) {
+function hasPermission(permission: EditorPermission, identity: string | null, rbac: RbacConfig) {
   if (!rbac.enabled) {
     return true;
   }
@@ -217,7 +213,10 @@ function hasPermission(
   return false;
 }
 
-async function requireAccessActor(jwtAssertion: string, config: AccessConfig): Promise<AccessIdentity> {
+async function requireAccessActor(
+  jwtAssertion: string,
+  config: AccessConfig,
+): Promise<AccessIdentity> {
   const { payload } = await jwtVerify(jwtAssertion, config.jwks, {
     issuer: [config.issuer, `${config.issuer}/`],
     audience: config.audiences,
@@ -231,7 +230,7 @@ async function requireAccessActor(jwtAssertion: string, config: AccessConfig): P
 
 async function resolveIdentity(
   event: RequestEvent,
-  context: { permission?: EditorPermission }
+  context: { permission?: EditorPermission },
 ): Promise<AccessIdentity> {
   const editorTokenAuthEnabled = isEnabled(env[EDITOR_TOKEN_AUTH_ENABLED_ENV]);
   const editorToken = env[EDITOR_API_TOKEN_ENV]?.trim();
@@ -276,7 +275,8 @@ async function resolveIdentity(
     return await requireAccessActor(jwtAssertion, accessConfig);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    const code = err instanceof Error && 'code' in err ? (err as { code?: unknown }).code : undefined;
+    const code =
+      err instanceof Error && 'code' in err ? (err as { code?: unknown }).code : undefined;
     console.warn('[editor-auth] 401 JWT verification failed', {
       path: event.url.pathname,
       method: event.request.method,
@@ -290,7 +290,7 @@ async function resolveIdentity(
 
 export async function requireEditorActor(
   event: RequestEvent,
-  permission: EditorPermission = 'content:edit'
+  permission: EditorPermission = 'content:edit',
 ) {
   const { actor, identity } = await resolveIdentity(event, { permission });
   const rbac = getRbacConfig();
@@ -301,7 +301,7 @@ export async function requireEditorActor(
 }
 
 export async function requireAuthenticatedIdentity(
-  event: RequestEvent
+  event: RequestEvent,
 ): Promise<{ actor: string; identity: string }> {
   const { actor, identity } = await resolveIdentity(event, {});
   if (!identity) {

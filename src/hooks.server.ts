@@ -40,7 +40,9 @@ function applySecurityHeaders(headers: Headers) {
 }
 
 function isWriteApiRequest(event: RequestEvent) {
-  return (event.route.id?.startsWith(API_PREFIX) ?? false) && WRITE_METHODS.has(event.request.method);
+  return (
+    (event.route.id?.startsWith(API_PREFIX) ?? false) && WRITE_METHODS.has(event.request.method)
+  );
 }
 
 function isCrossOriginWrite(event: RequestEvent) {
@@ -105,7 +107,7 @@ function getWriteLimiter(event: RequestEvent): WriteRateLimit | undefined {
 
 export async function checkWriteRateLimit(
   binding: WriteRateLimit | undefined,
-  key: string
+  key: string,
 ): Promise<{ allowed: boolean }> {
   if (!binding) {
     // Binding not provisioned (e.g., local `wrangler dev` without unsafe.bindings,

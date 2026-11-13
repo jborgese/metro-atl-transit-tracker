@@ -21,9 +21,10 @@ function requireId(value: string | undefined): string {
   return value;
 }
 
-export function makeCollectionHandlers<T>(
-  store: Pick<ContentStore<T>, 'list' | 'create'>,
-): { GET: RequestHandler; POST: RequestHandler } {
+export function makeCollectionHandlers<T>(store: Pick<ContentStore<T>, 'list' | 'create'>): {
+  GET: RequestHandler;
+  POST: RequestHandler;
+} {
   const GET: RequestHandler = async (event) => {
     try {
       const includeArchived = parseIncludeArchived(event.url.searchParams.get('includeArchived'));
@@ -95,9 +96,9 @@ export function makeItemHandlers<T>(
   return { GET, PATCH, DELETE };
 }
 
-export function makeRestoreHandler<T>(
-  store: Pick<ContentStore<T>, 'restore'>,
-): { POST: RequestHandler } {
+export function makeRestoreHandler<T>(store: Pick<ContentStore<T>, 'restore'>): {
+  POST: RequestHandler;
+} {
   const POST: RequestHandler = async (event) => {
     try {
       const id = requireId(event.params.id);

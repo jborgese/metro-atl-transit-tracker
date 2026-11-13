@@ -1,4 +1,4 @@
-import { metroCountyGeoids } from "./countyStyles";
+import { metroCountyGeoids } from './countyStyles';
 
 export interface MetroCountyBounds {
   sw: [number, number];
@@ -11,11 +11,14 @@ export interface MetroCountyBounds {
  */
 export function getMetroCountyBounds(geojson: any): MetroCountyBounds | null {
   if (!geojson || !geojson.features || !geojson.features.length) return null;
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
 
   function updateBoundsFromCoords(coords: any) {
     if (!Array.isArray(coords)) return;
-    if (typeof coords[0] === "number" && typeof coords[1] === "number") {
+    if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
       const x = coords[0];
       const y = coords[1];
       if (x < minX) minX = x;

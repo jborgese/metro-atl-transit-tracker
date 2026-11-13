@@ -1,9 +1,9 @@
 ---
 paths:
-  - "*.md"
-  - "docs/**/*.md"
-  - ".claude/**/*.md"
-  - ".github/**/*.md"
+  - '*.md'
+  - 'docs/**/*.md'
+  - '.claude/**/*.md'
+  - '.github/**/*.md'
 ---
 
 # Documentation Review

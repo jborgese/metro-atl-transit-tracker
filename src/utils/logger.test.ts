@@ -11,7 +11,9 @@ describe('createLogger', () => {
 
     createLogger('Map').error('tiles failed');
 
-    expect(consoleError.mock.calls).toEqual([[expect.stringMatching(/^\[Map\] \S+ ERROR: tiles failed$/)]]);
+    expect(consoleError.mock.calls).toEqual([
+      [expect.stringMatching(/^\[Map\] \S+ ERROR: tiles failed$/)],
+    ]);
   });
 
   it('passes data after the formatted line', () => {
@@ -20,6 +22,8 @@ describe('createLogger', () => {
 
     createLogger('Map').info('layer added', data);
 
-    expect(consoleInfo.mock.calls).toEqual([[expect.stringMatching(/^\[Map\] \S+ INFO: layer added$/), data]]);
+    expect(consoleInfo.mock.calls).toEqual([
+      [expect.stringMatching(/^\[Map\] \S+ INFO: layer added$/), data],
+    ]);
   });
 });

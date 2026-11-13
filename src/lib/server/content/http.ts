@@ -30,7 +30,7 @@ export function toHttpError(err: unknown): never {
 
 export async function readJsonBody(
   event: RequestEvent,
-  maxBytes: number = DEFAULT_MAX_JSON_BYTES
+  maxBytes: number = DEFAULT_MAX_JSON_BYTES,
 ): Promise<unknown> {
   const contentLength = event.request.headers.get('content-length');
   if (contentLength) {

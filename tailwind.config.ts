@@ -1,5 +1,5 @@
-import type { Config } from 'tailwindcss'
-import typography from '@tailwindcss/typography'
+import type { Config } from 'tailwindcss';
+import typography from '@tailwindcss/typography';
 
 const config: Config = {
   content: ['./src/**/*.{html,js,jsx,svelte,ts,tsx}'],
@@ -8,12 +8,12 @@ const config: Config = {
       colors: {
         // Atlanta 1996 brand palette (via CSS variables)
         atl: {
-          green: 'var(--atl-green)',         // #33514D
-          bronze: 'var(--atl-bronze)',       // #7E6E4F
-          red: 'var(--atl-red)',             // #a73a32
-          magenta: 'var(--atl-magenta)',     // #a32f65
-          blue: 'var(--atl-blue)',           // #4280c4
-          lavender: 'var(--atl-lavender)',   // #8a62b0
+          green: 'var(--atl-green)', // #33514D
+          bronze: 'var(--atl-bronze)', // #7E6E4F
+          red: 'var(--atl-red)', // #a73a32
+          magenta: 'var(--atl-magenta)', // #a32f65
+          blue: 'var(--atl-blue)', // #4280c4
+          lavender: 'var(--atl-lavender)', // #8a62b0
         },
 
         // Semantic UI tokens (recommended)
@@ -82,6 +82,6 @@ const config: Config = {
     },
   },
   plugins: [typography],
-}
+};
 
-export default config
+export default config;

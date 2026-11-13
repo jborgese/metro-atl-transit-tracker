@@ -1,10 +1,10 @@
 ---
 paths:
-  - "src/**/*.test.ts"
-  - "src/**/*.spec.ts"
-  - "scripts/smoke-content-api.mjs"
-  - "scripts/integration-content-api.mjs"
-  - "scripts/test-utils/**"
+  - 'src/**/*.test.ts'
+  - 'src/**/*.spec.ts'
+  - 'scripts/smoke-content-api.mjs'
+  - 'scripts/integration-content-api.mjs'
+  - 'scripts/test-utils/**'
 ---
 
 # Testing Standards (Vitest)
@@ -28,12 +28,12 @@ Apply when writing or reviewing tests. Cross-cutting principles (test logic at t
 - **Avoid** tests that do not prove behavior — restating source, asserting constants, or adding coverage for its own sake. If the change has no branching, mapping, or failure path to exercise, skip a new test.
 - **Avoid** unit tests for trivial pass-throughs — a one-line wrapper around an existing API with no branching does not need its own test.
 
-| Module | What to test |
-|--------|--------------|
-| Utils and mappers | Correct output for various inputs, edge cases, and error throwing |
-| Validators | Accepted and rejected payloads, including forbidden fields |
-| Handlers and routes | Status codes, response body shape, auth and permission failures, body-size and JSON errors |
-| Hooks (`hooks.server.ts`) | Headers set, redirects, and rejected requests for each branch |
+| Module                    | What to test                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| Utils and mappers         | Correct output for various inputs, edge cases, and error throwing                          |
+| Validators                | Accepted and rejected payloads, including forbidden fields                                 |
+| Handlers and routes       | Status codes, response body shape, auth and permission failures, body-size and JSON errors |
+| Hooks (`hooks.server.ts`) | Headers set, redirects, and rejected requests for each branch                              |
 
 ## Mocking
 

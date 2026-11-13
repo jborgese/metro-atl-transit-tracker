@@ -88,14 +88,26 @@ async function run() {
       headers: authHeaders,
       body: JSON.stringify({ summary: 'Smoke test update' }),
     });
-    assert.equal(updateResponse.status, 200, `PATCH /api/projects/:id failed: ${updateResponse.text}`);
+    assert.equal(
+      updateResponse.status,
+      200,
+      `PATCH /api/projects/:id failed: ${updateResponse.text}`,
+    );
 
     const archiveResponse = await requestJson(`${baseUrl}/api/projects/${entityId}`, {
       method: 'DELETE',
       headers: authHeaders,
     });
-    assert.equal(archiveResponse.status, 200, `DELETE /api/projects/:id failed: ${archiveResponse.text}`);
-    assert.equal(archiveResponse.data?.data?.is_archived, true, 'Archive did not set is_archived=true');
+    assert.equal(
+      archiveResponse.status,
+      200,
+      `DELETE /api/projects/:id failed: ${archiveResponse.text}`,
+    );
+    assert.equal(
+      archiveResponse.data?.data?.is_archived,
+      true,
+      'Archive did not set is_archived=true',
+    );
 
     const restoreResponse = await requestJson(`${baseUrl}/api/projects/${entityId}/restore`, {
       method: 'POST',
@@ -104,16 +116,24 @@ async function run() {
     assert.equal(
       restoreResponse.status,
       200,
-      `POST /api/projects/:id/restore failed: ${restoreResponse.text}`
+      `POST /api/projects/:id/restore failed: ${restoreResponse.text}`,
     );
-    assert.equal(restoreResponse.data?.data?.is_archived, false, 'Restore did not set is_archived=false');
+    assert.equal(
+      restoreResponse.data?.data?.is_archived,
+      false,
+      'Restore did not set is_archived=false',
+    );
 
     const feedbackResponse = await requestJson(`${baseUrl}/api/feedback`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ message: 'Smoke test feedback submission', category: 'general' }),
     });
-    assert.equal(feedbackResponse.status, 201, `POST /api/feedback failed: ${feedbackResponse.text}`);
+    assert.equal(
+      feedbackResponse.status,
+      201,
+      `POST /api/feedback failed: ${feedbackResponse.text}`,
+    );
     assert.ok(feedbackResponse.data?.data?.id, 'Feedback submission should return an id');
 
     const honeypotResponse = await requestJson(`${baseUrl}/api/feedback`, {
@@ -121,11 +141,15 @@ async function run() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ message: 'Smoke honeypot probe', website: 'https://spam.example' }),
     });
-    assert.equal(honeypotResponse.status, 201, `Honeypot POST /api/feedback failed: ${honeypotResponse.text}`);
+    assert.equal(
+      honeypotResponse.status,
+      201,
+      `Honeypot POST /api/feedback failed: ${honeypotResponse.text}`,
+    );
     assert.equal(
       honeypotResponse.data?.data?.id,
       undefined,
-      'Honeypot submission should not be stored or return an id'
+      'Honeypot submission should not be stored or return an id',
     );
 
     console.log('[smoke] Smoke tests passed.');

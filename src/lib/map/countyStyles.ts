@@ -10,12 +10,18 @@ export const metroCountyColorMatch = [
   'match',
   ['get', 'GEOID'],
   // GEOID -> color pairs
-  '13121', '#ef4444', // Fulton
-  '13089', '#f97316', // DeKalb
-  '13067', '#22c55e', // Cobb
-  '13135', '#a855f7', // Gwinnett
-  '13063', '#ec4899', // Clayton
-  '13151', '#14b8a6', // Henry
+  '13121',
+  '#ef4444', // Fulton
+  '13089',
+  '#f97316', // DeKalb
+  '13067',
+  '#22c55e', // Cobb
+  '13135',
+  '#a855f7', // Gwinnett
+  '13063',
+  '#ec4899', // Clayton
+  '13151',
+  '#14b8a6', // Henry
   // default
   '#3b82f6',
 ];

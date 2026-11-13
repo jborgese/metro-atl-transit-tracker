@@ -5,23 +5,27 @@ import { ContentStoreError } from '$lib/server/content/errors';
 type Profile = { identity: string; display_name: string; updated_at: string };
 
 const requireAuthenticatedIdentity = vi.hoisted(() =>
-  vi.fn(async (): Promise<{ actor: string; identity: string }> => ({
-    actor: 'foo@bar.com',
-    identity: 'foo@bar.com',
-  }))
+  vi.fn(
+    async (): Promise<{ actor: string; identity: string }> => ({
+      actor: 'foo@bar.com',
+      identity: 'foo@bar.com',
+    }),
+  ),
 );
 const getProfile = vi.hoisted(() =>
-  vi.fn(async (_event: unknown, _identity: string): Promise<Profile | null> => null)
+  vi.fn(async (_event: unknown, _identity: string): Promise<Profile | null> => null),
 );
 const upsertProfile = vi.hoisted(() =>
-  vi.fn(async (_event: unknown, identity: string, displayName: string): Promise<Profile> => ({
-    identity,
-    display_name: displayName.trim(),
-    updated_at: '2026-05-04T00:00:00.000Z',
-  }))
+  vi.fn(
+    async (_event: unknown, identity: string, displayName: string): Promise<Profile> => ({
+      identity,
+      display_name: displayName.trim(),
+      updated_at: '2026-05-04T00:00:00.000Z',
+    }),
+  ),
 );
 const deleteProfile = vi.hoisted(() =>
-  vi.fn(async (_event: unknown, _identity: string): Promise<void> => undefined)
+  vi.fn(async (_event: unknown, _identity: string): Promise<void> => undefined),
 );
 
 vi.mock('$lib/server/auth/editor', () => ({ requireAuthenticatedIdentity }));
@@ -51,7 +55,10 @@ beforeEach(() => {
   getProfile.mockClear();
   upsertProfile.mockClear();
   deleteProfile.mockClear();
-  requireAuthenticatedIdentity.mockImplementation(async () => ({ actor: 'foo@bar.com', identity: 'foo@bar.com' }));
+  requireAuthenticatedIdentity.mockImplementation(async () => ({
+    actor: 'foo@bar.com',
+    identity: 'foo@bar.com',
+  }));
   getProfile.mockImplementation(async () => null);
 });
 
@@ -59,8 +66,14 @@ describe('GET /api/me', () => {
   it('returns identity, actor, and display_name=null when no profile is set', async () => {
     const res = await GET(makeEvent())!;
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { identity: string; actor: string; display_name: string | null } };
-    expect(body.data).toEqual({ identity: 'foo@bar.com', actor: 'foo@bar.com', display_name: null });
+    const body = (await res.json()) as {
+      data: { identity: string; actor: string; display_name: string | null };
+    };
+    expect(body.data).toEqual({
+      identity: 'foo@bar.com',
+      actor: 'foo@bar.com',
+      display_name: null,
+    });
     expect(getProfile).toHaveBeenCalledWith(expect.anything(), 'foo@bar.com');
   });
 
@@ -77,7 +90,7 @@ describe('GET /api/me', () => {
 
   it('propagates 401 from auth helper', async () => {
     requireAuthenticatedIdentity.mockRejectedValueOnce(
-      Object.assign(new Error('Unauthorized'), { status: 401 })
+      Object.assign(new Error('Unauthorized'), { status: 401 }),
     );
     let caught: unknown;
     try {
@@ -138,7 +151,9 @@ describe('PUT /api/me', () => {
   });
 
   it('propagates ContentStoreError from upsertProfile (e.g. validation)', async () => {
-    upsertProfile.mockRejectedValueOnce(new ContentStoreError(400, 'display_name must be 64 characters or fewer'));
+    upsertProfile.mockRejectedValueOnce(
+      new ContentStoreError(400, 'display_name must be 64 characters or fewer'),
+    );
     let caught: unknown;
     try {
       await PUT(makeEvent({ body: JSON.stringify({ display_name: 'x'.repeat(100) }) }));

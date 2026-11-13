@@ -45,7 +45,7 @@ async function readCounts(db: D1Database): Promise<StoredCountsRow | null> {
     if (isMissingTableError(err)) {
       throw new ContentStoreError(
         503,
-        `D1 schema is missing. Apply migrations and reload: \`${D1_LOCAL_MIGRATION_CMD}\`.`
+        `D1 schema is missing. Apply migrations and reload: \`${D1_LOCAL_MIGRATION_CMD}\`.`,
       );
     }
     throw err;
@@ -55,7 +55,7 @@ async function readCounts(db: D1Database): Promise<StoredCountsRow | null> {
 function buildProjectSeedStatement(
   db: D1Database,
   seed: Project,
-  seedTimestamp: string
+  seedTimestamp: string,
 ): D1PreparedStatement {
   const seedRecord = seed as unknown as Record<string, unknown>;
   const project = toProjectSeed(seed);
@@ -75,13 +75,18 @@ function buildProjectSeedStatement(
         : archived
           ? SEED_ACTOR
           : null,
-    provenance: ensureProvenance(seedRecord.provenance ?? project.provenance, SEED_ACTOR, seedTimestamp, true),
+    provenance: ensureProvenance(
+      seedRecord.provenance ?? project.provenance,
+      SEED_ACTOR,
+      seedTimestamp,
+      true,
+    ),
   };
   const stored = normalizeEntityForStorage(
     seededEntity as unknown as Record<string, unknown>,
     SEED_ACTOR,
     seedTimestamp,
-    true
+    true,
   );
   return db
     .prepare(INSERT_PROJECT_SQL)
@@ -94,14 +99,14 @@ function buildProjectSeedStatement(
       stored.createdAt,
       stored.createdBy,
       stored.updatedAt,
-      stored.updatedBy
+      stored.updatedBy,
     );
 }
 
 function buildGoalSeedStatement(
   db: D1Database,
   seed: Goal,
-  seedTimestamp: string
+  seedTimestamp: string,
 ): D1PreparedStatement {
   const seedRecord = seed as unknown as Record<string, unknown>;
   const goal = toGoalSeed(seed);
@@ -121,13 +126,18 @@ function buildGoalSeedStatement(
         : archived
           ? SEED_ACTOR
           : null,
-    provenance: ensureProvenance(seedRecord.provenance ?? goal.provenance, SEED_ACTOR, seedTimestamp, true),
+    provenance: ensureProvenance(
+      seedRecord.provenance ?? goal.provenance,
+      SEED_ACTOR,
+      seedTimestamp,
+      true,
+    ),
   };
   const stored = normalizeEntityForStorage(
     seededEntity as unknown as Record<string, unknown>,
     SEED_ACTOR,
     seedTimestamp,
-    true
+    true,
   );
   return db
     .prepare(INSERT_GOAL_SQL)
@@ -140,13 +150,13 @@ function buildGoalSeedStatement(
       stored.createdAt,
       stored.createdBy,
       stored.updatedAt,
-      stored.updatedBy
+      stored.updatedBy,
     );
 }
 
 function buildHistorySeedStatement(
   db: D1Database,
-  event: ContentHistoryEvent
+  event: ContentHistoryEvent,
 ): D1PreparedStatement {
   return db
     .prepare(INSERT_HISTORY_SQL)
@@ -158,7 +168,7 @@ function buildHistorySeedStatement(
       event.actor,
       event.timestamp,
       toHistoryJson(event.before),
-      toHistoryJson(event.after)
+      toHistoryJson(event.after),
     );
 }
 
@@ -177,7 +187,7 @@ export function seedGoalsIfEmpty(db: D1Database, count: number): D1PreparedState
 export function seedHistoryIfEmpty(db: D1Database, count: number): D1PreparedStatement[] {
   if (count > 0) return [];
   return asSeedArray<ContentHistoryEvent>(contentHistorySeed).map((seed) =>
-    buildHistorySeedStatement(db, toSeedHistoryEvent(seed))
+    buildHistorySeedStatement(db, toSeedHistoryEvent(seed)),
   );
 }
 

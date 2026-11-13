@@ -20,17 +20,17 @@ Agent-specific guidance stays in that agent's own files: area rules in `.claude/
 
 ### Canonical References
 
-| Surface | Default anchors | Specialized or legacy anchors |
-|---------|-----------------|-------------------------------|
-| CRUD API endpoint | `src/routes/api/projects/+server.ts` wiring `makeCollectionHandlers` from `src/lib/server/content/handlers.ts` | `src/routes/api/feedback/+server.ts`: public, unauthenticated write with its own limiter; `src/routes/api/me/+server.ts`: hand-written handlers |
-| Server domain module | `src/lib/server/content/` (validators → service → repository; `store.ts` is its public barrel) | `src/lib/server/feedback/`: smaller and flatter, reuses `getDb` from `content/repository.ts` |
-| Auth | `src/lib/server/auth/editor.ts` (`requireEditorActor`, `requireAuthenticatedIdentity`) | — |
-| Page data | `src/routes/+page.ts`: universal `load` with SvelteKit `fetch` and a static fallback | `src/routes/admin/+page.server.ts`: auth-gated server `load` |
-| Component | `src/components/svelte/FeedbackModal.svelte`: runes, `$bindable` prop, `Portal`, POST to the API | `src/routes/admin/+page.svelte`, `src/components/svelte/GoalsTable.svelte`: oversized, see Legacy |
-| Map | `src/lib/map/` (`initMetroMap.ts` and layer helpers) | MapLibre lifecycle in `src/components/svelte/MetroMap.svelte` |
-| Shared types | `src/types/<domain>.ts` + barrel `src/types/index.ts` | `src/components/svelte/types.ts`, `src/lib/map/types.ts`: local types, see Legacy |
-| Migration | `migrations/d1/0003_feedback.sql` | — |
-| Styles | Tokens in `src/styles/global.css` ([`design-tokens.md`](design-tokens.md)) | Status colors in `src/utils/statusHelpers.ts` |
+| Surface              | Default anchors                                                                                                | Specialized or legacy anchors                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| CRUD API endpoint    | `src/routes/api/projects/+server.ts` wiring `makeCollectionHandlers` from `src/lib/server/content/handlers.ts` | `src/routes/api/feedback/+server.ts`: public, unauthenticated write with its own limiter; `src/routes/api/me/+server.ts`: hand-written handlers |
+| Server domain module | `src/lib/server/content/` (validators → service → repository; `store.ts` is its public barrel)                 | `src/lib/server/feedback/`: smaller and flatter, reuses `getDb` from `content/repository.ts`                                                    |
+| Auth                 | `src/lib/server/auth/editor.ts` (`requireEditorActor`, `requireAuthenticatedIdentity`)                         | —                                                                                                                                               |
+| Page data            | `src/routes/+page.ts`: universal `load` with SvelteKit `fetch` and a static fallback                           | `src/routes/admin/+page.server.ts`: auth-gated server `load`                                                                                    |
+| Component            | `src/components/svelte/FeedbackModal.svelte`: runes, `$bindable` prop, `Portal`, POST to the API               | `src/routes/admin/+page.svelte`, `src/components/svelte/GoalsTable.svelte`: oversized, see Legacy                                               |
+| Map                  | `src/lib/map/` (`initMetroMap.ts` and layer helpers)                                                           | MapLibre lifecycle in `src/components/svelte/MetroMap.svelte`                                                                                   |
+| Shared types         | `src/types/<domain>.ts` + barrel `src/types/index.ts`                                                          | `src/components/svelte/types.ts`, `src/lib/map/types.ts`: local types, see Legacy                                                               |
+| Migration            | `migrations/d1/0003_feedback.sql`                                                                              | —                                                                                                                                               |
+| Styles               | Tokens in `src/styles/global.css` ([`design-tokens.md`](design-tokens.md))                                     | Status colors in `src/utils/statusHelpers.ts`                                                                                                   |
 
 ## Universal Standards
 
@@ -53,7 +53,8 @@ We favor a functional programming style. Most other guidance in this file falls 
 
   ```typescript
   // ❌ special-cases one item
-  const linked = ids.length === 1 ? await findLinked(ids[0]) : (await Promise.all(ids.map(findLinked))).flat();
+  const linked =
+    ids.length === 1 ? await findLinked(ids[0]) : (await Promise.all(ids.map(findLinked))).flat();
 
   // ✅ one pipeline over the list
   const linked = (await Promise.all(ids.map(findLinked))).flat();
@@ -65,15 +66,15 @@ We favor a functional programming style. Most other guidance in this file falls 
 
 See `.claude/rules/typescript-standards.md` for the full rule.
 
-| Topic | Standard |
-|-------|----------|
-| Bindings | Prefer `const` in new code. Use `let` only for actual reassignment. Do not churn unrelated legacy lines that still use `let`. |
-| Types | Explicit types on exports, handlers, public props, and API contracts. `tsconfig.json` enables `noUncheckedIndexedAccess`. |
-| Object shapes | `interface` or `type` — match the surrounding file. No `I` prefix. |
-| Unknown input | Prefer `unknown` plus narrowing over `any`. Do not spread loosely typed legacy shapes (e.g. `Record<string, any>` blobs) into new code. |
-| Imports | External packages first; then match the file's order of `$lib/...`, `@/...`, and relative imports. Omit file extensions except `.svelte` and `.json`. |
-| Domain logic | Keep business rules testable without the Workers runtime, D1, SvelteKit, or Svelte. |
-| Collections | Prefer a plain array and `.includes()` / `.some()`. |
+| Topic         | Standard                                                                                                                                              |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bindings      | Prefer `const` in new code. Use `let` only for actual reassignment. Do not churn unrelated legacy lines that still use `let`.                         |
+| Types         | Explicit types on exports, handlers, public props, and API contracts. `tsconfig.json` enables `noUncheckedIndexedAccess`.                             |
+| Object shapes | `interface` or `type` — match the surrounding file. No `I` prefix.                                                                                    |
+| Unknown input | Prefer `unknown` plus narrowing over `any`. Do not spread loosely typed legacy shapes (e.g. `Record<string, any>` blobs) into new code.               |
+| Imports       | External packages first; then match the file's order of `$lib/...`, `@/...`, and relative imports. Omit file extensions except `.svelte` and `.json`. |
+| Domain logic  | Keep business rules testable without the Workers runtime, D1, SvelteKit, or Svelte.                                                                   |
+| Collections   | Prefer a plain array and `.includes()` / `.some()`.                                                                                                   |
 
 ### Write For Human Reviewers
 
@@ -148,16 +149,16 @@ Handlers are SvelteKit `+server.ts` functions. Domain code throws `ContentStoreE
 
 ### API Layering
 
-| Layer | Responsibility | Here |
-|-------|----------------|------|
-| Route handlers | Parse/validate the request, call a service, shape the response. No DB calls or heavy business logic. | `src/routes/api/**/+server.ts`, usually wiring a factory from `handlers.ts` |
-| Handler factories | Shared GET/POST/PATCH/DELETE/restore handlers over a store, with auth and body parsing | `src/lib/server/content/handlers.ts` |
-| Services | Business logic and orchestration (seeding, history events, archive rules) | `src/lib/server/content/service.ts`, exposed through `stores.ts` |
-| Data modules | SQL constants, queries, batching | `src/lib/server/content/repository.ts`, `src/lib/server/feedback/store.ts` |
-| DB client | The D1 binding | `getDb(event)` in `repository.ts` |
-| Hooks | `www` redirect, security headers, cross-origin write rejection, write rate limit; no authorization | `src/hooks.server.ts` |
-| Auth | Access JWT verification and RBAC, called inside each handler | `src/lib/server/auth/editor.ts` |
-| Validation | Request schemas (Zod), parsed inside the service and also registered in the OpenAPI spec | `src/lib/server/<domain>/validators.ts`, `src/lib/server/openapi/spec.ts` |
+| Layer             | Responsibility                                                                                       | Here                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Route handlers    | Parse/validate the request, call a service, shape the response. No DB calls or heavy business logic. | `src/routes/api/**/+server.ts`, usually wiring a factory from `handlers.ts` |
+| Handler factories | Shared GET/POST/PATCH/DELETE/restore handlers over a store, with auth and body parsing               | `src/lib/server/content/handlers.ts`                                        |
+| Services          | Business logic and orchestration (seeding, history events, archive rules)                            | `src/lib/server/content/service.ts`, exposed through `stores.ts`            |
+| Data modules      | SQL constants, queries, batching                                                                     | `src/lib/server/content/repository.ts`, `src/lib/server/feedback/store.ts`  |
+| DB client         | The D1 binding                                                                                       | `getDb(event)` in `repository.ts`                                           |
+| Hooks             | `www` redirect, security headers, cross-origin write rejection, write rate limit; no authorization   | `src/hooks.server.ts`                                                       |
+| Auth              | Access JWT verification and RBAC, called inside each handler                                         | `src/lib/server/auth/editor.ts`                                             |
+| Validation        | Request schemas (Zod), parsed inside the service and also registered in the OpenAPI spec             | `src/lib/server/<domain>/validators.ts`, `src/lib/server/openapi/spec.ts`   |
 
 `/api/me` and `/api/history` are hand-written and call the domain modules directly. Outside `src/lib/server/content/`, import from `store.ts` (the content barrel) or the specific module a sibling route already uses.
 
@@ -180,15 +181,15 @@ Migrations are `migrations/d1/NNNN_description.sql`, zero-padded and sequential 
 
 ## Testing Matrix
 
-| Layer | Runner | Location | Mock at |
-|-------|--------|----------|---------|
-| Server modules (handlers, validators, mappers, OpenAPI spec) | Vitest in Node (`npm run test`) | Colocated `src/lib/server/**/*.test.ts` | `vi.mock` on `$lib/server/...` boundaries such as `auth/editor`; fake stores passed to the handler factories |
-| API routes | Vitest | Colocated `src/routes/api/**/<name>.test.ts` | `vi.mock` on domain modules; a hand-built `RequestEvent` with a fake D1 and limiter in `platform.env` |
-| Hooks | Vitest | `src/hooks.server.test.ts` | Hand-built `RequestEvent` |
-| Smoke | Node script + local Wrangler worker | `scripts/smoke-content-api.mjs` | Nothing; real local worker and local D1 |
-| Integration | Node script + local Wrangler worker | `scripts/integration-content-api.mjs` | Nothing |
-| Schema | Node script | `scripts/check-d1-schema.mjs` | Nothing |
-| Components | Vitest + `@testing-library/svelte` in jsdom (`npm run test`, `client` project) | Colocated `src/components/**/*.svelte.test.ts` | `fetch` via `vi.stubGlobal`; MapLibre does not run in jsdom |
+| Layer                                                        | Runner                                                                         | Location                                       | Mock at                                                                                                      |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Server modules (handlers, validators, mappers, OpenAPI spec) | Vitest in Node (`npm run test`)                                                | Colocated `src/lib/server/**/*.test.ts`        | `vi.mock` on `$lib/server/...` boundaries such as `auth/editor`; fake stores passed to the handler factories |
+| API routes                                                   | Vitest                                                                         | Colocated `src/routes/api/**/<name>.test.ts`   | `vi.mock` on domain modules; a hand-built `RequestEvent` with a fake D1 and limiter in `platform.env`        |
+| Hooks                                                        | Vitest                                                                         | `src/hooks.server.test.ts`                     | Hand-built `RequestEvent`                                                                                    |
+| Smoke                                                        | Node script + local Wrangler worker                                            | `scripts/smoke-content-api.mjs`                | Nothing; real local worker and local D1                                                                      |
+| Integration                                                  | Node script + local Wrangler worker                                            | `scripts/integration-content-api.mjs`          | Nothing                                                                                                      |
+| Schema                                                       | Node script                                                                    | `scripts/check-d1-schema.mjs`                  | Nothing                                                                                                      |
+| Components                                                   | Vitest + `@testing-library/svelte` in jsdom (`npm run test`, `client` project) | Colocated `src/components/**/*.svelte.test.ts` | `fetch` via `vi.stubGlobal`; MapLibre does not run in jsdom                                                  |
 
 For what to test and how, use `.claude/rules/testing.md`.
 
@@ -206,32 +207,32 @@ Agents should read this section before copying a nearby file.
 
 When no row covers the case: match the file or folder you are editing, use the canonical reference for new files, and do not migrate legacy code outside the task's scope.
 
-| Area | Existing inconsistency | What to do |
-|------|------------------------|------------|
-| Lint ceiling | `npm run lint` allows as many warnings as `--max-warnings` in `package.json`, which matches the current count. Every warning comes from a backlog rule demoted to `warn` in `eslint.config.cjs` (`svelte/require-each-key`, `svelte/no-navigation-without-resolve`, `@typescript-eslint/no-explicit-any`, and others). | Add no new warnings, and do not raise the ceiling. A PR that clears a rule's warnings promotes it to `error` and lowers the ceiling by the same count ([`ci-gate-policy.md`](ci-gate-policy.md)). |
-| Import aliases | Three styles coexist. Routes and server code import `src/lib` as `$lib/...`. `@/...` (an alias for `src/` in `svelte.config.js`) is used for `src/types` and `src/utils`. Components reach `src/lib/map`, other components, and layouts by relative path (`../../lib/map/initMetroMap`, `../../layouts/BaseLayout.svelte`), and `validators.ts` imports seed JSON through deep relative paths. | Match the file you are editing; in a new file, copy its nearest sibling. Do not rewrite existing imports. |
-| CI vs local gate | `.github/workflows/ci-gates.yml` runs the integration test, which `npm run ci:gate` leaves to `ci:gate:full`. | Run `npm run ci:gate:full` before pushing a change to content writes or history. |
-| Type placement | `CONTRIBUTING.md` makes `src/types/` canonical for shared types. `src/components/svelte/types.ts` and `src/lib/map/types.ts` hold local types. | Put new shared types in `src/types/`; leave the local files alone. |
-| Oversized components | `src/routes/admin/+page.svelte` (~1,500 lines) and `src/components/svelte/GoalsTable.svelte` (~970 lines) predate the size guidance. | Do not grow them. Put new sections in child components or `.ts` helpers within the task's scope; no drive-by splits. |
-| Hardcoded host and limits | `src/hooks.server.ts` hardcodes the apex host (`maitai.observer`) and mirrors the `WRITE_LIMITER` limit (30 per 60 s) for response headers. | Keep these values in step with `wrangler.jsonc` when either changes. |
-| `public/` vs `static/` | SvelteKit serves `static/`. `public/` is gitignored apart from two tracked favicons. | Put served assets in `static/`. |
+| Area                      | Existing inconsistency                                                                                                                                                                                                                                                                                                                                                                         | What to do                                                                                                                                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lint ceiling              | `npm run lint` allows as many warnings as `--max-warnings` in `package.json`, which matches the current count. Every warning comes from a backlog rule demoted to `warn` in `eslint.config.cjs` (`svelte/require-each-key`, `svelte/no-navigation-without-resolve`, `@typescript-eslint/no-explicit-any`, and others).                                                                         | Add no new warnings, and do not raise the ceiling. A PR that clears a rule's warnings promotes it to `error` and lowers the ceiling by the same count ([`ci-gate-policy.md`](ci-gate-policy.md)). |
+| Import aliases            | Three styles coexist. Routes and server code import `src/lib` as `$lib/...`. `@/...` (an alias for `src/` in `svelte.config.js`) is used for `src/types` and `src/utils`. Components reach `src/lib/map`, other components, and layouts by relative path (`../../lib/map/initMetroMap`, `../../layouts/BaseLayout.svelte`), and `validators.ts` imports seed JSON through deep relative paths. | Match the file you are editing; in a new file, copy its nearest sibling. Do not rewrite existing imports.                                                                                         |
+| CI vs local gate          | `.github/workflows/ci-gates.yml` runs the integration test, which `npm run ci:gate` leaves to `ci:gate:full`.                                                                                                                                                                                                                                                                                  | Run `npm run ci:gate:full` before pushing a change to content writes or history.                                                                                                                  |
+| Type placement            | `CONTRIBUTING.md` makes `src/types/` canonical for shared types. `src/components/svelte/types.ts` and `src/lib/map/types.ts` hold local types.                                                                                                                                                                                                                                                 | Put new shared types in `src/types/`; leave the local files alone.                                                                                                                                |
+| Oversized components      | `src/routes/admin/+page.svelte` (~1,500 lines) and `src/components/svelte/GoalsTable.svelte` (~970 lines) predate the size guidance.                                                                                                                                                                                                                                                           | Do not grow them. Put new sections in child components or `.ts` helpers within the task's scope; no drive-by splits.                                                                              |
+| Hardcoded host and limits | `src/hooks.server.ts` hardcodes the apex host (`maitai.observer`) and mirrors the `WRITE_LIMITER` limit (30 per 60 s) for response headers.                                                                                                                                                                                                                                                    | Keep these values in step with `wrangler.jsonc` when either changes.                                                                                                                              |
+| `public/` vs `static/`    | SvelteKit serves `static/`. `public/` is gitignored apart from two tracked favicons.                                                                                                                                                                                                                                                                                                           | Put served assets in `static/`.                                                                                                                                                                   |
 
 ## Anti-Patterns
 
-| Avoid | Do instead |
-|-------|------------|
-| A new `+server.ts` with inline CRUD logic for a content type | The `make*Handlers(store)` factories in `handlers.ts` |
-| New fat handlers with D1 queries and domain logic inline | Queries in the domain's data module, logic in testable helpers under `src/lib/server/<domain>/` |
-| Reading `platform.env.DB` inline in new code | `getDb(event)` |
-| Authorization only in `hooks.server.ts` or a layout `load` | `requireEditorActor` / `requireAuthenticatedIdentity` inside each handler and server `load` |
-| Writing content tables directly, or touching `content_history` rows | The content service, which appends the history event |
-| Hardcoded environment values (URLs, resource IDs, addresses) | `$env/dynamic/*` and `event.platform.env` |
-| String-interpolated SQL with user input | `.bind()` parameters and the query helpers in `repository.ts` |
-| Hex literals or a second styling approach | Tailwind utilities and the tokens in `src/styles/global.css` |
-| Copying a legacy feature as the scaffold for new work | The canonical reference for that layer |
-| Production `data-testid` by default | Accessible names and semantic structure first |
-| Unconditional data overwrites in production D1 | Targeted or conditional writes, approved first |
-| Legacy Svelte syntax (`export let`, `$:`, `on:`, `<slot>`) | Runes; see `.claude/rules/svelte.md` |
+| Avoid                                                               | Do instead                                                                                      |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| A new `+server.ts` with inline CRUD logic for a content type        | The `make*Handlers(store)` factories in `handlers.ts`                                           |
+| New fat handlers with D1 queries and domain logic inline            | Queries in the domain's data module, logic in testable helpers under `src/lib/server/<domain>/` |
+| Reading `platform.env.DB` inline in new code                        | `getDb(event)`                                                                                  |
+| Authorization only in `hooks.server.ts` or a layout `load`          | `requireEditorActor` / `requireAuthenticatedIdentity` inside each handler and server `load`     |
+| Writing content tables directly, or touching `content_history` rows | The content service, which appends the history event                                            |
+| Hardcoded environment values (URLs, resource IDs, addresses)        | `$env/dynamic/*` and `event.platform.env`                                                       |
+| String-interpolated SQL with user input                             | `.bind()` parameters and the query helpers in `repository.ts`                                   |
+| Hex literals or a second styling approach                           | Tailwind utilities and the tokens in `src/styles/global.css`                                    |
+| Copying a legacy feature as the scaffold for new work               | The canonical reference for that layer                                                          |
+| Production `data-testid` by default                                 | Accessible names and semantic structure first                                                   |
+| Unconditional data overwrites in production D1                      | Targeted or conditional writes, approved first                                                  |
+| Legacy Svelte syntax (`export let`, `$:`, `on:`, `<slot>`)          | Runes; see `.claude/rules/svelte.md`                                                            |
 
 ## Quick Copy-From Index
 

@@ -1,10 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type {
-  ContentEntityType,
-  ContentHistoryEvent,
-  Goal,
-  Project,
-} from '@/types/content';
+import type { ContentEntityType, ContentHistoryEvent, Goal, Project } from '@/types/content';
 import { ContentStoreError } from './errors';
 import { parseIntSafe, SEED_ACTOR } from './validators';
 
@@ -84,7 +79,7 @@ export function ensureProvenance(
   value: unknown,
   actor: string,
   timestamp: string,
-  isCreate: boolean
+  isCreate: boolean,
 ): Record<string, unknown> {
   const provenance = isRecord(value) ? { ...value } : {};
   const createdAt = typeof provenance.created_at === 'string' ? provenance.created_at : timestamp;
@@ -106,7 +101,7 @@ export function applyArchiveFields(
   entity: Record<string, unknown>,
   actor: string,
   timestamp: string,
-  previousArchived: boolean
+  previousArchived: boolean,
 ) {
   const archived = entity.is_archived === true;
   if (archived && !previousArchived) {
@@ -129,9 +124,10 @@ export function normalizeEntityForStorage(
   entityInput: Record<string, unknown>,
   actor: string,
   timestamp: string,
-  isCreate: boolean
+  isCreate: boolean,
 ): StoredEntityWrite {
-  const id = typeof entityInput.id === 'string' && entityInput.id.trim().length > 0 ? entityInput.id : null;
+  const id =
+    typeof entityInput.id === 'string' && entityInput.id.trim().length > 0 ? entityInput.id : null;
   if (!id) {
     throw new ContentStoreError(500, 'entity id is missing');
   }
@@ -144,9 +140,17 @@ export function normalizeEntityForStorage(
 
   const archived = entityInput.is_archived === true;
   const archivedAt =
-    archived && typeof entityInput.archived_at === 'string' ? entityInput.archived_at : archived ? timestamp : null;
+    archived && typeof entityInput.archived_at === 'string'
+      ? entityInput.archived_at
+      : archived
+        ? timestamp
+        : null;
   const archivedBy =
-    archived && typeof entityInput.archived_by === 'string' ? entityInput.archived_by : archived ? actor : null;
+    archived && typeof entityInput.archived_by === 'string'
+      ? entityInput.archived_by
+      : archived
+        ? actor
+        : null;
 
   const normalized: Record<string, unknown> = {
     ...entityInput,
@@ -211,7 +215,9 @@ export function rowToGoal(row: StoredEntityRow): Goal {
 }
 
 export function rowToHistoryEvent(row: StoredHistoryRow): ContentHistoryEvent {
-  const before = row.before_json ? parseJsonObject(row.before_json, `history ${row.id} before`) : null;
+  const before = row.before_json
+    ? parseJsonObject(row.before_json, `history ${row.id} before`)
+    : null;
   const after = row.after_json ? parseJsonObject(row.after_json, `history ${row.id} after`) : null;
 
   return {
@@ -266,10 +272,16 @@ export function toSeedHistoryEvent(input: unknown): ContentHistoryEvent {
       ? input.action
       : null;
   const entityId = typeof input.entity_id === 'string' ? input.entity_id : null;
-  const actor = typeof input.actor === 'string' && input.actor.trim().length > 0 ? input.actor.trim() : SEED_ACTOR;
+  const actor =
+    typeof input.actor === 'string' && input.actor.trim().length > 0
+      ? input.actor.trim()
+      : SEED_ACTOR;
   const timestamp =
-    typeof input.timestamp === 'string' && input.timestamp.trim().length > 0 ? input.timestamp : nowIso();
-  const id = typeof input.id === 'string' && input.id.trim().length > 0 ? input.id.trim() : randomUUID();
+    typeof input.timestamp === 'string' && input.timestamp.trim().length > 0
+      ? input.timestamp
+      : nowIso();
+  const id =
+    typeof input.id === 'string' && input.id.trim().length > 0 ? input.id.trim() : randomUUID();
 
   if (!entityType || !action || !entityId) {
     throw new ContentStoreError(500, 'history seed entry is missing required fields');
@@ -289,7 +301,7 @@ export function toSeedHistoryEvent(input: unknown): ContentHistoryEvent {
 
 export function resolveActorDisplay(
   actor: string | null | undefined,
-  profiles: Map<string, string>
+  profiles: Map<string, string>,
 ): string | null | undefined {
   if (typeof actor !== 'string' || actor.trim().length === 0) {
     return actor;
@@ -305,7 +317,7 @@ const PROVENANCE_ACTOR_FIELDS = ['created_by', 'updated_by'] as const;
 
 export function applyProfileMapToEntity<T extends Record<string, unknown>>(
   entity: T,
-  profiles: Map<string, string>
+  profiles: Map<string, string>,
 ): T {
   if (profiles.size === 0) {
     return entity;
@@ -334,7 +346,7 @@ export function applyProfileMapToEntity<T extends Record<string, unknown>>(
 
 export function applyProfileMapToHistoryEvent(
   event: ContentHistoryEvent,
-  profiles: Map<string, string>
+  profiles: Map<string, string>,
 ): ContentHistoryEvent {
   if (profiles.size === 0) {
     return event;

@@ -8,7 +8,9 @@ export const load: PageLoad = async ({ fetch }) => {
       return { history: [] as ContentHistoryEvent[] };
     }
 
-    const payload = (await res.json()) as ApiListResponse<ContentHistoryEvent> | ContentHistoryEvent[];
+    const payload = (await res.json()) as
+      | ApiListResponse<ContentHistoryEvent>
+      | ContentHistoryEvent[];
     if (Array.isArray(payload)) {
       return { history: payload };
     }

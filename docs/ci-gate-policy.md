@@ -9,34 +9,37 @@ Define the minimum automated checks that must pass before a commit is eligible f
 The following gates are blocking. Any failure blocks deployment.
 
 1. Typecheck
-Command: `npm run typecheck`
-Pass criteria: `svelte-check` reports zero errors.
+   Command: `npm run typecheck`
+   Pass criteria: `svelte-check` reports zero errors.
 
 2. Lint
-Command: `npm run lint`
-Pass criteria: ESLint reports zero errors and no more warnings than the `--max-warnings` ceiling in the `lint` script in `package.json`. Every warning comes from a backlog rule demoted to `warn` in `eslint.config.cjs`. The ceiling only goes down: a PR that clears a backlog rule's warnings promotes that rule to `error` and lowers the ceiling by the same count.
+   Command: `npm run lint`
+   Pass criteria: ESLint reports zero errors and no more warnings than the `--max-warnings` ceiling in the `lint` script in `package.json`. Every warning comes from a backlog rule demoted to `warn` in `eslint.config.cjs`. The ceiling only goes down: a PR that clears a backlog rule's warnings promotes that rule to `error` and lowers the ceiling by the same count.
 
 3. Unit Tests
-Command: `npm run test`
-Pass criteria: every Vitest test passes.
+   Command: `npm run test`
+   Pass criteria: every Vitest test passes.
 
 4. Schema Check
-Command: `npm run schema:check`
-Pass criteria:
+   Command: `npm run schema:check`
+   Pass criteria:
+
 - Local D1 migrations apply successfully.
 - Required tables, indexes, and immutability triggers exist in `sqlite_master`.
 - Expected SQL constraints for payload JSON validity and archive/history invariants are present.
 
 5. Smoke Test
-Command: `npm run test:smoke`
-Pass criteria:
+   Command: `npm run test:smoke`
+   Pass criteria:
+
 - Worker starts locally with Wrangler.
 - Public read routes return valid responses.
 - Project write/archive/restore flow succeeds end-to-end.
 
 6. Integration Test
-Command: `npm run test:integration`
-Pass criteria:
+   Command: `npm run test:integration`
+   Pass criteria:
+
 - Mutation history ordering invariants hold for projects and goals.
 - History immutability trigger rejects tampering attempts.
 

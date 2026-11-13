@@ -68,14 +68,17 @@
         return true;
       }
 
-      const haystack = `${item.id} ${toEntityHeadline(item, dataset)} ${toEntitySubline(item, dataset)}`.toLowerCase();
+      const haystack =
+        `${item.id} ${toEntityHeadline(item, dataset)} ${toEntitySubline(item, dataset)}`.toLowerCase();
       return haystack.includes(searchTerm);
-    })
+    }),
   );
   const selectedEntity: EntityItem | null = $derived(
     selectedId
-      ? (selectedDataset === 'project' ? projects : goals).find((item) => item.id === selectedId) ?? null
-      : null
+      ? ((selectedDataset === 'project' ? projects : goals).find(
+          (item) => item.id === selectedId,
+        ) ?? null)
+      : null,
   );
   const selectedArchived = $derived(selectedEntity?.is_archived === true);
 
@@ -195,7 +198,9 @@
       return project.status?.trim() || 'status unknown';
     }
     const goal = item as Goal;
-    const relatedCount = Array.isArray(goal.related_project_ids) ? goal.related_project_ids.length : 0;
+    const relatedCount = Array.isArray(goal.related_project_ids)
+      ? goal.related_project_ids.length
+      : 0;
     return `${relatedCount} related projects`;
   }
 
@@ -220,7 +225,8 @@
     if (absDiff < 45_000) return 'just now';
     if (absDiff < hour) return `${Math.round(absDiff / minute)} min ago`;
     if (absDiff < day) return `${Math.round(absDiff / hour)} hr ago`;
-    if (absDiff < 7 * day) return `${Math.round(absDiff / day)} day${Math.round(absDiff / day) === 1 ? '' : 's'} ago`;
+    if (absDiff < 7 * day)
+      return `${Math.round(absDiff / day)} day${Math.round(absDiff / day) === 1 ? '' : 's'} ago`;
     return date.toLocaleDateString();
   }
 
@@ -369,7 +375,9 @@
 
     const targetDataset = selectedDataset;
     const targetId = selectedId;
-    const proceed = window.confirm(`Archive ${entityTitle[targetDataset].toLowerCase()} ${targetId}?`);
+    const proceed = window.confirm(
+      `Archive ${entityTitle[targetDataset].toLowerCase()} ${targetId}?`,
+    );
     if (!proceed) {
       return;
     }
@@ -481,7 +489,7 @@
       myDisplayName = resolved ?? '';
       setMessage(
         resolved ? `Display name set to "${resolved}".` : 'Display name cleared.',
-        'success'
+        'success',
       );
       await loadData({ quiet: true });
     } catch (err) {
@@ -516,7 +524,9 @@
       <div class="header-copy">
         <h1>Admin Portal</h1>
         <p>
-          Edit projects and goals. Changes go live immediately and are logged to <a href="/history">/history</a>.
+          Edit projects and goals. Changes go live immediately and are logged to <a href="/history"
+            >/history</a
+          >.
         </p>
       </div>
       <div class="header-status">
@@ -527,7 +537,9 @@
               Refreshed {formatRelative(lastLoadedAt, now)}
             </span>
           {/if}
-          <button class="refresh-button" onclick={() => loadData()} disabled={loading}>Refresh</button>
+          <button class="refresh-button" onclick={() => loadData()} disabled={loading}
+            >Refresh</button
+          >
         </div>
 
         {#if myIdentity}
@@ -548,8 +560,8 @@
                   disabled={savingDisplayName}
                 />
                 <small>
-                  Replaces your email on <a href="/history">/history</a> and on entity
-                  "Updated by" fields. Past entries update too. Leave blank to use your email.
+                  Replaces your email on <a href="/history">/history</a> and on entity "Updated by" fields.
+                  Past entries update too. Leave blank to use your email.
                 </small>
               </label>
               <div class="profile-actions">
@@ -631,51 +643,50 @@
           role="tabpanel"
           aria-labelledby={dataset === 'project' ? 'tab-project' : 'tab-goal'}
         >
-
-        <label class="search-field">
-          <span class="search-label">
-            <span>Search</span>
-            <span class="collection-meta">{filteredItems.length} of {activeItems.length}</span>
-          </span>
-          <input
-            bind:value={searchQuery}
-            type="text"
-            autocomplete="off"
-            placeholder={`Find a ${dataset} by id or text`}
-          />
-        </label>
-
-        <div class="list-toolbar">
-          <button class="new-button" onclick={() => startNew(dataset)} disabled={loading}>
-            + New {entityTitle[dataset]}
-          </button>
-          <label class="archive-toggle">
-            <input type="checkbox" bind:checked={includeArchived} />
-            Include archived
+          <label class="search-field">
+            <span class="search-label">
+              <span>Search</span>
+              <span class="collection-meta">{filteredItems.length} of {activeItems.length}</span>
+            </span>
+            <input
+              bind:value={searchQuery}
+              type="text"
+              autocomplete="off"
+              placeholder={`Find a ${dataset} by id or text`}
+            />
           </label>
-        </div>
 
-        <ul>
-          {#if filteredItems.length === 0}
-            <li class="empty-state">No {dataset}s match this filter.</li>
-          {:else}
-            {#each filteredItems as item (item.id)}
-              <li class:selected={selectedDataset === dataset && selectedId === item.id}>
-                <button
-                  onclick={() => selectEntity(item.id, dataset)}
-                  disabled={loading}
-                  title={item.id}
-                >
-                  <span class="item-headline">{toEntityHeadline(item, dataset)}</span>
-                  <span class="item-subline">{toEntitySubline(item, dataset)}</span>
-                  {#if item.is_archived === true}
-                    <span class="badge">archived</span>
-                  {/if}
-                </button>
-              </li>
-            {/each}
-          {/if}
-        </ul>
+          <div class="list-toolbar">
+            <button class="new-button" onclick={() => startNew(dataset)} disabled={loading}>
+              + New {entityTitle[dataset]}
+            </button>
+            <label class="archive-toggle">
+              <input type="checkbox" bind:checked={includeArchived} />
+              Include archived
+            </label>
+          </div>
+
+          <ul>
+            {#if filteredItems.length === 0}
+              <li class="empty-state">No {dataset}s match this filter.</li>
+            {:else}
+              {#each filteredItems as item (item.id)}
+                <li class:selected={selectedDataset === dataset && selectedId === item.id}>
+                  <button
+                    onclick={() => selectEntity(item.id, dataset)}
+                    disabled={loading}
+                    title={item.id}
+                  >
+                    <span class="item-headline">{toEntityHeadline(item, dataset)}</span>
+                    <span class="item-subline">{toEntitySubline(item, dataset)}</span>
+                    {#if item.is_archived === true}
+                      <span class="badge">archived</span>
+                    {/if}
+                  </button>
+                </li>
+              {/each}
+            {/if}
+          </ul>
         </div>
       </aside>
 
@@ -689,7 +700,12 @@
           <div class="editor-head-actions">
             <button onclick={formatEditorJson} disabled={loading}>Format JSON</button>
             {#if selectedId}
-              <button class="ghost" onclick={closeEditor} disabled={loading} aria-label="Close editor">
+              <button
+                class="ghost"
+                onclick={closeEditor}
+                disabled={loading}
+                aria-label="Close editor"
+              >
                 Close
               </button>
             {/if}

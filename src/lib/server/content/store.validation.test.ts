@@ -153,6 +153,6 @@ describe('assertNoForbiddenWriteFields', () => {
       expect(caught).toBeInstanceOf(ContentStoreError);
       expect((caught as ContentStoreError).status).toBe(400);
       expect((caught as ContentStoreError).message).toContain(field);
-    }
+    },
   );
 });

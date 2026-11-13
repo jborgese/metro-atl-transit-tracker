@@ -58,7 +58,7 @@ async function loadEmailMessageCtor(): Promise<EmailMessageCtor> {
 export async function sendFeedbackEmail(
   event: StoreEvent,
   feedback: FeedbackRow,
-  loadCtor: () => Promise<EmailMessageCtor> = loadEmailMessageCtor
+  loadCtor: () => Promise<EmailMessageCtor> = loadEmailMessageCtor,
 ): Promise<boolean> {
   if (getStringVar(event, 'FEEDBACK_EMAIL_ENABLED', 'true') === 'false') {
     console.warn('[feedback] email delivery disabled via FEEDBACK_EMAIL_ENABLED');

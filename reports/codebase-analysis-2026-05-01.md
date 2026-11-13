@@ -11,7 +11,7 @@
 
 - **Stack at a glance:** SvelteKit 2.50 (Svelte 5.49) + TypeScript on Cloudflare Workers via `@sveltejs/adapter-cloudflare`, with Cloudflare D1 (SQLite) as the system of record, MapLibre GL for geospatial UI, Tailwind 4 for styling, and Cloudflare Access (JWT via `jose`) plus an in-memory rate limiter for write-path auth. Small repo (~50 source files, ~8.4k LOC of source) with a single D1 migration and a hand-rolled smoke + integration harness in place of unit tests.
 - **Auth & write path are the strong center.** [src/hooks.server.ts](../src/hooks.server.ts), [src/lib/server/auth/editor.ts](../src/lib/server/auth/editor.ts), and [src/lib/server/content/store.ts](../src/lib/server/content/store.ts) are coherent, defensively coded, and consistent in style — RBAC by env-CSV, immutable history table enforced by SQL triggers, optional editor-token mode for tests. This is the part of the codebase a new contributor should trust.
-- **The lint config is broken under ESLint 9.** Both [.eslintrc.cjs](../.eslintrc.cjs) (legacy, extends `recommended`) and [eslint.config.cjs](../eslint.config.cjs) (flat, *empty rules*) are present. ESLint 9 only consults the flat config, so `npm run lint` is effectively a no-op. The CI gate passes lint trivially. (F-01, 🟠.)
+- **The lint config is broken under ESLint 9.** Both [.eslintrc.cjs](../.eslintrc.cjs) (legacy, extends `recommended`) and [eslint.config.cjs](../eslint.config.cjs) (flat, _empty rules_) are present. ESLint 9 only consults the flat config, so `npm run lint` is effectively a no-op. The CI gate passes lint trivially. (F-01, 🟠.)
 - **A few large UI modules are absorbing most of the churn.** [src/components/svelte/MetroMap.svelte](../src/components/svelte/MetroMap.svelte) (40 commits in 6 months, 450 LOC), [src/lib/server/content/store.ts](../src/lib/server/content/store.ts) (1,483 LOC), and [src/routes/admin/+page.svelte](../src/routes/admin/+page.svelte) (1,293 LOC) are the obvious refactor candidates. None of them have automated tests at the unit level.
 - **Layout has a quirk worth knowing on day one:** [src/pages/](../src/pages/) is a leftover from the project's pre-SvelteKit Astro origin. SvelteKit routes in [src/routes/](../src/routes/) are thin wrappers that re-export from `../pages/`. [src/pages/methodology.svelte](../src/pages/methodology.svelte) currently has no route pointing at it (F-08, 🟢).
 
@@ -19,22 +19,22 @@
 
 ## Findings table
 
-| ID    | Severity | Title                                                                | Location                                                                                                  | Source              |
-| ----- | -------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------- |
-| F-01  | 🟠 High   | ESLint 9 flat config has empty rules — lint is a CI no-op            | [eslint.config.cjs](../eslint.config.cjs) + [.eslintrc.cjs](../.eslintrc.cjs)                             | File read           |
-| F-02  | 🟠 High   | No automated unit tests; only integration/smoke at the HTTP boundary | [scripts/](../scripts/), [package.json](../package.json)                                                  | `find` / scripts    |
-| F-03  | 🟡 Medium | Large modules concentrate complexity                                 | [src/lib/server/content/store.ts](../src/lib/server/content/store.ts), admin page, GoalsTable             | LOC sort            |
-| F-04  | 🟡 Medium | `MetroMap.svelte` is a churn hotspot (40 commits / 6 months)         | [src/components/svelte/MetroMap.svelte](../src/components/svelte/MetroMap.svelte)                         | `git log` churn     |
-| F-05  | 🟡 Medium | Two ESLint configs (legacy + flat) co-exist; cleanup cliff           | repo root                                                                                                 | File read           |
-| F-06  | 🟡 Medium | Code is on Svelte 5 but written in Svelte 4 idioms (no runes)        | all `.svelte` files                                                                                       | `rg` for runes      |
-| F-07  | 🟡 Medium | In-memory rate limiter doesn't survive Worker isolate boundaries     | [src/hooks.server.ts:16](../src/hooks.server.ts#L16)                                                      | File read           |
-| F-08  | 🟢 Low    | `src/pages/methodology.svelte` has no route referencing it           | [src/pages/methodology.svelte](../src/pages/methodology.svelte), [src/routes/](../src/routes/)            | `rg` import scan    |
-| F-09  | 🟢 Low    | `pages/`-then-`routes/`-wrapper indirection is unusual for SvelteKit | [src/pages/](../src/pages/) ↔ [src/routes/](../src/routes/)                                              | File read           |
-| F-10  | 🟢 Low    | `Cloudflare Access AUD` and team domain stored as `vars` in `wrangler.jsonc` | [wrangler.jsonc:11-12](../wrangler.jsonc#L11)                                                     | File read           |
-| F-11  | 🟢 Low    | TypeScript config is one line — relies entirely on SvelteKit-generated tsconfig | [tsconfig.json](../tsconfig.json)                                                              | File read           |
-| F-12  | ℹ️ Info   | Single linear-history branch (94 commits, no merges to date except #1) | `git log`                                                                                                | `git log`           |
-| F-13  | ℹ️ Info   | `cloc` not installed in the environment used for this audit          | n/a                                                                                                       | `command -v cloc`   |
-| F-14  | ℹ️ Info   | No TODO/FIXME/HACK markers anywhere in `src/` or `scripts/`          | repo-wide                                                                                                 | `rg` count          |
+| ID   | Severity  | Title                                                                           | Location                                                                                       | Source            |
+| ---- | --------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- |
+| F-01 | 🟠 High   | ESLint 9 flat config has empty rules — lint is a CI no-op                       | [eslint.config.cjs](../eslint.config.cjs) + [.eslintrc.cjs](../.eslintrc.cjs)                  | File read         |
+| F-02 | 🟠 High   | No automated unit tests; only integration/smoke at the HTTP boundary            | [scripts/](../scripts/), [package.json](../package.json)                                       | `find` / scripts  |
+| F-03 | 🟡 Medium | Large modules concentrate complexity                                            | [src/lib/server/content/store.ts](../src/lib/server/content/store.ts), admin page, GoalsTable  | LOC sort          |
+| F-04 | 🟡 Medium | `MetroMap.svelte` is a churn hotspot (40 commits / 6 months)                    | [src/components/svelte/MetroMap.svelte](../src/components/svelte/MetroMap.svelte)              | `git log` churn   |
+| F-05 | 🟡 Medium | Two ESLint configs (legacy + flat) co-exist; cleanup cliff                      | repo root                                                                                      | File read         |
+| F-06 | 🟡 Medium | Code is on Svelte 5 but written in Svelte 4 idioms (no runes)                   | all `.svelte` files                                                                            | `rg` for runes    |
+| F-07 | 🟡 Medium | In-memory rate limiter doesn't survive Worker isolate boundaries                | [src/hooks.server.ts:16](../src/hooks.server.ts#L16)                                           | File read         |
+| F-08 | 🟢 Low    | `src/pages/methodology.svelte` has no route referencing it                      | [src/pages/methodology.svelte](../src/pages/methodology.svelte), [src/routes/](../src/routes/) | `rg` import scan  |
+| F-09 | 🟢 Low    | `pages/`-then-`routes/`-wrapper indirection is unusual for SvelteKit            | [src/pages/](../src/pages/) ↔ [src/routes/](../src/routes/)                                    | File read         |
+| F-10 | 🟢 Low    | `Cloudflare Access AUD` and team domain stored as `vars` in `wrangler.jsonc`    | [wrangler.jsonc:11-12](../wrangler.jsonc#L11)                                                  | File read         |
+| F-11 | 🟢 Low    | TypeScript config is one line — relies entirely on SvelteKit-generated tsconfig | [tsconfig.json](../tsconfig.json)                                                              | File read         |
+| F-12 | ℹ️ Info   | Single linear-history branch (94 commits, no merges to date except #1)          | `git log`                                                                                      | `git log`         |
+| F-13 | ℹ️ Info   | `cloc` not installed in the environment used for this audit                     | n/a                                                                                            | `command -v cloc` |
+| F-14 | ℹ️ Info   | No TODO/FIXME/HACK markers anywhere in `src/` or `scripts/`                     | repo-wide                                                                                      | `rg` count        |
 
 ---
 
@@ -42,16 +42,16 @@
 
 ### Languages and lines (source files only, generated artifacts excluded)
 
-| Extension | Files (tracked) | LOC   |
-| --------- | --------------- | ----- |
-| `.ts`     | 36              | 3,134 |
-| `.svelte` | 15              | 4,208 |
-| `.mjs`    | 4               |   764 |
-| `.js`     | 5               |   207 |
-| `.cjs`    | 2               |    67 |
-| `.sql`    | 1               |    61 |
-|           |                 |       |
-| **Total source** |              | **8,441** |
+| Extension        | Files (tracked) | LOC       |
+| ---------------- | --------------- | --------- |
+| `.ts`            | 36              | 3,134     |
+| `.svelte`        | 15              | 4,208     |
+| `.mjs`           | 4               | 764       |
+| `.js`            | 5               | 207       |
+| `.cjs`           | 2               | 67        |
+| `.sql`           | 1               | 61        |
+|                  |                 |           |
+| **Total source** |                 | **8,441** |
 
 (`package-lock.json` is 5,139 lines but excluded from source; PNG/SVG/JSON content files excluded.)
 
@@ -71,36 +71,36 @@ The route hierarchy and the API surface together define a clean CRUD-with-histor
 
 From [package.json](../package.json):
 
-| Command | What it actually does |
-| ------- | --------------------- |
-| `npm run dev` | `vite dev` (SvelteKit dev server). |
-| `npm run build` | `svelte-kit sync && vite build` — emits `.svelte-kit/cloudflare/_worker.js` for Wrangler. |
-| `npm run deploy` | Build, then `wrangler deploy`. |
-| `npm run lint` | `eslint . --max-warnings=0` — currently a no-op (see F-01). |
-| `npm run typecheck` (alias `check`) | `svelte-kit sync && svelte-check`. |
-| `npm run schema:check` | Diffs migration SQL against local D1 introspection ([scripts/check-d1-schema.mjs](../scripts/check-d1-schema.mjs)). |
-| `npm run test:smoke` | Builds, applies migrations, starts `wrangler dev`, hits the API ([scripts/smoke-content-api.mjs](../scripts/smoke-content-api.mjs)). |
-| `npm run test:integration` | Same harness with deeper assertions ([scripts/integration-content-api.mjs](../scripts/integration-content-api.mjs)). |
-| `npm run ci:gate` | `typecheck → lint → schema:check → smoke`. The CI workflow [.github/workflows/ci-gates.yml](../.github/workflows/ci-gates.yml) runs the same gates per-job. |
-| `npm run d1:migrate:local` | Applies pending migrations to the local D1 instance. |
-| `npm run build:org-logos` | Pre-generates org logo assets ([scripts/build-org-logos.js](../scripts/build-org-logos.js)). |
+| Command                             | What it actually does                                                                                                                                       |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`                       | `vite dev` (SvelteKit dev server).                                                                                                                          |
+| `npm run build`                     | `svelte-kit sync && vite build` — emits `.svelte-kit/cloudflare/_worker.js` for Wrangler.                                                                   |
+| `npm run deploy`                    | Build, then `wrangler deploy`.                                                                                                                              |
+| `npm run lint`                      | `eslint . --max-warnings=0` — currently a no-op (see F-01).                                                                                                 |
+| `npm run typecheck` (alias `check`) | `svelte-kit sync && svelte-check`.                                                                                                                          |
+| `npm run schema:check`              | Diffs migration SQL against local D1 introspection ([scripts/check-d1-schema.mjs](../scripts/check-d1-schema.mjs)).                                         |
+| `npm run test:smoke`                | Builds, applies migrations, starts `wrangler dev`, hits the API ([scripts/smoke-content-api.mjs](../scripts/smoke-content-api.mjs)).                        |
+| `npm run test:integration`          | Same harness with deeper assertions ([scripts/integration-content-api.mjs](../scripts/integration-content-api.mjs)).                                        |
+| `npm run ci:gate`                   | `typecheck → lint → schema:check → smoke`. The CI workflow [.github/workflows/ci-gates.yml](../.github/workflows/ci-gates.yml) runs the same gates per-job. |
+| `npm run d1:migrate:local`          | Applies pending migrations to the local D1 instance.                                                                                                        |
+| `npm run build:org-logos`           | Pre-generates org logo assets ([scripts/build-org-logos.js](../scripts/build-org-logos.js)).                                                                |
 
 ### Public API surface (HTTP routes)
 
 Detected from [src/routes/](../src/routes/):
 
-| Method+Path                                | Auth                      | File                                                                                                                          |
-| ------------------------------------------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `GET /` and `GET /history`                 | none (public read)        | [src/routes/+page.svelte](../src/routes/+page.svelte), [src/routes/history/+page.svelte](../src/routes/history/+page.svelte) |
-| `GET /admin`                               | `content:edit` (page load)| [src/routes/admin/+page.server.ts](../src/routes/admin/+page.server.ts)                                                       |
-| `GET /api/projects`                        | none                      | [src/routes/api/projects/+server.ts](../src/routes/api/projects/+server.ts)                                                   |
-| `POST /api/projects`                       | `content:edit`            | same                                                                                                                          |
-| `GET /api/projects/:id`                    | none                      | [src/routes/api/projects/[id]/+server.ts](../src/routes/api/projects/[id]/+server.ts)                                         |
-| `PATCH /api/projects/:id`                  | `content:edit`            | same                                                                                                                          |
-| `DELETE /api/projects/:id`                 | `content:archive`         | same                                                                                                                          |
-| `POST /api/projects/:id/restore`           | `content:edit`            | [src/routes/api/projects/[id]/restore/+server.ts](../src/routes/api/projects/[id]/restore/+server.ts)                         |
-| `GET/POST/PATCH/DELETE /api/goals(/...)`   | mirror of projects        | [src/routes/api/goals/](../src/routes/api/goals/)                                                                             |
-| `GET /api/history`                         | none                      | [src/routes/api/history/+server.ts](../src/routes/api/history/+server.ts)                                                     |
+| Method+Path                              | Auth                       | File                                                                                                                         |
+| ---------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `GET /` and `GET /history`               | none (public read)         | [src/routes/+page.svelte](../src/routes/+page.svelte), [src/routes/history/+page.svelte](../src/routes/history/+page.svelte) |
+| `GET /admin`                             | `content:edit` (page load) | [src/routes/admin/+page.server.ts](../src/routes/admin/+page.server.ts)                                                      |
+| `GET /api/projects`                      | none                       | [src/routes/api/projects/+server.ts](../src/routes/api/projects/+server.ts)                                                  |
+| `POST /api/projects`                     | `content:edit`             | same                                                                                                                         |
+| `GET /api/projects/:id`                  | none                       | [src/routes/api/projects/[id]/+server.ts](../src/routes/api/projects/[id]/+server.ts)                                        |
+| `PATCH /api/projects/:id`                | `content:edit`             | same                                                                                                                         |
+| `DELETE /api/projects/:id`               | `content:archive`          | same                                                                                                                         |
+| `POST /api/projects/:id/restore`         | `content:edit`             | [src/routes/api/projects/[id]/restore/+server.ts](../src/routes/api/projects/[id]/restore/+server.ts)                        |
+| `GET/POST/PATCH/DELETE /api/goals(/...)` | mirror of projects         | [src/routes/api/goals/](../src/routes/api/goals/)                                                                            |
+| `GET /api/history`                       | none                       | [src/routes/api/history/+server.ts](../src/routes/api/history/+server.ts)                                                    |
 
 All write endpoints flow through `requireEditorActor()` ([src/lib/server/auth/editor.ts:203](../src/lib/server/auth/editor.ts#L203)) and the in-memory rate limiter in [src/hooks.server.ts](../src/hooks.server.ts).
 
@@ -153,18 +153,18 @@ This is rigorous against the routing/auth/rate-limit/SQL boundaries but leaves a
 
 ### Top 10 hot files (commits in last 6 months)
 
-| Commits | File                                                                                                                          | LOC   |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------- | ----- |
-| 40      | [src/components/svelte/MetroMap.svelte](../src/components/svelte/MetroMap.svelte)                                             |   450 |
-| 14      | [src/styles/global.css](../src/styles/global.css)                                                                             |   443 |
-| 14      | [package.json](../package.json)                                                                                               |    51 |
-| 12      | [src/components/svelte/GoalsTable.svelte](../src/components/svelte/GoalsTable.svelte)                                         |   957 |
-| 12      | [README.md](../README.md)                                                                                                     |   248 |
-| 10      | [.vscode/settings.json](../.vscode/settings.json)                                                                             | (gitignored — present in older commits) |
-|  8      | [src/pages/index.svelte](../src/pages/index.svelte)                                                                           |   139 |
-|  7      | `src/pages/index.astro`                                                                                                       | (deleted — Astro→Svelte port) |
-|  6      | [src/lib/server/content/store.ts](../src/lib/server/content/store.ts)                                                         | 1,483 |
-|  6      | [src/lib/server/auth/editor.ts](../src/lib/server/auth/editor.ts)                                                             |   261 |
+| Commits | File                                                                                  | LOC                                     |
+| ------- | ------------------------------------------------------------------------------------- | --------------------------------------- |
+| 40      | [src/components/svelte/MetroMap.svelte](../src/components/svelte/MetroMap.svelte)     | 450                                     |
+| 14      | [src/styles/global.css](../src/styles/global.css)                                     | 443                                     |
+| 14      | [package.json](../package.json)                                                       | 51                                      |
+| 12      | [src/components/svelte/GoalsTable.svelte](../src/components/svelte/GoalsTable.svelte) | 957                                     |
+| 12      | [README.md](../README.md)                                                             | 248                                     |
+| 10      | [.vscode/settings.json](../.vscode/settings.json)                                     | (gitignored — present in older commits) |
+| 8       | [src/pages/index.svelte](../src/pages/index.svelte)                                   | 139                                     |
+| 7       | `src/pages/index.astro`                                                               | (deleted — Astro→Svelte port)           |
+| 6       | [src/lib/server/content/store.ts](../src/lib/server/content/store.ts)                 | 1,483                                   |
+| 6       | [src/lib/server/auth/editor.ts](../src/lib/server/auth/editor.ts)                     | 261                                     |
 
 ### Hot-and-large (refactor candidates)
 
@@ -238,7 +238,7 @@ Notably untested even at integration level: every `.svelte` component, all of `s
 - **Where:** All `.svelte` files (verified by ripgrep — zero uses of `$state(`, `$derived(`, `$effect(`, `$props(`).
 - **Evidence:** [src/routes/admin/+page.svelte:10-27](../src/routes/admin/+page.svelte#L10) uses `let token = ''; let actor = 'admin'; ...` and `$:` reactive declarations — classic Svelte 4. The `package.json` pins `svelte: ^5.49.1`.
 - **Why it matters:** Svelte 4 idioms still compile under Svelte 5 in legacy mode, but new Svelte 5 features (runes, fine-grained reactivity, snippets) are unavailable. Mixing the two later is more painful than picking now.
-- **Fix:** Either (a) commit to runes for all *new* components and migrate hotspots opportunistically, or (b) explicitly document that this repo stays on Svelte-4-style for now. Pick one and write it down. The decision is more important than which way you decide.
+- **Fix:** Either (a) commit to runes for all _new_ components and migrate hotspots opportunistically, or (b) explicitly document that this repo stays on Svelte-4-style for now. Pick one and write it down. The decision is more important than which way you decide.
 
 ### F-07 — 🟡 In-memory rate limiter is per-isolate
 
@@ -313,5 +313,5 @@ In order, for someone new contributing to this repo:
 1. [README.md](../README.md) — the operational and conceptual overview is unusually thorough.
 2. [src/hooks.server.ts](../src/hooks.server.ts) — small, self-contained, shows how requests enter the system, rate limit, and host-redirect.
 3. [src/lib/server/auth/editor.ts](../src/lib/server/auth/editor.ts) — the auth model (Cloudflare Access JWT + RBAC + token escape-hatch). Read end-to-end before editing any write route.
-4. [src/lib/server/content/store.ts](../src/lib/server/content/store.ts) — the canonical D1 layer and Zod schemas. Long, but it is *the* business-logic file.
+4. [src/lib/server/content/store.ts](../src/lib/server/content/store.ts) — the canonical D1 layer and Zod schemas. Long, but it is _the_ business-logic file.
 5. [migrations/d1/0001_init_content_schema.sql](../migrations/d1/0001_init_content_schema.sql) — the data shape. Pair this with `store.ts`.
