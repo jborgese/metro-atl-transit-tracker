@@ -113,7 +113,6 @@ module.exports = [
       // Backlog — demote to warn for now, ratchet to error in a follow-up.
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-expressions': 'warn',
-      '@typescript-eslint/no-unsafe-function-type': 'warn',
     },
   },
 
@@ -146,7 +145,6 @@ module.exports = [
       'svelte/no-navigation-without-resolve': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-expressions': 'warn',
-      '@typescript-eslint/no-unsafe-function-type': 'warn',
     },
   },
 
