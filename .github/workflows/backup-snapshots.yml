@@ -2,24 +2,24 @@ name: Backup Snapshots
 
 on:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: '0 2 * * *'
   push:
     branches:
       - main
   workflow_dispatch:
     inputs:
       run_content_snapshot:
-        description: "Capture data/content snapshot"
+        description: 'Capture data/content snapshot'
         required: false
         default: true
         type: boolean
       run_d1_exports:
-        description: "Run D1 exports (prod + staging)"
+        description: 'Run D1 exports (prod + staging)'
         required: false
         default: true
         type: boolean
       configure_r2_governance:
-        description: "Ensure R2 lifecycle + lock rules (manual use)"
+        description: 'Ensure R2 lifecycle + lock rules (manual use)'
         required: false
         default: false
         type: boolean

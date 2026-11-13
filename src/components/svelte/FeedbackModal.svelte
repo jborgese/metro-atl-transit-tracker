@@ -55,8 +55,8 @@
     if (e.key === 'Tab' && modalContent) {
       const focusables = Array.from(
         modalContent.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])'
-        )
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])',
+        ),
       );
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
@@ -164,9 +164,7 @@
         {:else}
           <form class="feedback-form" onsubmit={handleSubmit}>
             <h1 id="feedback-title">Send feedback</h1>
-            <p class="feedback-intro">
-              Spotted a data error, a bug, or have an idea? Let us know.
-            </p>
+            <p class="feedback-intro">Spotted a data error, a bug, or have an idea? Let us know.</p>
 
             <label class="feedback-field">
               <span>Topic</span>
@@ -190,12 +188,7 @@
 
             <label class="feedback-field">
               <span>Feedback</span>
-              <textarea
-                bind:value={message}
-                maxlength="4000"
-                rows="6"
-                required
-                aria-required="true"
+              <textarea bind:value={message} maxlength="4000" rows="6" required aria-required="true"
               ></textarea>
             </label>
 
@@ -230,158 +223,158 @@
 {/if}
 
 <style>
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-modal);
-  padding: 1rem;
-}
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal);
+    padding: 1rem;
+  }
 
-.modal-content {
-  position: relative;
-  width: min(100%, 28rem);
-  max-height: 90vh;
-  overflow-y: auto;
-  background: var(--surface-2);
-  border-radius: 0.75rem;
-  padding: clamp(1.25rem, 3vw, 2rem);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-}
-
-.modal-close {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: none;
-  border: none;
-  color: #a3a3a3;
-  font-size: 1.75rem;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-}
-
-.modal-close:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.feedback-form h1,
-.feedback-success h1 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: #fff;
-}
-
-.feedback-intro,
-.feedback-success p {
-  color: var(--text-muted);
-  margin-bottom: 1rem;
-  line-height: 1.5;
-}
-
-.feedback-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin-bottom: 0.9rem;
-}
-
-.feedback-field span {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.feedback-field em {
-  font-style: normal;
-  color: var(--text-dim);
-}
-
-.feedback-field input,
-.feedback-field select,
-.feedback-field textarea {
-  border: 1px solid var(--border-subtle);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-on-dark);
-  padding: 0.45rem 0.6rem;
-  border-radius: 0.5rem;
-  font: inherit;
-}
-
-.feedback-field textarea {
-  resize: vertical;
-  min-height: 7rem;
-}
-
-.feedback-field input:focus-visible,
-.feedback-field select:focus-visible,
-.feedback-field textarea:focus-visible {
-  outline: none;
-  border-color: var(--atl-blue);
-  box-shadow: 0 0 0 3px rgba(66, 128, 196, 0.35);
-}
-
-.feedback-trap {
-  position: absolute;
-  left: -9999px;
-  height: 1px;
-  width: 1px;
-  overflow: hidden;
-}
-
-.feedback-status {
-  min-height: 1.2rem;
-  margin-bottom: 0.5rem;
-}
-
-.feedback-error {
-  color: #fca5a5;
-  background: rgba(220, 38, 38, 0.15);
-  border: 1px solid rgba(220, 38, 38, 0.4);
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
-}
-
-.feedback-submit {
-  border: 1px solid var(--border-strong);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-on-dark);
-  padding: 0.5rem 1.1rem;
-  border-radius: 0.5rem;
-  font: inherit;
-  cursor: pointer;
-}
-
-.feedback-submit:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
-}
-
-.feedback-submit:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.feedback-submit:focus-visible {
-  outline: none;
-  border-color: var(--atl-blue);
-  box-shadow: 0 0 0 3px rgba(66, 128, 196, 0.35);
-}
-
-@media (max-width: 600px) {
   .modal-content {
-    border-radius: 0.5rem;
-    max-height: 92vh;
+    position: relative;
+    width: min(100%, 28rem);
+    max-height: 90vh;
+    overflow-y: auto;
+    background: var(--surface-2);
+    border-radius: 0.75rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   }
 
   .modal-close {
-    top: 0.5rem;
-    right: 0.5rem;
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    color: #a3a3a3;
+    font-size: 1.75rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
   }
-}
+
+  .modal-close:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .feedback-form h1,
+  .feedback-success h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+  }
+
+  .feedback-intro,
+  .feedback-success p {
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+
+  .feedback-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .feedback-field span {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .feedback-field em {
+    font-style: normal;
+    color: var(--text-dim);
+  }
+
+  .feedback-field input,
+  .feedback-field select,
+  .feedback-field textarea {
+    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-on-dark);
+    padding: 0.45rem 0.6rem;
+    border-radius: 0.5rem;
+    font: inherit;
+  }
+
+  .feedback-field textarea {
+    resize: vertical;
+    min-height: 7rem;
+  }
+
+  .feedback-field input:focus-visible,
+  .feedback-field select:focus-visible,
+  .feedback-field textarea:focus-visible {
+    outline: none;
+    border-color: var(--atl-blue);
+    box-shadow: 0 0 0 3px rgba(66, 128, 196, 0.35);
+  }
+
+  .feedback-trap {
+    position: absolute;
+    left: -9999px;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+  }
+
+  .feedback-status {
+    min-height: 1.2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .feedback-error {
+    color: #fca5a5;
+    background: rgba(220, 38, 38, 0.15);
+    border: 1px solid rgba(220, 38, 38, 0.4);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .feedback-submit {
+    border: 1px solid var(--border-strong);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-on-dark);
+    padding: 0.5rem 1.1rem;
+    border-radius: 0.5rem;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .feedback-submit:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  .feedback-submit:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .feedback-submit:focus-visible {
+    outline: none;
+    border-color: var(--atl-blue);
+    box-shadow: 0 0 0 3px rgba(66, 128, 196, 0.35);
+  }
+
+  @media (max-width: 600px) {
+    .modal-content {
+      border-radius: 0.5rem;
+      max-height: 92vh;
+    }
+
+    .modal-close {
+      top: 0.5rem;
+      right: 0.5rem;
+    }
+  }
 </style>

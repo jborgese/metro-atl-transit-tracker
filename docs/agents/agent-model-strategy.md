@@ -42,13 +42,13 @@ Token budgets are finite, and subagent fan-out multiplies model spend fast. Rule
 
 ## Recommended Patterns
 
-| Goal | Suggested model strategy | Notes |
-|---|---|---|
-| Broad exploration | Cheap/fast model | Optimize for speed and keep prompts narrow |
-| Implementation helper | `inherit` | Preserve parent context and assumptions |
-| Adversarial review | Different model family if available | Keep read-only, independent, and findings-first |
-| Final readiness review | Different family or stronger model | Include acceptance criteria and test evidence (e.g. the `final-reviewer` agent) |
-| Docs drift / cleanup | Cheap/fast model | Keep it cheap and focused |
+| Goal                   | Suggested model strategy            | Notes                                                                           |
+| ---------------------- | ----------------------------------- | ------------------------------------------------------------------------------- |
+| Broad exploration      | Cheap/fast model                    | Optimize for speed and keep prompts narrow                                      |
+| Implementation helper  | `inherit`                           | Preserve parent context and assumptions                                         |
+| Adversarial review     | Different model family if available | Keep read-only, independent, and findings-first                                 |
+| Final readiness review | Different family or stronger model  | Include acceptance criteria and test evidence (e.g. the `final-reviewer` agent) |
+| Docs drift / cleanup   | Cheap/fast model                    | Keep it cheap and focused                                                       |
 
 ## Orchestration Pattern
 

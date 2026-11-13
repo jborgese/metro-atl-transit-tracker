@@ -18,53 +18,53 @@ Beyond these, two medium opportunities — **Drizzle ORM** for the D1 layer and 
 
 **Top-5 prioritized adoption queue:**
 
-| # | Opportunity                                                | Severity   | Effort | Replaces                                                                       |
-| - | ---------------------------------------------------------- | ---------- | ------ | ------------------------------------------------------------------------------ |
-| 1 | `@cloudflare/vitest-pool-workers` + `vitest`               | 🟠 High    | M      | [scripts/test-utils/](../scripts/test-utils/), smoke + integration harness     |
-| 2 | Cloudflare native `RateLimit` binding (or `@upstash/ratelimit`) | 🟠 High | S      | hand-rolled rate limiter in [hooks.server.ts](../src/hooks.server.ts)         |
-| 3 | `@cloudflare/workers-types` (declare directly)             | 🟡 Medium  | S      | inline `D1Database` types in [store.ts](../src/lib/server/content/store.ts)    |
-| 4 | Drizzle ORM (D1 driver)                                    | 🟡 Medium  | L      | most of the SQL in [store.ts](../src/lib/server/content/store.ts) (1,483 LOC)  |
-| 5 | `@asteasolutions/zod-to-openapi` (auto-generate API docs)  | 🟢 Low     | S      | the manual Zod schemas would also become an OpenAPI spec for free              |
+| #   | Opportunity                                                     | Severity  | Effort | Replaces                                                                      |
+| --- | --------------------------------------------------------------- | --------- | ------ | ----------------------------------------------------------------------------- |
+| 1   | `@cloudflare/vitest-pool-workers` + `vitest`                    | 🟠 High   | M      | [scripts/test-utils/](../scripts/test-utils/), smoke + integration harness    |
+| 2   | Cloudflare native `RateLimit` binding (or `@upstash/ratelimit`) | 🟠 High   | S      | hand-rolled rate limiter in [hooks.server.ts](../src/hooks.server.ts)         |
+| 3   | `@cloudflare/workers-types` (declare directly)                  | 🟡 Medium | S      | inline `D1Database` types in [store.ts](../src/lib/server/content/store.ts)   |
+| 4   | Drizzle ORM (D1 driver)                                         | 🟡 Medium | L      | most of the SQL in [store.ts](../src/lib/server/content/store.ts) (1,483 LOC) |
+| 5   | `@asteasolutions/zod-to-openapi` (auto-generate API docs)       | 🟢 Low    | S      | the manual Zod schemas would also become an OpenAPI spec for free             |
 
 ---
 
-## Step 1 — What this repo *does* (capability inventory)
+## Step 1 — What this repo _does_ (capability inventory)
 
-| Capability                  | Today's implementation                                                                                                                            | Disposition           |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| HTTP routing & SSR          | SvelteKit 2 + `@sveltejs/adapter-cloudflare`                                                                                                      | Framework — keep      |
-| UI                          | Svelte 5 (in legacy idioms — see `/analyze-codebase` F-06)                                                                                        | Framework — keep      |
-| Styling                     | Tailwind 4 + `@tailwindcss/typography`                                                                                                            | Framework — keep      |
-| Mapping                     | MapLibre GL 5                                                                                                                                     | Library — keep        |
-| Validation                  | Zod 4 (schemas in [store.ts:161-227](../src/lib/server/content/store.ts#L161))                                                                    | Library — keep        |
-| Auth (JWT verification)     | `jose` 6 + Cloudflare Access JWKS                                                                                                                 | Library — keep        |
-| Persistence                 | Cloudflare D1 (SQLite) — raw SQL with prepared statements                                                                                         | **Hand-rolled**       |
-| Migrations                  | `wrangler d1 migrations apply` + 1 `.sql` file                                                                                                    | Tooling — keep        |
-| Schema check (drift)        | [scripts/check-d1-schema.mjs](../scripts/check-d1-schema.mjs) (167 LOC, parses `wrangler d1 execute` JSON)                                        | **Hand-rolled glue**  |
-| Tests (smoke + integration) | [scripts/test-utils/cloudflare-test-utils.mjs](../scripts/test-utils/cloudflare-test-utils.mjs) (263 LOC) + smoke (121) + integration (213)       | **Hand-rolled**       |
-| Rate limiting               | In-memory `Map` per isolate ([hooks.server.ts](../src/hooks.server.ts))                                                                           | **Hand-rolled**       |
-| Logging (client)            | [src/utils/logger.ts](../src/utils/logger.ts) (43 LOC, scoped logger)                                                                             | Hand-rolled (small)   |
-| Logging (server)            | Raw `console.warn` with structured-object args ([editor.ts:229](../src/lib/server/auth/editor.ts#L229), [:252](../src/lib/server/auth/editor.ts#L252)) | Hand-rolled (small) |
-| Date formatting             | [src/utils/dateFormat.ts](../src/utils/dateFormat.ts) (40 LOC, native `Intl.DateTimeFormat` + relative-time helper)                               | Hand-rolled (small)   |
-| Org-logo build              | [scripts/build-org-logos.js](../scripts/build-org-logos.js) (uses `sharp` + `png-to-ico`)                                                         | Glue — keep           |
-| Backup workflow             | [.github/workflows/backup-snapshots.yml](../.github/workflows/backup-snapshots.yml) (314 LOC)                                                     | Hand-rolled (workflow)|
+| Capability                  | Today's implementation                                                                                                                                            | Disposition            |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| HTTP routing & SSR          | SvelteKit 2 + `@sveltejs/adapter-cloudflare`                                                                                                                      | Framework — keep       |
+| UI                          | Svelte 5 (in legacy idioms — see `/analyze-codebase` F-06)                                                                                                        | Framework — keep       |
+| Styling                     | Tailwind 4 + `@tailwindcss/typography`                                                                                                                            | Framework — keep       |
+| Mapping                     | MapLibre GL 5                                                                                                                                                     | Library — keep         |
+| Validation                  | Zod 4 (schemas in [store.ts:161-227](../src/lib/server/content/store.ts#L161))                                                                                    | Library — keep         |
+| Auth (JWT verification)     | `jose` 6 + Cloudflare Access JWKS                                                                                                                                 | Library — keep         |
+| Persistence                 | Cloudflare D1 (SQLite) — raw SQL with prepared statements                                                                                                         | **Hand-rolled**        |
+| Migrations                  | `wrangler d1 migrations apply` + 1 `.sql` file                                                                                                                    | Tooling — keep         |
+| Schema check (drift)        | [scripts/check-d1-schema.mjs](../scripts/check-d1-schema.mjs) (167 LOC, parses `wrangler d1 execute` JSON)                                                        | **Hand-rolled glue**   |
+| Tests (smoke + integration) | [scripts/test-utils/cloudflare-test-utils.mjs](../scripts/test-utils/cloudflare-test-utils.mjs) (263 LOC) + smoke (121) + integration (213)                       | **Hand-rolled**        |
+| Rate limiting               | In-memory `Map` per isolate ([hooks.server.ts](../src/hooks.server.ts))                                                                                           | **Hand-rolled**        |
+| Logging (client)            | [src/utils/logger.ts](../src/utils/logger.ts) (43 LOC, scoped logger)                                                                                             | Hand-rolled (small)    |
+| Logging (server)            | Raw `console.warn` with structured-object args ([editor.ts:229](../src/lib/server/auth/editor.ts#L229), [:252](../src/lib/server/auth/editor.ts#L252))            | Hand-rolled (small)    |
+| Date formatting             | [src/utils/dateFormat.ts](../src/utils/dateFormat.ts) (40 LOC, native `Intl.DateTimeFormat` + relative-time helper)                                               | Hand-rolled (small)    |
+| Org-logo build              | [scripts/build-org-logos.js](../scripts/build-org-logos.js) (uses `sharp` + `png-to-ico`)                                                                         | Glue — keep            |
+| Backup workflow             | [.github/workflows/backup-snapshots.yml](../.github/workflows/backup-snapshots.yml) (314 LOC)                                                                     | Hand-rolled (workflow) |
 | Provenance / audit history  | Append-only `content_history` D1 table + SQL triggers (see [migrations/d1/0001_init_content_schema.sql:51-61](../migrations/d1/0001_init_content_schema.sql#L51)) | **Hand-rolled** (good) |
-| CRUD route boilerplate      | 7 × `+server.ts` files, ~40% line-duplicated (see `/check-health` H-05)                                                                           | **Hand-rolled glue**  |
+| CRUD route boilerplate      | 7 × `+server.ts` files, ~40% line-duplicated (see `/check-health` H-05)                                                                                           | **Hand-rolled glue**   |
 
 ---
 
 ## Step 2 — Hand-rolled opportunities at a glance
 
-| Capability                 | LOC under maintenance | Has tests? | Buggy / stale signals               | Worth a swap? |
-| -------------------------- | --------------------- | ---------- | ----------------------------------- | ------------- |
-| Test harness               | 597 (test-utils + smoke + integration) | The harness *is* the tests | 35-min CI timeouts (H-08) | **Yes — F-01** |
-| D1 persistence layer       | 1,483 ([store.ts](../src/lib/server/content/store.ts))               | Integration only | Three functions over CC 15 (`/check-health` H-06) | **Yes — F-04** |
-| D1 type declarations       | ~30 (in store.ts)                                                    | n/a       | Drift risk vs. official types       | **Yes — F-03** |
-| Rate limiter               | ~150 ([hooks.server.ts](../src/hooks.server.ts))                     | Integration only | Per-isolate weakness ([reports/security-2026-05-01.md S-06](security-2026-05-01.md#s-06--%F0%9F%9F%A1-in-memory-rate-limiter-is-per-isolate)) | **Yes — F-02** |
-| Schema drift check         | 167 ([check-d1-schema.mjs](../scripts/check-d1-schema.mjs))          | self        | Hasn't been exercised against a 2nd migration yet | Borderline — F-04 absorbs |
-| Client logger              | 43 ([logger.ts](../src/utils/logger.ts))                             | None       | None                                | **No** — too small |
-| Date formatting helpers    | 40 ([dateFormat.ts](../src/utils/dateFormat.ts))                     | None       | None                                | **No** — `Intl` is correct |
-| CRUD route boilerplate     | ~150 across 7 files                                                  | Integration | jscpd 40% duplication (H-05)        | Local helper > FOSS — F-05 |
+| Capability              | LOC under maintenance                                       | Has tests?                 | Buggy / stale signals                                                                                                                         | Worth a swap?              |
+| ----------------------- | ----------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Test harness            | 597 (test-utils + smoke + integration)                      | The harness _is_ the tests | 35-min CI timeouts (H-08)                                                                                                                     | **Yes — F-01**             |
+| D1 persistence layer    | 1,483 ([store.ts](../src/lib/server/content/store.ts))      | Integration only           | Three functions over CC 15 (`/check-health` H-06)                                                                                             | **Yes — F-04**             |
+| D1 type declarations    | ~30 (in store.ts)                                           | n/a                        | Drift risk vs. official types                                                                                                                 | **Yes — F-03**             |
+| Rate limiter            | ~150 ([hooks.server.ts](../src/hooks.server.ts))            | Integration only           | Per-isolate weakness ([reports/security-2026-05-01.md S-06](security-2026-05-01.md#s-06--%F0%9F%9F%A1-in-memory-rate-limiter-is-per-isolate)) | **Yes — F-02**             |
+| Schema drift check      | 167 ([check-d1-schema.mjs](../scripts/check-d1-schema.mjs)) | self                       | Hasn't been exercised against a 2nd migration yet                                                                                             | Borderline — F-04 absorbs  |
+| Client logger           | 43 ([logger.ts](../src/utils/logger.ts))                    | None                       | None                                                                                                                                          | **No** — too small         |
+| Date formatting helpers | 40 ([dateFormat.ts](../src/utils/dateFormat.ts))            | None                       | None                                                                                                                                          | **No** — `Intl` is correct |
+| CRUD route boilerplate  | ~150 across 7 files                                         | Integration                | jscpd 40% duplication (H-05)                                                                                                                  | Local helper > FOSS — F-05 |
 
 ---
 
@@ -78,19 +78,21 @@ Beyond these, two medium opportunities — **Drizzle ORM** for the D1 layer and 
 
 **Candidates:**
 
-| Library                                | License    | Maintenance signal                                                                                              | Why it fits                                                                                                  |
-| -------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Library                                              | License    | Maintenance signal                                                                                                                                                                                  | Why it fits                                                                                                                                                    |
+| ---------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`@cloudflare/vitest-pool-workers`** + **`vitest`** | MIT (both) | First-party Cloudflare; verify maintenance status via `gh repo view cloudflare/workers-sdk --json` (this monorepo houses it). Vitest itself is one of the most actively maintained JS test runners. | Designed precisely for this: D1, KV, R2, queues are bound just like in `wrangler.jsonc`. SvelteKit + Vite already in the tree — Vitest reuses the Vite config. |
-| `miniflare` directly + `vitest`        | MIT        | Same maintainer (Cloudflare).                                                                                   | More flexible but you build the harness yourself; no longer recommended after `vitest-pool-workers` shipped.  |
-| Stick with HTTP-only + supertest       | MIT        | Mature.                                                                                                         | Does not address the unit-test gap; doesn't speed up CI.                                                     |
+| `miniflare` directly + `vitest`                      | MIT        | Same maintainer (Cloudflare).                                                                                                                                                                       | More flexible but you build the harness yourself; no longer recommended after `vitest-pool-workers` shipped.                                                   |
+| Stick with HTTP-only + supertest                     | MIT        | Mature.                                                                                                                                                                                             | Does not address the unit-test gap; doesn't speed up CI.                                                                                                       |
 
 **Adoption cost:** **M.** ~½ day to wire the pool config, port one smoke test, and remove the spawn-wrangler harness. Migration strategy: **strangler fig** — keep [scripts/integration-content-api.mjs](../scripts/integration-content-api.mjs) running until 90% of its assertions are duplicated as Vitest specs, then delete.
 
 **Risks:**
+
 - The local D1 instance the pool creates is per-test by default; teardown semantics differ from a long-running `wrangler dev`. Tests that depend on global state ordering need `beforeEach` resets.
 - Vitest config has to share `vite.config.js`'s aliases (`$lib`, `@/types`) — usually a one-line `defineConfig` extension.
 
 **References:**
+
 - `@cloudflare/vitest-pool-workers`: <https://www.npmjs.com/package/@cloudflare/vitest-pool-workers>
 - Cloudflare docs: "Write your first test" — Workers / Vitest integration.
 
@@ -104,16 +106,17 @@ Beyond these, two medium opportunities — **Drizzle ORM** for the D1 layer and 
 
 **Candidates:**
 
-| Library / approach                              | License    | Maintenance signal                       | Why it fits                                                                                                                                          |
-| ----------------------------------------------- | ---------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Cloudflare native `RateLimit` binding**       | n/a (platform-provided; no library to license-check) | First-party, GA since Nov 2024. Verify current status via the Cloudflare Workers changelog. | Zero extra deps. Add a `unsafe.bindings` block to [wrangler.jsonc](../wrangler.jsonc); `event.platform.env.WRITE_LIMITER.limit({ key })` returns `{ success }`. Globally consistent across isolates. |
-| `@upstash/ratelimit` (`@upstash/ratelimit-cloudflare` for Workers) | MIT | Active. Verify via `gh repo view upstash/ratelimit-js --json`. | Sliding-window / token-bucket. Backs onto Upstash Redis or a Durable Object. Best when you already have Upstash infra; otherwise overkill.            |
-| `sveltekit-rate-limiter`                        | MIT        | Active SvelteKit-community lib.           | A drop-in for the existing approach, **also per-isolate by default** — solves the ergonomics, not the global-consistency problem. Use only if F-02 is too much. |
-| Build a Durable Object yourself                 | n/a        | Cloudflare-supported pattern.             | Maximum control; ~30 LOC of DO code. Fine if you already have DOs. Adds a binding and a small cost.                                                 |
+| Library / approach                                                 | License                                              | Maintenance signal                                                                          | Why it fits                                                                                                                                                                                          |
+| ------------------------------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cloudflare native `RateLimit` binding**                          | n/a (platform-provided; no library to license-check) | First-party, GA since Nov 2024. Verify current status via the Cloudflare Workers changelog. | Zero extra deps. Add a `unsafe.bindings` block to [wrangler.jsonc](../wrangler.jsonc); `event.platform.env.WRITE_LIMITER.limit({ key })` returns `{ success }`. Globally consistent across isolates. |
+| `@upstash/ratelimit` (`@upstash/ratelimit-cloudflare` for Workers) | MIT                                                  | Active. Verify via `gh repo view upstash/ratelimit-js --json`.                              | Sliding-window / token-bucket. Backs onto Upstash Redis or a Durable Object. Best when you already have Upstash infra; otherwise overkill.                                                           |
+| `sveltekit-rate-limiter`                                           | MIT                                                  | Active SvelteKit-community lib.                                                             | A drop-in for the existing approach, **also per-isolate by default** — solves the ergonomics, not the global-consistency problem. Use only if F-02 is too much.                                      |
+| Build a Durable Object yourself                                    | n/a                                                  | Cloudflare-supported pattern.                                                               | Maximum control; ~30 LOC of DO code. Fine if you already have DOs. Adds a binding and a small cost.                                                                                                  |
 
 **Recommended:** the **native `RateLimit` binding**. It is the lowest-cost path to truly global limits.
 
 **Adoption cost:** **S.** Roughly 30 LOC of changes:
+
 1. Add to [wrangler.jsonc](../wrangler.jsonc):
    ```jsonc
    "unsafe": {
@@ -127,11 +130,13 @@ Beyond these, two medium opportunities — **Drizzle ORM** for the D1 layer and 
 3. Delete the `Map`, the GC sweep, and `parsePositiveInt`. Keep `applyRateLimitHeaders` for the response shape.
 
 **Risks:**
+
 - Native binding has fixed buckets per binding. Multiple bucket policies require multiple bindings.
 - It's still in `unsafe.bindings` in some SDK versions — check the current Wrangler release notes when implementing.
 - Local development with `wrangler dev` may not enforce the binding identically; document the gap.
 
 **References:**
+
 - Cloudflare docs: Workers Rate Limiting API.
 - `@upstash/ratelimit`: <https://github.com/upstash/ratelimit-js>.
 - `sveltekit-rate-limiter`: <https://github.com/ciscoheat/sveltekit-rate-limiter>.
@@ -146,16 +151,20 @@ Beyond these, two medium opportunities — **Drizzle ORM** for the D1 layer and 
 
 **Candidates:**
 
-| Library                          | License    | Maintenance signal                                         | Why it fits                                                                            |
-| -------------------------------- | ---------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| **`@cloudflare/workers-types`**  | MIT (Apache-2.0 OR MIT) | First-party, weekly releases (the version currently resolved is `4.20260219.0`). | Zero new transitive deps. Drop-in replacement.                                         |
-| `cloudflare:workers` ambient     | n/a        | Same maintainer.                                           | Available without import via the `compatibility_date` runtime, but explicit imports are cleaner for IDE go-to-def. |
+| Library                         | License                 | Maintenance signal                                                               | Why it fits                                                                                                        |
+| ------------------------------- | ----------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **`@cloudflare/workers-types`** | MIT (Apache-2.0 OR MIT) | First-party, weekly releases (the version currently resolved is `4.20260219.0`). | Zero new transitive deps. Drop-in replacement.                                                                     |
+| `cloudflare:workers` ambient    | n/a                     | Same maintainer.                                                                 | Available without import via the `compatibility_date` runtime, but explicit imports are cleaner for IDE go-to-def. |
 
 **Adoption cost:** **S.** ~5 minutes:
+
 1. Add to [package.json](../package.json) devDependencies: `"@cloudflare/workers-types": "^4.20260219.0"`.
 2. In [tsconfig.json](../tsconfig.json), the SvelteKit-generated config already pulls them, but make it explicit:
    ```json
-   { "extends": "./.svelte-kit/tsconfig.json", "compilerOptions": { "types": ["@cloudflare/workers-types"] } }
+   {
+     "extends": "./.svelte-kit/tsconfig.json",
+     "compilerOptions": { "types": ["@cloudflare/workers-types"] }
+   }
    ```
 3. Delete the inline `D1Database` / `D1PreparedStatement` / `D1ResultSet` types in [store.ts:21-35](../src/lib/server/content/store.ts#L21). Replace `getDb`'s `as unknown as D1Database` with a real type narrow.
 
@@ -173,13 +182,14 @@ Beyond these, two medium opportunities — **Drizzle ORM** for the D1 layer and 
 
 **Candidates:**
 
-| Library          | License   | Maintenance signal                                                     | Why it fits                                                                                                                                |
-| ---------------- | --------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Drizzle ORM** + `drizzle-kit` | Apache-2.0 | Very active. Verify via `gh repo view drizzle-team/drizzle-orm --json`. | Native D1 adapter, schema-first TypeScript, generates migrations + types + Zod schemas. SQLite-compatible (D1 is SQLite). Lightweight runtime. |
-| Kysely + `kysely-d1`            | MIT        | Stable, smaller community.                                              | Query-builder rather than ORM; thinner abstraction, very strong types. No migration tooling included.                                      |
-| Prisma                          | Apache-2.0 | Industry standard, but D1 support is preview-only and adds a Rust binary engine that does not run in Workers natively. | Skip — not a fit for D1/Workers.                                                                                                            |
+| Library                         | License    | Maintenance signal                                                                                                     | Why it fits                                                                                                                                    |
+| ------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Drizzle ORM** + `drizzle-kit` | Apache-2.0 | Very active. Verify via `gh repo view drizzle-team/drizzle-orm --json`.                                                | Native D1 adapter, schema-first TypeScript, generates migrations + types + Zod schemas. SQLite-compatible (D1 is SQLite). Lightweight runtime. |
+| Kysely + `kysely-d1`            | MIT        | Stable, smaller community.                                                                                             | Query-builder rather than ORM; thinner abstraction, very strong types. No migration tooling included.                                          |
+| Prisma                          | Apache-2.0 | Industry standard, but D1 support is preview-only and adds a Rust binary engine that does not run in Workers natively. | Skip — not a fit for D1/Workers.                                                                                                               |
 
 **Adoption cost:** **L.** Real migration:
+
 1. Create `db/schema.ts` describing `projects`, `goals`, `content_history` (matches [migrations/d1/0001_init_content_schema.sql](../migrations/d1/0001_init_content_schema.sql)).
 2. `drizzle-kit generate` produces a migration file matching the existing one.
 3. Refactor [store.ts](../src/lib/server/content/store.ts) one operation at a time, replacing `db.prepare(INSERT_PROJECT_SQL).bind(...)` with `db.insert(projects).values(...)`.
@@ -189,6 +199,7 @@ Beyond these, two medium opportunities — **Drizzle ORM** for the D1 layer and 
 **Strategy:** **strangler fig.** Drizzle and raw `db.prepare()` calls coexist on the same D1 binding. Migrate one operation per PR.
 
 **Risks:**
+
 - D1's `db.batch()` semantics differ slightly across Drizzle versions — verify the version of `drizzle-orm/d1` you adopt supports the exact batching pattern in [store.ts:912-944](../src/lib/server/content/store.ts#L912) (insert + history append in one transaction).
 - `content_history` immutability is currently enforced by SQL triggers in the migration; Drizzle is migration-aware but the trigger needs to live in a raw SQL file. Drizzle supports `drizzle-kit` "custom" SQL migrations, so this still works — verify before committing.
 - The 1,483 LOC of `store.ts` is the most complex code in the repo; refactoring it touches the auth+write hot path.
@@ -217,10 +228,10 @@ The cleanest fix is the local helper proposed in [reports/health-2026-05-01.md H
 
 **Candidates:**
 
-| Library                                | License   | Maintenance signal                                                            | Why it fits                                                                  |
-| -------------------------------------- | --------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **`@asteasolutions/zod-to-openapi`**   | MIT       | Active; verify via `gh repo view asteasolutions/zod-to-openapi --json`.        | Decorator-free, registers existing Zod schemas; exposes `.generateDocument()`.|
-| `zod-openapi`                          | MIT       | Active alternative.                                                           | Similar surface; pick whichever the team prefers.                            |
+| Library                              | License | Maintenance signal                                                      | Why it fits                                                                    |
+| ------------------------------------ | ------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **`@asteasolutions/zod-to-openapi`** | MIT     | Active; verify via `gh repo view asteasolutions/zod-to-openapi --json`. | Decorator-free, registers existing Zod schemas; exposes `.generateDocument()`. |
+| `zod-openapi`                        | MIT     | Active alternative.                                                     | Similar surface; pick whichever the team prefers.                              |
 
 **Adoption cost:** **S.** ~30 LOC + a new `+server.ts` for `/api/openapi.json`.
 
@@ -232,14 +243,14 @@ The cleanest fix is the local helper proposed in [reports/health-2026-05-01.md H
 
 ## Considered and rejected
 
-| Capability                       | Library considered           | Why rejected                                                                                                                                  |
-| -------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Server-side structured logging   | `pino` (MIT)                 | The existing scoped logger ([src/utils/logger.ts](../src/utils/logger.ts), 43 LOC) is fine. Cloudflare Observability ingests structured `console.warn` directly — `pino` adds no clarity here, and its serializers don't compose well with Workers. |
-| Date formatting                  | `date-fns` / `dayjs` / `luxon` | [src/utils/dateFormat.ts](../src/utils/dateFormat.ts) is 40 LOC of native `Intl.DateTimeFormat` with a hand-rolled relative-time helper. `Intl` is the right answer for i18n; an external lib would *increase* bundle size for less correctness. |
-| HTTP framework swap              | `hono`, `tRPC`               | Already on SvelteKit; swap would replace 90% of the code for no architectural gain.                                                         |
-| Observability                    | `@sentry/sveltekit`          | The Cloudflare Workers Observability binding (already enabled in [wrangler.jsonc:7-9](../wrangler.jsonc#L7)) covers the same ground without a new vendor. Add Sentry only if a *user-facing* error capture + release tracking is wanted. |
-| Test runner alternatives          | `playwright` (browser), `cypress`  | Both are E2E browser testers — different layer from the API integration tests in scope here. Useful later for the admin UI, not for replacing [scripts/integration-content-api.mjs](../scripts/integration-content-api.mjs). |
-| Auth library swap                | `lucia-auth`, `auth.js`      | Cloudflare Access already provides MFA-backed SSO; the JWT verification in [editor.ts](../src/lib/server/auth/editor.ts) is ~260 LOC of correct, defensive code. Swapping in another auth lib would *add* surface, not reduce it. |
+| Capability                     | Library considered                | Why rejected                                                                                                                                                                                                                                        |
+| ------------------------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server-side structured logging | `pino` (MIT)                      | The existing scoped logger ([src/utils/logger.ts](../src/utils/logger.ts), 43 LOC) is fine. Cloudflare Observability ingests structured `console.warn` directly — `pino` adds no clarity here, and its serializers don't compose well with Workers. |
+| Date formatting                | `date-fns` / `dayjs` / `luxon`    | [src/utils/dateFormat.ts](../src/utils/dateFormat.ts) is 40 LOC of native `Intl.DateTimeFormat` with a hand-rolled relative-time helper. `Intl` is the right answer for i18n; an external lib would _increase_ bundle size for less correctness.    |
+| HTTP framework swap            | `hono`, `tRPC`                    | Already on SvelteKit; swap would replace 90% of the code for no architectural gain.                                                                                                                                                                 |
+| Observability                  | `@sentry/sveltekit`               | The Cloudflare Workers Observability binding (already enabled in [wrangler.jsonc:7-9](../wrangler.jsonc#L7)) covers the same ground without a new vendor. Add Sentry only if a _user-facing_ error capture + release tracking is wanted.            |
+| Test runner alternatives       | `playwright` (browser), `cypress` | Both are E2E browser testers — different layer from the API integration tests in scope here. Useful later for the admin UI, not for replacing [scripts/integration-content-api.mjs](../scripts/integration-content-api.mjs).                        |
+| Auth library swap              | `lucia-auth`, `auth.js`           | Cloudflare Access already provides MFA-backed SSO; the JWT verification in [editor.ts](../src/lib/server/auth/editor.ts) is ~260 LOC of correct, defensive code. Swapping in another auth lib would _add_ surface, not reduce it.                   |
 
 ---
 

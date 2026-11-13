@@ -93,14 +93,14 @@ npm run dev
 
 Follow [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) for cross-cutting patterns (functional style, TypeScript, writing for human reviewers, testing, canonical file index). Use area rules for depth:
 
-| Surface | Rule |
-|---------|------|
-| Functional style | `.claude/rules/functional-programming.md` |
-| TypeScript | `.claude/rules/typescript-standards.md` |
-| UI design | `.claude/rules/design-review.md` |
-| Svelte / SvelteKit (including the runes-only policy) | `.claude/rules/svelte.md` |
-| Unit tests | `.claude/rules/testing.md` |
-| Documentation edits | `.claude/rules/doc-review.md` |
+| Surface                                              | Rule                                      |
+| ---------------------------------------------------- | ----------------------------------------- |
+| Functional style                                     | `.claude/rules/functional-programming.md` |
+| TypeScript                                           | `.claude/rules/typescript-standards.md`   |
+| UI design                                            | `.claude/rules/design-review.md`          |
+| Svelte / SvelteKit (including the runes-only policy) | `.claude/rules/svelte.md`                 |
+| Unit tests                                           | `.claude/rules/testing.md`                |
+| Documentation edits                                  | `.claude/rules/doc-review.md`             |
 
 **Repo-specific reminders:**
 
@@ -132,6 +132,7 @@ Pushes to `main` also trigger `.github/workflows/backup-snapshots.yml`, which sn
 ## Boundaries
 
 **✅ Always:**
+
 - Keep changes scoped — only modify what directly supports the task
 - When moving or removing logic, or changing a response shape, find every consumer of the old location and update all of them in the same change
 - For doc edits, prefer the smallest diff that restores accuracy; do not remove correct content or restructure docs unless it is stale or the user explicitly asks for a rewrite (`.claude/rules/doc-review.md`)
@@ -141,12 +142,14 @@ Pushes to `main` also trigger `.github/workflows/backup-snapshots.yml`, which sn
 - Run `npm run ci:gate` before calling code changes done
 
 **⚠️ Ask before:**
+
 - Adding new external dependencies
 - Changing the public JSON API's routes or response shapes (published at `/api/openapi.json`)
 - Changing `wrangler.jsonc` (bindings, routes, rate limits, vars), Cloudflare Access or RBAC configuration, or `.github/workflows/`
 - **Any mutation against the Cloudflare account.** This covers D1 `INSERT`/`UPDATE`/`DELETE` or DDL, remote migrations, R2 put or delete, Worker deploys, and secret changes. On production (`metro-atl-transit-prod` D1, prod Workers, R2 backup buckets), describe the exact call and get approval for each action, even when the task implies it. Prefer a staging dry run or a migration or script the user runs. On staging (`metro-atl-transit-staging`), say what you will run before running it. Read-only queries, R2 listings, and Worker or observability inspection need no approval. This applies to Wrangler and to the Cloudflare MCP servers in `.mcp.json`.
 
 **🚫 Never:**
+
 - Commit credentials, `.env*` files, or any secrets
 - Modify generated output (`node_modules/`, `.svelte-kit/`, `build/`, `.wrangler/`)
 - Deploy to shared non-production environments or production without explicit user confirmation
@@ -221,11 +224,11 @@ Before spawning subagents or running multiple independent/cross-model review pas
 
 The `epic-planning` skill and the `final-reviewer` agent are provided by the agent-guardrails plugin (Cursor and Claude Code).
 
-| Situation | Primary Resource | Use It When | Typical Follow-Up |
-|---|---|---|---|
-| Large plan, migration, or phased rollout | `epic-planning` skill | The work needs decisions, sequencing, validation, rollback, or multi-package coordination before implementation | `final-reviewer` once implemented |
-| Final implementation review | `final-reviewer` agent | The work is implemented and needs an objective merge-readiness review | Fix findings, then re-review if needed |
-| Repo audit (architecture, health, security, UI/UX, FOSS options) | `.claude/commands/` (`/analyze-codebase`, `/check-health`, `/security-scan`, `/audit-uiux`, `/recommend-foss`); user-invoked only | The user asks for an audit report | The report lands in `reports/<name>-<date>.md` |
+| Situation                                                        | Primary Resource                                                                                                                  | Use It When                                                                                                     | Typical Follow-Up                              |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Large plan, migration, or phased rollout                         | `epic-planning` skill                                                                                                             | The work needs decisions, sequencing, validation, rollback, or multi-package coordination before implementation | `final-reviewer` once implemented              |
+| Final implementation review                                      | `final-reviewer` agent                                                                                                            | The work is implemented and needs an objective merge-readiness review                                           | Fix findings, then re-review if needed         |
+| Repo audit (architecture, health, security, UI/UX, FOSS options) | `.claude/commands/` (`/analyze-codebase`, `/check-health`, `/security-scan`, `/audit-uiux`, `/recommend-foss`); user-invoked only | The user asks for an audit report                                                                               | The report lands in `reports/<name>-<date>.md` |
 
 For review passes, prefer role separation and `readonly` review before model separation; for high-risk validation, consider a different model family when available.
 
@@ -243,22 +246,22 @@ For review passes, prefer role separation and `readonly` review before model sep
 
 ## Canonical References
 
-| Topic | Location |
-|---|---|
-| **Coding standards (canonical patterns)** | [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) |
-| Agent model strategy | [`docs/agents/agent-model-strategy.md`](docs/agents/agent-model-strategy.md) |
-| API routes, editor auth, env vars, rate limits, Cloudflare and D1 operations | [`README.md`](README.md) |
-| Audit commands and report format | [`.claude/commands/`](.claude/commands/), [`.claude/snippets/report-format.md`](.claude/snippets/report-format.md) |
-| Backup, retention, and restore runbooks | [`docs/backup-retention-policy.md`](docs/backup-retention-policy.md) |
-| CI gates | [`docs/ci-gate-policy.md`](docs/ci-gate-policy.md) |
-| Design review principles | [`.claude/rules/design-review.md`](.claude/rules/design-review.md) |
-| Design tokens and styling (Tailwind 4 + tokens) | [`docs/design-tokens.md`](docs/design-tokens.md) |
-| Doc edits | [`.claude/rules/doc-review.md`](.claude/rules/doc-review.md) |
-| Functional programming | [`.claude/rules/functional-programming.md`](.claude/rules/functional-programming.md) |
-| Git branch naming and GitHub operations | [`.claude/rules/github-operations.md`](.claude/rules/github-operations.md) |
-| PR template / PR authoring | [`.claude/rules/pr-creation.md`](.claude/rules/pr-creation.md), [`.github/pull_request_template.md`](.github/pull_request_template.md) |
-| Specs guide | [`docs/specs/README.md`](docs/specs/README.md) |
-| Svelte and SvelteKit standards, runes-only policy | [`.claude/rules/svelte.md`](.claude/rules/svelte.md) |
-| Type declaration placement | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
-| TypeScript standards | [`.claude/rules/typescript-standards.md`](.claude/rules/typescript-standards.md) |
-| Unit testing patterns | [`.claude/rules/testing.md`](.claude/rules/testing.md) |
+| Topic                                                                        | Location                                                                                                                               |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Coding standards (canonical patterns)**                                    | [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md)                                                                                 |
+| Agent model strategy                                                         | [`docs/agents/agent-model-strategy.md`](docs/agents/agent-model-strategy.md)                                                           |
+| API routes, editor auth, env vars, rate limits, Cloudflare and D1 operations | [`README.md`](README.md)                                                                                                               |
+| Audit commands and report format                                             | [`.claude/commands/`](.claude/commands/), [`.claude/snippets/report-format.md`](.claude/snippets/report-format.md)                     |
+| Backup, retention, and restore runbooks                                      | [`docs/backup-retention-policy.md`](docs/backup-retention-policy.md)                                                                   |
+| CI gates                                                                     | [`docs/ci-gate-policy.md`](docs/ci-gate-policy.md)                                                                                     |
+| Design review principles                                                     | [`.claude/rules/design-review.md`](.claude/rules/design-review.md)                                                                     |
+| Design tokens and styling (Tailwind 4 + tokens)                              | [`docs/design-tokens.md`](docs/design-tokens.md)                                                                                       |
+| Doc edits                                                                    | [`.claude/rules/doc-review.md`](.claude/rules/doc-review.md)                                                                           |
+| Functional programming                                                       | [`.claude/rules/functional-programming.md`](.claude/rules/functional-programming.md)                                                   |
+| Git branch naming and GitHub operations                                      | [`.claude/rules/github-operations.md`](.claude/rules/github-operations.md)                                                             |
+| PR template / PR authoring                                                   | [`.claude/rules/pr-creation.md`](.claude/rules/pr-creation.md), [`.github/pull_request_template.md`](.github/pull_request_template.md) |
+| Specs guide                                                                  | [`docs/specs/README.md`](docs/specs/README.md)                                                                                         |
+| Svelte and SvelteKit standards, runes-only policy                            | [`.claude/rules/svelte.md`](.claude/rules/svelte.md)                                                                                   |
+| Type declaration placement                                                   | [`CONTRIBUTING.md`](CONTRIBUTING.md)                                                                                                   |
+| TypeScript standards                                                         | [`.claude/rules/typescript-standards.md`](.claude/rules/typescript-standards.md)                                                       |
+| Unit testing patterns                                                        | [`.claude/rules/testing.md`](.claude/rules/testing.md)                                                                                 |

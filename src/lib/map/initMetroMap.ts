@@ -1,4 +1,4 @@
-import maplibregl, { type StyleSpecification } from "maplibre-gl";
+import maplibregl, { type StyleSpecification } from 'maplibre-gl';
 
 export interface InitMetroMapOptions {
   container: HTMLDivElement;
@@ -21,7 +21,7 @@ export function initMetroMap({
   center = [-84.388, 33.749], // Atlanta, GA
   zoom = 9,
   attributionControl = false,
-  customAttribution = ["County boundaries (c) US Census Bureau (TIGER/Line)"],
+  customAttribution = ['County boundaries (c) US Census Bureau (TIGER/Line)'],
   onLoad,
   onError,
 }: InitMetroMapOptions): maplibregl.Map {
@@ -38,26 +38,26 @@ export function initMetroMap({
       compact: true,
       customAttribution,
     }),
-    "bottom-right"
+    'bottom-right',
   );
 
   const closeAttribution = () => {
-    const el = container.querySelector(".maplibregl-ctrl-attrib");
+    const el = container.querySelector('.maplibregl-ctrl-attrib');
     if (el) {
-      el.classList.remove("maplibregl-compact-show");
-      el.removeAttribute("open");
+      el.classList.remove('maplibregl-compact-show');
+      el.removeAttribute('open');
     }
   };
   closeAttribution();
-  map.on("load", closeAttribution);
+  map.on('load', closeAttribution);
 
-  map.addControl(new maplibregl.NavigationControl(), "top-right");
+  map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
   if (onLoad) {
-    map.on("load", () => onLoad(map));
+    map.on('load', () => onLoad(map));
   }
   if (onError) {
-    map.on("error", onError);
+    map.on('error', onError);
   }
 
   return map;

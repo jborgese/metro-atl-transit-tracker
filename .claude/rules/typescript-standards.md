@@ -1,7 +1,7 @@
 ---
 paths:
-  - "src/**/*.ts"
-  - "src/**/*.svelte"
+  - 'src/**/*.ts'
+  - 'src/**/*.svelte'
 ---
 
 # TypeScript Standards

@@ -47,26 +47,28 @@ describe('toFeedbackCreate', () => {
 
   it('rejects invalid email addresses', () => {
     expect(() => toFeedbackCreate({ message: 'hello there', email: 'not-an-email' })).toThrowError(
-      ContentStoreError
+      ContentStoreError,
     );
   });
 
   it('rejects names containing line breaks (header injection defense)', () => {
     expect(() =>
-      toFeedbackCreate({ message: 'hello there', name: 'evil\r\nBcc: spam@example.com' })
+      toFeedbackCreate({ message: 'hello there', name: 'evil\r\nBcc: spam@example.com' }),
     ).toThrowError(ContentStoreError);
   });
 
   it('rejects unknown categories', () => {
     expect(() => toFeedbackCreate({ message: 'hello there', category: 'rant' })).toThrowError(
-      ContentStoreError
+      ContentStoreError,
     );
   });
 });
 
 describe('isHoneypotTripped', () => {
   it('returns true when the hidden field is filled', () => {
-    expect(isHoneypotTripped({ message: 'hello there', website: 'https://spam.example' })).toBe(true);
+    expect(isHoneypotTripped({ message: 'hello there', website: 'https://spam.example' })).toBe(
+      true,
+    );
   });
 
   it('returns false for empty or missing honeypot values', () => {
@@ -93,7 +95,7 @@ class FakeEmailMessage {
   constructor(
     public from: string,
     public to: string,
-    public raw: string
+    public raw: string,
   ) {}
 }
 
@@ -111,7 +113,7 @@ describe('sendFeedbackEmail', () => {
     const send = vi.fn(async () => undefined);
     const sent = await sendFeedbackEmail(
       makeEvent({ SEND_EMAIL: { send }, FEEDBACK_EMAIL_ENABLED: 'false' }),
-      baseRow
+      baseRow,
     );
     expect(sent).toBe(false);
     expect(send).not.toHaveBeenCalled();
@@ -126,7 +128,7 @@ describe('sendFeedbackEmail', () => {
         FEEDBACK_TO_ADDRESS: 'owner@example.com',
       }),
       baseRow,
-      async () => FakeEmailMessage
+      async () => FakeEmailMessage,
     );
     expect(sent).toBe(true);
     expect(send).toHaveBeenCalledTimes(1);
@@ -146,7 +148,7 @@ describe('sendFeedbackEmail', () => {
     const sent = await sendFeedbackEmail(
       makeEvent({ SEND_EMAIL: { send } }),
       baseRow,
-      async () => FakeEmailMessage
+      async () => FakeEmailMessage,
     );
     expect(sent).toBe(false);
   });

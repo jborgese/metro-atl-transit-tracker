@@ -26,28 +26,28 @@ Keep active planning docs at the root of `docs/specs/` so the current queue stay
 
 ## Status Values
 
-| Status | Meaning |
-| --- | --- |
-| `Draft` | Being researched or written |
-| `In Review` | Ready for stakeholder or agent review |
-| `Approved` | Accepted as the current plan |
-| `In Progress` | Implementation has started against this spec |
-| `Done` | Implementation completed and validated; keep active for follow-on planning or move to `archived/` |
-| `Superseded` | Replaced by a newer spec |
-| `Rejected` | Reviewed and explicitly declined; keep as historical context |
-| `Abandoned` | Intentionally not moving forward without a formal rejection; keep as historical context |
+| Status        | Meaning                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| `Draft`       | Being researched or written                                                                       |
+| `In Review`   | Ready for stakeholder or agent review                                                             |
+| `Approved`    | Accepted as the current plan                                                                      |
+| `In Progress` | Implementation has started against this spec                                                      |
+| `Done`        | Implementation completed and validated; keep active for follow-on planning or move to `archived/` |
+| `Superseded`  | Replaced by a newer spec                                                                          |
+| `Rejected`    | Reviewed and explicitly declined; keep as historical context                                      |
+| `Abandoned`   | Intentionally not moving forward without a formal rejection; keep as historical context           |
 
 ## Status Transitions
 
-| Transition | When |
-| --- | --- |
-| `Draft` -> `In Review` | Major sections are complete and the author wants feedback |
-| `In Review` -> `Approved` | Relevant engineering owners agree on the plan |
-| `Approved` -> `In Progress` | Implementation begins against the spec |
-| `In Progress` -> `Done` | Validation passes and the definition of done is satisfied; move the file to `archived/` during docs cleanup |
-| Any active spec -> `Superseded` | A newer spec replaces it; add a pointer to the replacement near the top |
-| Any active spec -> `Rejected` | Stakeholders review the plan and explicitly decide not to proceed; add a brief rationale near the top |
-| `Draft` or `In Review` -> `Abandoned` | The work is intentionally dropped without a formal rejection |
+| Transition                            | When                                                                                                        |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `Draft` -> `In Review`                | Major sections are complete and the author wants feedback                                                   |
+| `In Review` -> `Approved`             | Relevant engineering owners agree on the plan                                                               |
+| `Approved` -> `In Progress`           | Implementation begins against the spec                                                                      |
+| `In Progress` -> `Done`               | Validation passes and the definition of done is satisfied; move the file to `archived/` during docs cleanup |
+| Any active spec -> `Superseded`       | A newer spec replaces it; add a pointer to the replacement near the top                                     |
+| Any active spec -> `Rejected`         | Stakeholders review the plan and explicitly decide not to proceed; add a brief rationale near the top       |
+| `Draft` or `In Review` -> `Abandoned` | The work is intentionally dropped without a formal rejection                                                |
 
 Never mark a spec `Approved` without explicit human sign-off from the relevant owners.
 

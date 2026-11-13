@@ -24,12 +24,12 @@ async function convertFavicon() {
   // Create PNG versions at different sizes for ICO
   const sizes = [16, 32, 48, 64, 128, 256];
   const pngBuffers = await Promise.all(
-    sizes.map(size =>
+    sizes.map((size) =>
       sharp(inputBuffer)
         .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .png()
-        .toBuffer()
-    )
+        .toBuffer(),
+    ),
   );
 
   // Create favicon.ico from the PNG buffers

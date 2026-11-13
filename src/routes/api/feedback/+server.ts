@@ -58,7 +58,7 @@ export const POST: RequestHandler = async (event) => {
     if (err instanceof ContentStoreError && err.status === 429) {
       return json(
         { message: err.message },
-        { status: 429, headers: { 'Retry-After': String(FEEDBACK_LIMIT_WINDOW_SECONDS) } }
+        { status: 429, headers: { 'Retry-After': String(FEEDBACK_LIMIT_WINDOW_SECONDS) } },
       );
     }
     toHttpError(err);

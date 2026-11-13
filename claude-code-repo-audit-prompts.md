@@ -39,7 +39,7 @@ These come from the Claude Code best practices docs and field-tested patterns:
 
 ## 1. `/analyze-codebase` — Architecture & convention map
 
-~~~markdown
+```markdown
 ---
 name: analyze-codebase
 description: Produce a structured architecture and convention overview of this repository.
@@ -49,7 +49,9 @@ disable-model-invocation: true
 You are a senior staff engineer doing a first-week orientation for a codebase you have never seen before. Produce a `reports/codebase-analysis-$(date +%Y-%m-%d).md` file. Do not modify any source files.
 
 ## Step 1 — Plan
+
 Before any analysis, list:
+
 - The detected primary language(s), package manager(s), and build system(s) (run `cat package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `pom.xml`, `*.csproj`, etc. as applicable).
 - The directories you will sample first.
 - Whether you will dispatch subagents (recommended for repos >200 source files).
@@ -57,6 +59,7 @@ Before any analysis, list:
 Pause and present the plan before running tools.
 
 ## Step 2 — Inventory
+
 - Total LOC by language (use `cloc` if available; otherwise `find` + `wc -l`).
 - Top-level package layout and inferred architectural style (monolith, monorepo, layered, hexagonal, microservices, etc.).
 - Build/test/lint entry points (the actual scripts a new dev would run).
@@ -64,27 +67,30 @@ Pause and present the plan before running tools.
 - External integrations (DBs, queues, cloud services).
 
 ## Step 3 — Conventions
+
 - Naming, formatting, and import conventions actually observed (not what a style guide claims).
 - Test pyramid shape (unit/integration/e2e ratios; framework names).
 - Error handling and logging idioms.
 - Configuration and secret management approach.
 
 ## Step 4 — Risk surface
+
 - Hot files: areas with high churn (use `git log --since="6 months ago" --pretty=format: --name-only | sort | uniq -c | sort -rn | head -30`).
 - Hot-and-large: correlate churn with LOC — these are top refactor candidates.
 - Modules with no tests.
 
 ## Step 5 — Report
+
 Use the shared severity rubric and report skeleton. Findings here will mostly be 🟡/🟢/ℹ️ — this is a map, not a bug report. Mark Critical only for things like missing CI, no tests at all, or vendored secrets.
 
 End with a "Where would I start reading?" section: 5 files in suggested reading order for a new contributor.
-~~~
+```
 
 ---
 
 ## 2. `/check-health` — Code quality & maintainability
 
-~~~markdown
+```markdown
 ---
 name: check-health
 description: Score the maintainability of the repo and surface technical debt with evidence.
@@ -94,7 +100,9 @@ disable-model-invocation: true
 You are running a code health audit. Produce `reports/health-$(date +%Y-%m-%d).md`. Do not modify source files.
 
 ## Step 1 — Detect ecosystem & install scanners
+
 Detect language(s), then prepare scanner commands. Examples:
+
 - **JS/TS:** `npx eslint . --format json`, `npx madge --circular .`, `npx depcheck`, `npx ts-prune`, `npm outdated --json`.
 - **Python:** `ruff check . --output-format=json`, `vulture .`, `pip list --outdated --format=json`, `radon cc -j .`.
 - **Go:** `go vet ./...`, `staticcheck ./...`, `go list -u -m all`.
@@ -104,7 +112,9 @@ Detect language(s), then prepare scanner commands. Examples:
 If a tool is not installed, document the gap as an Info-level finding and continue with what is available.
 
 ## Step 2 — Metrics
+
 Capture and tabulate:
+
 - **Cyclomatic complexity** — top 20 functions by complexity. Flag anything >15 as 🟡, >25 as 🟠.
 - **File size** — top 20 files by LOC. Flag >500 LOC as 🟡, >1000 as 🟠.
 - **Duplication** — use `jscpd` if available, otherwise grep for repeated blocks. Flag >5% duplication as 🟡.
@@ -115,16 +125,17 @@ Capture and tabulate:
 - **TODO/FIXME/HACK density** — `rg -c '(TODO|FIXME|HACK|XXX)'` per directory.
 
 ## Step 3 — Report
+
 Use the shared rubric. Each finding must include the actual tool output or file:line evidence. Group findings by category (Complexity, Duplication, Dependencies, Tests, Dead code, Comments-as-debt).
 
 End with a **Maintainability Index estimate** (Excellent/Good/Fair/Poor) with a one-paragraph justification, and a **top 5 highest-ROI fixes** list ranked by (impact ÷ effort).
-~~~
+```
 
 ---
 
 ## 3. `/security-scan` — OWASP-aligned vulnerability sweep
 
-~~~markdown
+```markdown
 ---
 name: security-scan
 description: Identify security vulnerabilities mapped to OWASP Top 10 (2025) and surface dependency, secret, and misconfiguration risks.
@@ -136,7 +147,9 @@ You are a security engineer performing a non-destructive review aligned to the *
 Produce `reports/security-$(date +%Y-%m-%d).md`. Do not modify source files. Do not exfiltrate secrets if any are found — redact them in the report.
 
 ## Step 1 — Plan & tool detection
+
 Detect ecosystem and choose available tools. Recommended:
+
 - **SAST:** `semgrep --config=auto --json` (works across many languages).
 - **Dependency vulnerabilities:** `npm audit --json`, `pip-audit -f json`, `osv-scanner --format=json -r .`, `cargo audit --json`, `govulncheck ./...`, `trivy fs --format json .`.
 - **Secrets:** `gitleaks detect --no-git --report-format json` or `trufflehog filesystem --json .`.
@@ -146,7 +159,9 @@ Detect ecosystem and choose available tools. Recommended:
 For each tool not installed, record a gap (Info) and continue.
 
 ## Step 2 — Manual review augmenting the scanners
+
 Scanners miss design-level issues. Specifically inspect:
+
 - Authentication flows: session handling, password storage, MFA, account lockout (A07).
 - Authorization checks at every protected endpoint — look for IDOR patterns (A01).
 - Server-side fetches that take user-controlled URLs (A01, formerly SSRF).
@@ -157,7 +172,9 @@ Scanners miss design-level issues. Specifically inspect:
 - Error handling: are stack traces or internal paths leaked to users? (A10).
 
 ## Step 3 — Report
+
 Use the shared rubric, mapping each finding to its OWASP category. Each finding must include:
+
 - The tool output or file:line evidence.
 - The exact OWASP A0X:2025 category.
 - Whether it appears in any SBOM/CVE record (link to the advisory).
@@ -166,13 +183,13 @@ Use the shared rubric, mapping each finding to its OWASP category. Each finding 
 Critical (🔴) is reserved for: confirmed RCE/SQLi/auth bypass paths, exposed secrets currently in the working tree, or known-exploited CVEs in production deps.
 
 End with: (1) a one-paragraph executive summary suitable for sharing with non-security stakeholders, and (2) a remediation queue ordered by (severity × exploit likelihood).
-~~~
+```
 
 ---
 
 ## 4. `/recommend-foss` — FOSS framework opportunities
 
-~~~markdown
+```markdown
 ---
 name: recommend-foss
 description: Analyze what this codebase does and recommend FOSS frameworks/libraries that could replace bespoke code or fill gaps.
@@ -181,20 +198,26 @@ disable-model-invocation: true
 
 You are a pragmatic tech lead deciding where to swap in well-maintained FOSS instead of carrying bespoke code. Produce `reports/foss-recommendations-$(date +%Y-%m-%d).md`. Do not modify source files.
 
-## Step 1 — Inventory what the repo *does*
+## Step 1 — Inventory what the repo _does_
+
 Identify the major capabilities the codebase implements (e.g., HTTP routing, auth, background jobs, validation, observability, feature flags, retries, caching, file uploads, WebSocket, search, scheduling, state machines). For each, note whether it is:
+
 - Built on a well-known framework (e.g., Express, FastAPI, Spring, Actix).
 - Glued together with smaller libs.
 - Hand-rolled.
 
 ## Step 2 — Identify hand-rolled or thin-glue capabilities
+
 For each hand-rolled capability that has a mature FOSS alternative:
+
 - Estimate LOC under maintenance.
 - Estimate test coverage of that bespoke code.
 - List any signals it is buggy or stale (TODOs, recent fixes, "we should replace this" comments).
 
 ## Step 3 — Recommend candidates
+
 For each opportunity, list 2–3 FOSS candidates with:
+
 - **License** (MIT/Apache-2.0/BSL/AGPL — flag anything that may not be permissive).
 - **Maintenance signal** — last release, GitHub stars trend, open-vs-closed issue ratio. Use `gh repo view <owner>/<repo> --json` if `gh` is available, otherwise note "verify maintenance status".
 - **Why it fits this repo** — referencing a specific module or pain point.
@@ -204,19 +227,21 @@ For each opportunity, list 2–3 FOSS candidates with:
 Bias toward libraries that are already in the dependency tree's neighborhood (e.g., if the project uses Pydantic, prefer FastAPI ecosystem libs).
 
 ## Step 4 — Report
-Use the shared rubric, but here severity reflects *opportunity magnitude*:
+
+Use the shared rubric, but here severity reflects _opportunity magnitude_:
+
 - 🟠 **High** — replacing bespoke code that is buggy, security-relevant, or actively costing dev time.
 - 🟡 **Medium** — solid bespoke code but a FOSS option would reduce maintenance.
 - 🟢 **Low** — minor convenience swap.
 
 End with a top-5 prioritized adoption queue with an effort/impact matrix.
-~~~
+```
 
 ---
 
 ## 5. `/audit-uiux` — Accessibility, performance & modern UI standards
 
-~~~markdown
+```markdown
 ---
 name: audit-uiux
 description: Audit the frontend against WCAG 2.2 AA, Core Web Vitals (INP/LCP/CLS), and current responsive/component-system patterns.
@@ -226,12 +251,15 @@ disable-model-invocation: true
 You are a senior frontend engineer auditing UI/UX standards. If this repo has no frontend code, produce a one-paragraph report saying so and stop. Otherwise produce `reports/uiux-audit-$(date +%Y-%m-%d).md`. Do not modify source files.
 
 ## Step 1 — Detect & plan
+
 - Identify the framework (React/Vue/Svelte/Angular/Next/Nuxt/Remix/SolidStart/etc.) and the styling approach (Tailwind, CSS Modules, styled-components, vanilla, design system).
 - Identify whether a component library or design system is in use (shadcn/ui, Radix, MUI, Chakra, Mantine, Ark UI, etc.).
 - Note the build target (SPA, SSR, SSG, hybrid) — this changes how Core Web Vitals are measured and fixed.
 
 ## Step 2 — Accessibility (WCAG 2.2 AA — ISO/IEC 40500:2025)
+
 Static review (since runtime audit may not be possible):
+
 - Run `eslint-plugin-jsx-a11y` rules if a JS/TS frontend; equivalent linters for other frameworks.
 - Run `axe-linter`, `pa11y-ci`, or `lighthouse --only-categories=accessibility` in headless mode if the dev server can be started.
 - Manually scan for: missing `alt`, missing `<label>` associations, color used as the only conveyance, focus traps, missing skip links, reliance on `<div onClick>`, missing semantic landmarks, form errors not announced to assistive tech.
@@ -247,21 +275,27 @@ Static review (since runtime audit may not be possible):
   - 3.3.9 Accessible Authentication (Enhanced) — AAA
 
 ## Step 3 — Core Web Vitals (current thresholds, 75th-percentile field data)
+
 Apply Google's published "good" thresholds:
+
 - **LCP:** ≤ 2.5s
 - **INP:** ≤ 200ms (replaced FID in March 2024)
 - **CLS:** ≤ 0.1
 
 Static analysis:
+
 - Find LCP risks: hero images without `width`/`height`, large above-the-fold JS bundles, render-blocking CSS, missing `fetchpriority="high"` on the LCP image, `loading="lazy"` on above-the-fold images.
 - Find INP risks: synchronous heavy work in event handlers, large component trees with no memoization, third-party scripts loaded eagerly, long tasks not yielded with `scheduler.yield()` or `setTimeout(..., 0)`.
 - Find CLS risks: images/videos/iframes without dimensions, late-injected ads/banners with no reserved space, web fonts without `font-display: swap` and matched fallback metrics (`size-adjust`, `ascent-override`).
 
 ## Step 4 — Modern UI/UX patterns
+
 Check for: a documented design system, dark mode support, `prefers-reduced-motion` respect, mobile-first responsive baseline, container queries usage where appropriate, semantic HTML over div soup, error/empty/loading states for async UI, keyboard-first interaction patterns, `:focus-visible` styling.
 
 ## Step 5 — Report
+
 Use the shared rubric, with these mappings:
+
 - 🔴 **Critical** — Any WCAG 2.2 AA failure that blocks assistive tech users from completing core tasks; LCP > 4s or INP > 500ms on the main flow.
 - 🟠 **High** — Other AA failures; LCP/INP/CLS in "needs improvement"; missing keyboard support on important interactions.
 - 🟡 **Medium** — AAA-only failures, modern-pattern gaps, minor visual inconsistencies.
@@ -270,7 +304,7 @@ Use the shared rubric, with these mappings:
 For every accessibility finding, cite the exact WCAG 2.2 success criterion (e.g., "2.5.8 Target Size (Minimum) — Level AA"). For every performance finding, cite which Core Web Vital it affects.
 
 End with: (1) the top 3 fixes to ship this sprint, and (2) a "definition of done" checklist the team can attach to PRs.
-~~~
+```
 
 ---
 
@@ -287,21 +321,26 @@ End with: (1) the top 3 fixes to ship this sprint, and (2) a "definition of done
 ## Sources & standards referenced
 
 **Claude Code patterns**
-- Anthropic, *Best Practices for Claude Code* — slash command structure, plan-first patterns, subagent guidance, `disable-model-invocation` semantics. <https://code.claude.com/docs/en/best-practices>
-- Anthropic, *Prompting best practices (Claude API docs)* — agentic prompt structure for self-correction and iteration. <https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices>
+
+- Anthropic, _Best Practices for Claude Code_ — slash command structure, plan-first patterns, subagent guidance, `disable-model-invocation` semantics. <https://code.claude.com/docs/en/best-practices>
+- Anthropic, _Prompting best practices (Claude API docs)_ — agentic prompt structure for self-correction and iteration. <https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices>
 
 **Security**
-- OWASP Foundation, *OWASP Top 10:2025* — current categories including A03 Software Supply Chain Failures (new) and SSRF folded into A01 Broken Access Control. <https://owasp.org/Top10/>
+
+- OWASP Foundation, _OWASP Top 10:2025_ — current categories including A03 Software Supply Chain Failures (new) and SSRF folded into A01 Broken Access Control. <https://owasp.org/Top10/>
 
 **Accessibility**
-- W3C, *Web Content Accessibility Guidelines (WCAG) 2.2* — current Recommendation since 5 October 2023, now also ISO/IEC 40500:2025. <https://www.w3.org/TR/WCAG22/>
-- W3C WAI, *What's New in WCAG 2.2* — the 9 added success criteria. <https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/>
+
+- W3C, _Web Content Accessibility Guidelines (WCAG) 2.2_ — current Recommendation since 5 October 2023, now also ISO/IEC 40500:2025. <https://www.w3.org/TR/WCAG22/>
+- W3C WAI, _What's New in WCAG 2.2_ — the 9 added success criteria. <https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/>
 
 **Performance**
-- web.dev, *Defining Core Web Vitals thresholds* — current LCP / INP / CLS "good" cutoffs and the 75th-percentile field-data evaluation method. <https://web.dev/articles/defining-core-web-vitals-thresholds>
-- web.dev, *Interaction to Next Paint (INP)* — replaced FID as a Core Web Vital in March 2024.
+
+- web.dev, _Defining Core Web Vitals thresholds_ — current LCP / INP / CLS "good" cutoffs and the 75th-percentile field-data evaluation method. <https://web.dev/articles/defining-core-web-vitals-thresholds>
+- web.dev, _Interaction to Next Paint (INP)_ — replaced FID as a Core Web Vital in March 2024.
 
 **Tooling referenced inside the prompts**
+
 - Semgrep — pattern-based SAST, multi-language. <https://semgrep.dev>
 - Gitleaks — secret scanning. <https://github.com/gitleaks/gitleaks>
 - OSV-Scanner — cross-ecosystem dependency vulnerability scanning, backed by the OSV database. <https://google.github.io/osv-scanner/>

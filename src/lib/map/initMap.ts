@@ -1,11 +1,11 @@
 // src/lib/map/initMap.ts
-import maplibregl from 'maplibre-gl'
-import { createLogger } from '../../utils/logger'
+import maplibregl from 'maplibre-gl';
+import { createLogger } from '../../utils/logger';
 
-const log = createLogger('MapInit')
+const log = createLogger('MapInit');
 
 export function initMap(container: HTMLElement, apiKey: string) {
-  log.info('map:init')
+  log.info('map:init');
 
   return new maplibregl.Map({
     container,
@@ -13,5 +13,5 @@ export function initMap(container: HTMLElement, apiKey: string) {
     center: [-84.388, 33.749], // Atlanta
     zoom: 9,
     attributionControl: false,
-  })
+  });
 }

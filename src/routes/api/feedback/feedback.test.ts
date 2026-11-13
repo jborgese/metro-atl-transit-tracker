@@ -71,7 +71,7 @@ describe('POST /api/feedback', () => {
   it('silently drops honeypot submissions with 201 and no side effects', async () => {
     const calls: DbCall[] = [];
     const res = await POST(
-      makeEvent({ body: { message: 'totally legit', website: 'https://spam.example' }, calls })
+      makeEvent({ body: { message: 'totally legit', website: 'https://spam.example' }, calls }),
     )!;
     expect(res.status).toBe(201);
     const body = (await res.json()) as { data: { id?: string; received: boolean } };
@@ -101,7 +101,9 @@ describe('POST /api/feedback', () => {
   it('returns 429 with Retry-After when the feedback limiter rejects', async () => {
     const calls: DbCall[] = [];
     const limiter = { limit: vi.fn(async () => ({ success: false })) };
-    const res = await POST(makeEvent({ body: { message: 'rapid fire feedback' }, limiter, calls }))!;
+    const res = await POST(
+      makeEvent({ body: { message: 'rapid fire feedback' }, limiter, calls }),
+    )!;
     expect(res.status).toBe(429);
     expect(res.headers.get('Retry-After')).toBe('60');
     expect(limiter.limit).toHaveBeenCalledWith({ key: '203.0.113.7' });

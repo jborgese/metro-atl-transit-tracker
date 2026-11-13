@@ -14,36 +14,53 @@ type Item = { id: string; name: string };
 
 function makeStore() {
   return {
-    list: vi.fn(async (_event: unknown, _options?: { includeArchived?: boolean }) => [
-      { id: 'a', name: 'alpha' },
-      { id: 'b', name: 'bravo' },
-    ] as Item[]),
+    list: vi.fn(
+      async (_event: unknown, _options?: { includeArchived?: boolean }) =>
+        [
+          { id: 'a', name: 'alpha' },
+          { id: 'b', name: 'bravo' },
+        ] as Item[],
+    ),
     getById: vi.fn(async (_event: unknown, id: string) => ({ id, name: 'found' }) as Item),
-    create: vi.fn(async (_event: unknown, input: unknown, actor: string) => ({
-      id: (input as { id: string }).id,
-      name: actor,
-    }) as Item),
-    update: vi.fn(async (_event: unknown, id: string, _patch: unknown, actor: string) => ({
-      id,
-      name: actor,
-    }) as Item),
-    archive: vi.fn(async (_event: unknown, id: string, actor: string) => ({
-      id,
-      name: `archived:${actor}`,
-    }) as Item),
-    restore: vi.fn(async (_event: unknown, id: string, actor: string) => ({
-      id,
-      name: `restored:${actor}`,
-    }) as Item),
+    create: vi.fn(
+      async (_event: unknown, input: unknown, actor: string) =>
+        ({
+          id: (input as { id: string }).id,
+          name: actor,
+        }) as Item,
+    ),
+    update: vi.fn(
+      async (_event: unknown, id: string, _patch: unknown, actor: string) =>
+        ({
+          id,
+          name: actor,
+        }) as Item,
+    ),
+    archive: vi.fn(
+      async (_event: unknown, id: string, actor: string) =>
+        ({
+          id,
+          name: `archived:${actor}`,
+        }) as Item,
+    ),
+    restore: vi.fn(
+      async (_event: unknown, id: string, actor: string) =>
+        ({
+          id,
+          name: `restored:${actor}`,
+        }) as Item,
+    ),
   };
 }
 
-function makeEvent(init: {
-  search?: string;
-  body?: string;
-  contentLength?: number;
-  params?: Record<string, string | undefined>;
-} = {}): RequestEvent {
+function makeEvent(
+  init: {
+    search?: string;
+    body?: string;
+    contentLength?: number;
+    params?: Record<string, string | undefined>;
+  } = {},
+): RequestEvent {
   const url = new URL(`http://example.test/api/items${init.search ?? ''}`);
   const headers: Record<string, string> = {};
   if (init.contentLength !== undefined) {
@@ -89,7 +106,11 @@ describe('makeCollectionHandlers', () => {
     const { POST } = makeCollectionHandlers<Item>(store);
     const res = await POST(makeEvent({ body: JSON.stringify({ id: 'new' }) }))!;
     expect(requireEditorActor).toHaveBeenCalledWith(expect.anything(), 'content:edit');
-    expect(store.create).toHaveBeenCalledWith(expect.anything(), { id: 'new' }, 'tester@example.test');
+    expect(store.create).toHaveBeenCalledWith(
+      expect.anything(),
+      { id: 'new' },
+      'tester@example.test',
+    );
     expect(res.status).toBe(201);
     const body = (await res.json()) as { data: Item };
     expect(body.data).toEqual({ id: 'new', name: 'tester@example.test' });
@@ -122,7 +143,9 @@ describe('makeItemHandlers', () => {
     const store = makeStore();
     const { GET } = makeItemHandlers<Item>(store);
     await GET(makeEvent({ params: { id: 'abc' }, search: '?includeArchived=false' }))!;
-    expect(store.getById).toHaveBeenCalledWith(expect.anything(), 'abc', { includeArchived: false });
+    expect(store.getById).toHaveBeenCalledWith(expect.anything(), 'abc', {
+      includeArchived: false,
+    });
   });
 
   it('GET with missing id throws 400', async () => {
