@@ -26,7 +26,7 @@ npm run dev
 
 ### Testing
 
-- Unit tests (Vitest, colocated `src/**/*.test.ts`): `npm run test`. This runs `svelte-kit sync && vitest run`; extra arguments go to `vitest run`, e.g. `npm run test -- src/lib/server/content/handlers.test.ts`.
+- Unit and component tests (Vitest, colocated `src/**/*.test.ts`; component tests are `*.svelte.test.ts` and run in jsdom): `npm run test`. This runs `svelte-kit sync && vitest run`; extra arguments go to `vitest run`, e.g. `npm run test -- src/lib/server/content/handlers.test.ts`.
 - Coverage: `npm run test:coverage`
 - Smoke test (starts a local Wrangler worker, exercises the read/write happy path): `npm run test:smoke`
 - Integration test (history ordering and immutability): `npm run test:integration`

@@ -188,7 +188,7 @@ Migrations are `migrations/d1/NNNN_description.sql`, zero-padded and sequential 
 | Smoke | Node script + local Wrangler worker | `scripts/smoke-content-api.mjs` | Nothing; real local worker and local D1 |
 | Integration | Node script + local Wrangler worker | `scripts/integration-content-api.mjs` | Nothing |
 | Schema | Node script | `scripts/check-d1-schema.mjs` | Nothing |
-| Components | None; there is no component-test harness | — | — |
+| Components | Vitest + `@testing-library/svelte` in jsdom (`npm run test`, `client` project) | Colocated `src/components/**/*.svelte.test.ts` | `fetch` via `vi.stubGlobal`; MapLibre does not run in jsdom |
 
 For what to test and how, use `.claude/rules/testing.md`.
 
@@ -216,7 +216,6 @@ When no row covers the case: match the file or folder you are editing, use the c
 | Oversized components | `src/routes/admin/+page.svelte` (~1,500 lines) and `src/components/svelte/GoalsTable.svelte` (~970 lines) predate the size guidance. | Do not grow them. Put new sections in child components or `.ts` helpers within the task's scope; no drive-by splits. |
 | Hardcoded host and limits | `src/hooks.server.ts` hardcodes the apex host (`maitai.observer`) and mirrors the `WRITE_LIMITER` limit (30 per 60 s) for response headers. | Keep these values in step with `wrangler.jsonc` when either changes. |
 | `public/` vs `static/` | SvelteKit serves `static/`. `public/` is gitignored apart from two tracked favicons. | Put served assets in `static/`. |
-| Workers test pool | `@cloudflare/vitest-pool-workers` is installed, but `vitest.config.ts` does not use it, so unit tests run in Node and get no real D1. | Fake D1 and bindings in a hand-built `RequestEvent`, as the route tests do. Real D1 coverage belongs in the smoke and integration scripts. |
 
 ## Anti-Patterns
 
@@ -263,6 +262,7 @@ When no row covers the case: match the file or folder you are editing, use the c
 
 - `src/lib/server/content/handlers.test.ts` - handler factories with a fake store and `vi.mock` on auth
 - `src/routes/api/feedback/feedback.test.ts` - route test with a fake D1 and limiter in `platform.env`
+- `src/components/svelte/FeedbackModal.svelte.test.ts` - component test: render, query by label, stub `fetch`, assert the request body
 
 ## Maintenance
 
