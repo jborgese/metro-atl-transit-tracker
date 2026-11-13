@@ -122,6 +122,7 @@ export function addMetroCountyLayers({ map, mapEl, log }: AddMetroCountyLayersOp
     setTimeout(() => {
       clearHover();
     }, 2000);
+    return f;
   }
 
   (map as any).__countyKeyboardActivate = keyboardActivate;

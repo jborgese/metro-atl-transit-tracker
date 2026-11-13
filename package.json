@@ -8,7 +8,7 @@
     "build": "svelte-kit sync && vite build",
     "deploy": "npm run build && wrangler deploy",
     "preview": "vite preview",
-    "lint": "eslint . --max-warnings=100",
+    "lint": "eslint . --max-warnings=99",
     "typecheck": "npm run check",
     "test": "svelte-kit sync && vitest run",
     "test:watch": "svelte-kit sync && vitest",

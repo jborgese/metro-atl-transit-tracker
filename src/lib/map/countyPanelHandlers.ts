@@ -1,21 +1,21 @@
-import type { Map as MaplibreMap } from 'maplibre-gl';
+import type { MapGeoJSONFeature, Map as MaplibreMap } from 'maplibre-gl';
 
 interface CountySelectionParams {
-  event: any;
+  feature: Pick<MapGeoJSONFeature, 'properties'> | undefined;
   countyMetadataMap: Record<string, any>;
   metroCountyGeoids: string[];
   setSelectedCounty: (county: any) => void;
 }
 
 export function handleCountySelection({
-  event,
+  feature,
   countyMetadataMap,
   metroCountyGeoids,
   setSelectedCounty,
 }: CountySelectionParams): void {
   try {
-    if (!event?.features?.length) return;
-    const props = event.features[0].properties || {};
+    if (!feature) return;
+    const props = feature.properties || {};
     const geoid = props.GEOID || props.geoid || props.GEOIDFQ || props.GEOID_FQ;
     if (!geoid || !metroCountyGeoids.includes(String(geoid))) return;
     const idKey = String(geoid);
