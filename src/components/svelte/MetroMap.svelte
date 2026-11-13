@@ -65,6 +65,7 @@
 
   let panelEl: HTMLElement | null = $state(null);
   let closeBtn: HTMLButtonElement | null = $state(null);
+  let mapUnavailable = $state(false);
 
   // derived related projects for the selected county
   // Use precomputed lookup to avoid scanning the full projects array on each selection
@@ -289,6 +290,7 @@
         safeResize();
       } catch (e) {
         log.error('map:construct-failed', e);
+        mapUnavailable = true;
       }
     })();
 
@@ -380,9 +382,11 @@
            MapLibre's own canvas handles keyboard pan/zoom (arrows, +/-) and
            is exposed to assistive tech without a role="application" wrapper. -->
       <div class="map-container" bind:this={mapEl}>
-        <button type="button" class="select-center-button" onclick={selectCenteredCounty}>
-          Select county at map center
-        </button>
+        {#if !mapUnavailable}
+          <button type="button" class="select-center-button" onclick={selectCenteredCounty}>
+            Select county at map center
+          </button>
+        {/if}
         {#if showDebugPanel}
           <DebugBadge
             selectedCountyKey={debugSelectedKey}
@@ -399,6 +403,14 @@
           </aside>
         {/if}
       </div>
+      {#if mapUnavailable}
+        <p class="map-unavailable" role="status">
+          <span>
+            The interactive map couldn't start in this browser. Try another browser or turn on
+            hardware acceleration; the county goals below still work.
+          </span>
+        </p>
+      {/if}
     </div>
   </div>
 </section>
@@ -411,7 +423,24 @@
   }
 
   .map-frame {
+    position: relative;
     height: var(--map-height);
+  }
+
+  .map-unavailable {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    padding: 1.5rem;
+    text-align: center;
+    background: var(--surface-1);
+    color: var(--text-muted);
+  }
+
+  .map-unavailable span {
+    max-width: var(--content-narrow);
   }
 
   @media (min-width: 1024px) {
