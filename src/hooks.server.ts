@@ -1,5 +1,7 @@
-import { env } from '$env/dynamic/private';
-import { json, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
+import { json, redirect, type RequestEvent } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
+import { WRITE_RATE_LIMIT_ENABLED } from '$app/env/private';
+import { env } from 'cloudflare:workers';
 
 const API_PREFIX = '/api/';
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -92,9 +94,8 @@ export function getClientKey(event: RequestEvent): string {
   return 'unknown';
 }
 
-function getWriteLimiter(event: RequestEvent): WriteRateLimit | undefined {
-  const platformEnv = (event.platform as { env?: Record<string, unknown> } | undefined)?.env;
-  const candidate = platformEnv?.WRITE_LIMITER;
+function getWriteLimiter(): WriteRateLimit | undefined {
+  const candidate = env.WRITE_LIMITER;
   if (
     candidate &&
     typeof candidate === 'object' &&
@@ -133,7 +134,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   if (event.url.hostname === WWW_HOST) {
     const target = new URL(event.url);
     target.hostname = APEX_HOST;
-    redirect(301, target.toString());
+    redirect(301, target.toString(), { external: true });
   }
 
   if (isCrossOriginWrite(event)) {
@@ -148,14 +149,14 @@ export const handle: Handle = async ({ event, resolve }) => {
     return response;
   }
 
-  const enabled = env.WRITE_RATE_LIMIT_ENABLED !== 'false';
+  const enabled = WRITE_RATE_LIMIT_ENABLED !== 'false';
   if (!enabled) {
     const response = await resolve(event);
     applySecurityHeaders(response.headers);
     return response;
   }
 
-  const limiter = getWriteLimiter(event);
+  const limiter = getWriteLimiter();
   const { allowed } = await checkWriteRateLimit(limiter, getClientKey(event));
   if (!allowed) {
     const response = json({ error: 'Too Many Requests' }, { status: 429 });

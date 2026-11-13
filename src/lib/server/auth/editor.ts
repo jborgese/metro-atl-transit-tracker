@@ -1,16 +1,19 @@
 import { timingSafeEqual } from 'node:crypto';
-import { env } from '$env/dynamic/private';
+import {
+  CF_ACCESS_AUD,
+  CF_ACCESS_RBAC_ADMINS,
+  CF_ACCESS_RBAC_ARCHIVERS,
+  CF_ACCESS_RBAC_EDITORS,
+  CF_ACCESS_TEAM_DOMAIN,
+  EDITOR_API_TOKEN,
+  EDITOR_TOKEN_AUTH_ENABLED,
+} from '$app/env/private';
 import { error, type RequestEvent } from '@sveltejs/kit';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 
 const ACCESS_JWT_HEADER = 'cf-access-jwt-assertion';
 const ACCESS_JWT_COOKIE = 'CF_Authorization';
 const EDITOR_TOKEN_HEADER = 'x-editor-token';
-const EDITOR_API_TOKEN_ENV = 'EDITOR_API_TOKEN';
-const EDITOR_TOKEN_AUTH_ENABLED_ENV = 'EDITOR_TOKEN_AUTH_ENABLED';
-const RBAC_ADMINS_ENV = 'CF_ACCESS_RBAC_ADMINS';
-const RBAC_EDITORS_ENV = 'CF_ACCESS_RBAC_EDITORS';
-const RBAC_ARCHIVERS_ENV = 'CF_ACCESS_RBAC_ARCHIVERS';
 
 const TEST_HOSTNAMES = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1']);
 const CF_EDGE_HEADER = 'cf-ray';
@@ -83,8 +86,8 @@ function normalizeTeamDomain(value: string | undefined) {
 }
 
 function getAccessConfig(): AccessConfig | null {
-  const teamDomain = normalizeTeamDomain(env.CF_ACCESS_TEAM_DOMAIN);
-  const audiences = parseCsv(env.CF_ACCESS_AUD);
+  const teamDomain = normalizeTeamDomain(CF_ACCESS_TEAM_DOMAIN);
+  const audiences = parseCsv(CF_ACCESS_AUD);
 
   if (!teamDomain || audiences.length === 0) {
     return null;
@@ -128,9 +131,9 @@ function isEnabled(value: string | undefined) {
 }
 
 function getRbacConfig(): RbacConfig {
-  const admins = parseIdentityCsv(env[RBAC_ADMINS_ENV]);
-  const editors = parseIdentityCsv(env[RBAC_EDITORS_ENV]);
-  const archivers = parseIdentityCsv(env[RBAC_ARCHIVERS_ENV]);
+  const admins = parseIdentityCsv(CF_ACCESS_RBAC_ADMINS);
+  const editors = parseIdentityCsv(CF_ACCESS_RBAC_EDITORS);
+  const archivers = parseIdentityCsv(CF_ACCESS_RBAC_ARCHIVERS);
   const enabled = admins.size > 0 || editors.size > 0 || archivers.size > 0;
 
   return {
@@ -232,8 +235,8 @@ async function resolveIdentity(
   event: RequestEvent,
   context: { permission?: EditorPermission },
 ): Promise<AccessIdentity> {
-  const editorTokenAuthEnabled = isEnabled(env[EDITOR_TOKEN_AUTH_ENABLED_ENV]);
-  const editorToken = env[EDITOR_API_TOKEN_ENV]?.trim();
+  const editorTokenAuthEnabled = isEnabled(EDITOR_TOKEN_AUTH_ENABLED);
+  const editorToken = EDITOR_API_TOKEN?.trim();
   // Token-mode is for local/CI smoke + integration tests only — refuse to
   // honor it on a deployed hostname even if the env vars are set, so that an
   // accidentally-leaked production env can't fall back to a single shared

@@ -9,14 +9,14 @@ paths:
 
 # Svelte Standards
 
-Apply when writing or reviewing Svelte components (`.svelte`), rune modules (`.svelte.ts`), SvelteKit route files, `hooks.server.ts`, and server modules. This repo is on **Svelte 5.55** and **SvelteKit 2.59** (the versions in `package-lock.json`). This file is the canonical home of the runes-only policy; `CONTRIBUTING.md` links here. Design-quality criteria live in `.claude/rules/design-review.md`; testing guidance lives in `.claude/rules/testing.md`.
+Apply when writing or reviewing Svelte components (`.svelte`), rune modules (`.svelte.ts`), SvelteKit route files, `hooks.server.ts`, and server modules. This repo is on **Svelte 5.57** and **SvelteKit 3.2** (the versions in `package-lock.json`). This file is the canonical home of the runes-only policy; `CONTRIBUTING.md` links here. Design-quality criteria live in `.claude/rules/design-review.md`; testing guidance lives in `.claude/rules/testing.md`.
 
 ## Before Writing
 
 - **Read the installed versions.** `package.json` declares ranges (`svelte` `^5.49.1`, `@sveltejs/kit` `^2.50.1`); `package-lock.json` records what is installed. Both packages add APIs in minor releases, so use an API only if the installed version has it. Do not upgrade either as a side effect of other work.
 - **Check the docs, not memory, for anything version-sensitive.** If the session has the Svelte MCP server or the `svelte` plugin, look sections up with `list-sections` and `get-documentation`. svelte.dev documents the newest releases, including SvelteKit 3, which this repo is not on. Check each API's "available since" note, or the installed package's type definitions (`node_modules/@sveltejs/kit/types/index.d.ts`, `node_modules/svelte/types/index.d.ts`), against the installed version.
 - **Not available here:** `{const ...}` declaration tags (Svelte 5.56), `src/env.ts` with `$app/env/*`, and `#lib/...` imports (SvelteKit 3).
-- **Ask before enabling an experimental flag.** Experimental features can change in any release. This repo enables neither `compilerOptions.experimental.async` (`await` in components, Svelte 5.36+) nor `kit.experimental.remoteFunctions` (SvelteKit 2.27+).
+- **Ask before enabling an experimental flag.** Experimental features can change in any release. This repo enables neither `compilerOptions.experimental.async` (`await` in components, Svelte 5.36+) nor `experimental.remoteFunctions` (a `sveltekit()` option in `vite.config.js`).
 
 ## Reactivity
 
@@ -88,14 +88,14 @@ These are unchanged in runes mode: `bind:this`, `bind:value`/`bind:checked` (to 
 
 ## TypeScript
 
-- Use `<script lang="ts">`. `svelte.config.js` calls `vitePreprocess()` without `script: true`, so Svelte compiles component TypeScript itself and accepts only type-level features: no `enum`, no constructor parameter properties.
+- Use `<script lang="ts">`. `vite.config.js` passes `vitePreprocess()` without `script: true`, so Svelte compiles component TypeScript itself and accepts only type-level features: no `enum`, no constructor parameter properties.
 - Type component references as `Component<Props>`, and read another component's props with `ComponentProps`.
 - A component that wraps a native element extends that element's attribute type from `svelte/elements` (for example `HTMLButtonAttributes`) and spreads the rest props onto it.
 - Type-check with `npm run typecheck` (`svelte-kit sync && svelte-check`), which covers `.svelte` files.
 
 ## SvelteKit
 
-- **Server code stays on the server.** Secrets, D1 access, and private environment variables live in server-only modules: files named `*.server.ts` or modules under `src/lib/server/` (`$lib/server/...`). SvelteKit refuses to bundle those, or `$env/*/private`, into client code. Whatever a `load` function returns is sent to the browser, so return only what the page needs.
+- **Server code stays on the server.** Secrets, D1 access, and private environment variables live in server-only modules: files named `*.server.ts` or modules in a `server/` directory (`#lib/server/...`). SvelteKit refuses to bundle those, or `$app/env/private`, into client code. Whatever a `load` function returns is sent to the browser, so return only what the page needs.
 - **Pick the `load` by what it needs.** Server `load` (`+page.server.ts`) for auth and private data, as `src/routes/admin/+page.server.ts` does. Universal `load` (`+page.ts`) for public data and fetching this app's own API, as `src/routes/+page.ts` does. Call the `fetch` that `load` receives, not the global one.
 - **`load` is pure.** It returns data; it never writes to module state.
 - **No waterfalls.** Start independent requests together (`Promise.all` in `src/routes/+page.ts`), and call `await parent()` after your own requests unless you need its result first.
@@ -104,10 +104,10 @@ These are unchanged in runes mode: `bind:this`, `bind:value`/`bind:checked` (to 
 - **`error()` and `redirect()` throw on their own.** `error(status, body)` takes a message string or an `App.Error` object (`{ message }`) as `body`, and SvelteKit answers it without calling `handleError`. Existing code writes `throw error(...)`, which is equivalent; match the file. If you call either, or a helper that does (`requireEditorActor`), inside `try`, the `catch` must rethrow what it does not handle, as `toHttpError` does.
 - **Unexpected errors** reach `handleError`, which sees only errors that are not `error()`/`redirect()`. This repo defines no `handleError` hook, so SvelteKit logs the error with `console.error` and answers with the message "Internal Error".
 - **Authorize where the data is read.** Each write handler and auth-gated server `load` calls `requireEditorActor(event, permission)` or `requireAuthenticatedIdentity(event)` itself; the factories in `src/lib/server/content/handlers.ts` already do. `hooks.server.ts` does not authorize. A guard in a layout `load` does not protect `+server.ts` endpoints and does not run on every navigation.
-- **App state comes from `$app/state`** (`page`, `navigating`, `updated`; SvelteKit 2.12+). `$app/stores` is deprecated. The repo imports neither today. State that should survive a reload or be shareable goes in the URL, as the selected project does on `/`.
+- **App state comes from `$app/state`** (`page`, `navigating`, `updated`). SvelteKit 3 removed `$app/stores`. The repo imports neither today. State that should survive a reload or be shareable goes in the URL, as the selected project does on `/`.
 - **Route types come from `./$types`.** Pages use `PageData`, `PageLoad`, and `PageServerLoad`; the installed version also generates `PageProps`. API handlers in this repo are typed with `RequestHandler` from `@sveltejs/kit`; match the file.
-- **Environment.** Variables come from `$env/dynamic/private` and `$env/dynamic/public` (for example `PUBLIC_MAPTILER_KEY`). Cloudflare bindings come from `event.platform.env`: `DB` (D1, through `getDb`), `WRITE_LIMITER`, `FEEDBACK_LIMITER`, and `SEND_EMAIL`. Public values are declared in `wrangler.jsonc` `vars`, and `.env.example` documents local ones.
-- **Imports.** `$lib/...` and the `@/...` alias from `svelte.config.js` work; `#lib/...` does not. Which style a file uses varies, so match the file (`docs/CODING_STANDARDS.md` → Legacy).
+- **Environment.** Variables are declared in `src/env.ts` and imported from `$app/env/private` and `$app/env/public` (for example `PUBLIC_MAPTILER_KEY`); a new variable needs a declaration there. Cloudflare bindings come from `env` in `cloudflare:workers`: `DB` (D1, through `getDb`), `WRITE_LIMITER`, `FEEDBACK_LIMITER`, and `SEND_EMAIL`. Public values are declared in `wrangler.jsonc` `vars`, and `.env.example` documents local ones.
+- **Imports.** `#lib/...` (with the `.ts` extension, declared in `package.json` `imports`) and the `@/...` alias from `vite.config.js` work; SvelteKit 3 no longer provides `$lib/...`. Which style a file uses varies, so match the file (`docs/CODING_STANDARDS.md` → Legacy).
 
 ## Checks And Tooling
 

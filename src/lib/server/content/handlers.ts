@@ -1,5 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { requireEditorActor } from '$lib/server/auth/editor';
+import { requireEditorActor } from '#lib/server/auth/editor.ts';
 import { ContentStoreError } from './errors';
 import { parseIncludeArchived, readJsonBody, toHttpError } from './http';
 import type { StoreEvent } from './mappers';

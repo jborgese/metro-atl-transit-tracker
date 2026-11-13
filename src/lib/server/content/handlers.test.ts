@@ -4,7 +4,7 @@ import { ContentStoreError } from './errors';
 
 const requireEditorActor = vi.hoisted(() => vi.fn(async () => 'tester@example.test'));
 
-vi.mock('$lib/server/auth/editor', () => ({
+vi.mock('#lib/server/auth/editor.ts', () => ({
   requireEditorActor,
 }));
 

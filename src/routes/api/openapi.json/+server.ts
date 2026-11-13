@@ -1,5 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { buildOpenApiDocument } from '$lib/server/openapi/spec';
+import { buildOpenApiDocument } from '#lib/server/openapi/spec.ts';
 
 let cached: ReturnType<typeof buildOpenApiDocument> | null = null;
 

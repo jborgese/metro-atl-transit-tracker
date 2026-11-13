@@ -1,6 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
 import { checkWriteRateLimit, getClientKey, handle, type WriteRateLimit } from './hooks.server';
+
+const workersEnv = vi.hoisted((): Record<string, unknown> => ({}));
+vi.mock('cloudflare:workers', () => ({ env: workersEnv }));
+
+beforeEach(() => {
+  for (const key of Object.keys(workersEnv)) delete workersEnv[key];
+});
 
 function makeEvent(headers: Record<string, string>): RequestEvent {
   const url = new URL('http://example.test/api/projects');
@@ -119,7 +126,6 @@ describe('handle', () => {
         method: 'POST',
         headers: { origin: 'https://attacker.example' },
       }),
-      platform: { env: {} },
       getClientAddress: () => '10.0.0.1',
     } as unknown as RequestEvent;
     const resolve = vi.fn(async () => new Response('ok'));
@@ -128,5 +134,37 @@ describe('handle', () => {
 
     expect(response.status).toBe(403);
     expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it('answers 429 when the write limiter rejects an API write', async () => {
+    workersEnv.WRITE_LIMITER = { limit: vi.fn(async () => ({ success: false })) };
+    const url = new URL('https://maitai.observer/api/projects');
+    const event = {
+      url,
+      route: { id: '/api/projects' },
+      request: new Request(url, { method: 'POST' }),
+      getClientAddress: () => '10.0.0.1',
+    } as unknown as RequestEvent;
+    const resolve = vi.fn(async () => new Response('ok'));
+
+    const response = await handle({ event, resolve });
+
+    expect(response.status).toBe(429);
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it('redirects the www host to the apex host', async () => {
+    const url = new URL('https://www.maitai.observer/history?limit=5');
+    const event = {
+      url,
+      route: { id: '/history' },
+      request: new Request(url),
+      getClientAddress: () => '10.0.0.1',
+    } as unknown as RequestEvent;
+
+    await expect(handle({ event, resolve: vi.fn() })).rejects.toMatchObject({
+      status: 301,
+      location: 'https://maitai.observer/history?limit=5',
+    });
   });
 });
