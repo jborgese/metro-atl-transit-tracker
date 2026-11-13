@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
-import { checkWriteRateLimit, getClientKey, type WriteRateLimit } from './hooks.server';
+import { checkWriteRateLimit, getClientKey, handle, type WriteRateLimit } from './hooks.server';
 
 function makeEvent(headers: Record<string, string>): RequestEvent {
   const url = new URL('http://example.test/api/projects');
@@ -104,5 +104,24 @@ describe('checkWriteRateLimit', () => {
       limit: async () => ({}) as unknown as { success: boolean },
     } as WriteRateLimit;
     expect(await checkWriteRateLimit(binding, '10.0.0.1')).toEqual({ allowed: false });
+  });
+});
+
+describe('handle', () => {
+  it('rejects a cross-origin write to a percent-encoded API path', async () => {
+    const url = new URL('https://maitai.observer/%61pi/projects');
+    const event = {
+      url,
+      route: { id: '/api/projects' },
+      request: new Request(url, { method: 'POST', headers: { origin: 'https://attacker.example' } }),
+      platform: { env: {} },
+      getClientAddress: () => '10.0.0.1',
+    } as unknown as RequestEvent;
+    const resolve = vi.fn(async () => new Response('ok'));
+
+    const response = await handle({ event, resolve });
+
+    expect(response.status).toBe(403);
+    expect(resolve).not.toHaveBeenCalled();
   });
 });
