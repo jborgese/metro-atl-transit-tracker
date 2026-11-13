@@ -26,7 +26,7 @@ npm run dev
 
 ### Testing
 
-- Unit tests (Vitest, colocated `src/**/*.test.ts`): `npm run test`. This runs `svelte-kit sync && vitest run`; extra arguments go to `vitest run`, e.g. `npm run test -- src/lib/server/content/handlers.test.ts`.
+- Unit and component tests (Vitest, colocated `src/**/*.test.ts`; component tests are `*.svelte.test.ts` and run in jsdom): `npm run test`. This runs `svelte-kit sync && vitest run`; extra arguments go to `vitest run`, e.g. `npm run test -- src/lib/server/content/handlers.test.ts`.
 - Coverage: `npm run test:coverage`
 - Smoke test (starts a local Wrangler worker, exercises the read/write happy path): `npm run test:smoke`
 - Integration test (history ordering and immutability): `npm run test:integration`
@@ -44,7 +44,7 @@ npm run dev
 
 ### Deployment
 
-`npm run deploy` builds and runs `wrangler deploy` to production (the top level of `wrangler.jsonc`; staging is `env.staging`). Cloudflare Workers Builds is also connected to this repo. Every pushed branch, including PR branches, gets a build that uploads a Worker version (the `Workers Builds: metro-atl-transit-tracker` check). Whether a push to `main` also deploys is set in the Cloudflare dashboard, not in this repo, so treat merging to `main` as a possible production deploy. Agents do not deploy or apply remote migrations; see Boundaries. Remote migration commands are in the README ("Cloudflare / D1 Operations"). Backup and restore runbooks are in [`docs/backup-retention-policy.md`](docs/backup-retention-policy.md).
+`npm run deploy` builds and runs `wrangler deploy` to production (the top level of `wrangler.jsonc`; staging is `env.staging`). Cloudflare Workers Builds is also connected to this repo, and **every push to `main`, including a PR merge, deploys to production** (`npx wrangler deploy`). Every other pushed branch, including PR branches, runs `npx wrangler versions upload`, which uploads a Worker version without deploying it (the `Workers Builds: metro-atl-transit-tracker` check). These triggers are set in the Cloudflare dashboard, not in this repo. Agents do not deploy or apply remote migrations; see Boundaries. Remote migration commands are in the README ("Cloudflare / D1 Operations"). Backup and restore runbooks are in [`docs/backup-retention-policy.md`](docs/backup-retention-policy.md).
 
 ---
 
@@ -123,9 +123,9 @@ See [`.claude/rules/github-operations.md`](.claude/rules/github-operations.md) f
 - **Branch names:** `chore/short-description` (or ask the user). The repo has no issue tracker, so there are no ticket-key branches.
 - Keep commits and PRs focused; avoid bundling unrelated changes.
 - Write descriptive commit messages; no WIP commits in final PRs.
-- All required CI checks must pass before a PR can merge. `.github/workflows/ci-gates.yml` runs three jobs on every PR and on pushes to `main`. **Quality Checks** runs typecheck, lint, and schema check; **Smoke Test** and **Integration Test** follow it. It does not run `npm run test`, so run that locally.
+- All required CI checks must pass before a PR can merge. `.github/workflows/ci-gates.yml` runs three jobs on every PR and on pushes to `main`. **Quality Checks** runs typecheck, lint, unit tests, and schema check; **Smoke Test** and **Integration Test** follow it. The `main-protection` ruleset requires all three, so changes reach `main` only through a PR with green checks.
 
-Pushes to `main` also trigger `.github/workflows/backup-snapshots.yml`, which snapshots `data/content/*` to R2, and a Cloudflare Workers Build that may deploy (see Deployment).
+Pushes to `main` also trigger `.github/workflows/backup-snapshots.yml`, which snapshots `data/content/*` to R2, and a Cloudflare Workers Build that deploys to production (see Deployment).
 
 ---
 

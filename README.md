@@ -255,7 +255,7 @@ See `docs/backup-retention-policy.md` for:
 
 ## Utility Scripts
 
-- `npm run build:org-logos` generates `src/data/static/orgLogos.ts` from county metadata + `public/logos`
+- `npm run build:org-logos` generates `src/data/static/orgLogos.ts` from `static/data/geo/counties-metadata.json` + `static/logos`
 - `scripts/check-d1-schema.mjs` validates schema objects and immutability triggers
 - `scripts/smoke-content-api.mjs` and `scripts/integration-content-api.mjs` run local Wrangler-backed API checks
 - `scripts/convert-favicon.js <image-path>` rebuilds `static/favicon.ico` and `static/favicon.svg`
