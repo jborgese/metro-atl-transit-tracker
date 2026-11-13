@@ -40,7 +40,7 @@ function applySecurityHeaders(headers: Headers) {
 }
 
 function isWriteApiRequest(event: RequestEvent) {
-  return event.url.pathname.startsWith(API_PREFIX) && WRITE_METHODS.has(event.request.method);
+  return (event.route.id?.startsWith(API_PREFIX) ?? false) && WRITE_METHODS.has(event.request.method);
 }
 
 function isCrossOriginWrite(event: RequestEvent) {
