@@ -159,7 +159,14 @@
 
   function selectCenteredCounty() {
     if (!map) return;
-    (map as any).__countyKeyboardActivate?.();
+    handleCountySelection({
+      feature: (map as any).__countyKeyboardActivate?.(),
+      countyMetadataMap,
+      metroCountyGeoids,
+      setSelectedCounty: (val) => {
+        selectedCounty = val;
+      },
+    });
   }
 
   onMount(() => {
@@ -242,7 +249,7 @@
               // Projects metadata is loaded lazily (on first county selection or after idle)
               mapInstance.on('click', 'ga-counties-fill', (e: any) => {
                 handleCountySelection({
-                  event: e,
+                  feature: e.features?.[0],
                   countyMetadataMap,
                   metroCountyGeoids,
                   setSelectedCounty: (val) => {
