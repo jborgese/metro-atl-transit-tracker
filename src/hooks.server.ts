@@ -1,5 +1,6 @@
+import { json, redirect, type RequestEvent } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 import { WRITE_RATE_LIMIT_ENABLED } from '$app/env/private';
-import { json, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 
 const API_PREFIX = '/api/';
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
