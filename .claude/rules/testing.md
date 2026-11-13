@@ -14,7 +14,7 @@ Apply when writing or reviewing tests. Cross-cutting principles (test logic at t
 ## General
 
 - When running `vitest` directly, always use `npx vitest run`, which avoids watch mode.
-- Unit tests are colocated next to the module as `*.test.ts` (`vitest.config.ts` includes `src/**/*.{test,spec}.ts`) and run in Node. Smoke and integration checks are Node scripts in `scripts/` that run against a local Wrangler worker and local D1.
+- Unit tests are colocated next to the module as `*.test.ts` and run in Node (the `server` project in `vitest.config.ts`). Component and rune-module tests are `*.svelte.test.ts` and run in jsdom (the `client` project). Smoke and integration checks are Node scripts in `scripts/` that run against a local Wrangler worker and local D1.
 - Add or update tests in the same PR as the feature or fix.
 - Commands: `npm run test` (all unit tests), `npm run test -- <path>` (one file), `npm run test:coverage`, `npm run test:smoke`, `npm run test:integration`. CI does not run `npm run test`, so run it locally before you push.
 
@@ -100,8 +100,10 @@ expect(result.isArchived).toBe(false);
 
 ## Svelte UI
 
-The repo has no component-test harness, and adding one (`@testing-library/svelte`, `vitest-browser-svelte`, a DOM environment) is a new dependency that needs approval. Until then:
+Component tests use `@testing-library/svelte` in jsdom. Name the file `<Component>.svelte.test.ts` next to the component; `src/components/svelte/FeedbackModal.svelte.test.ts` is the reference.
 
-- **Do** move logic out of the component before testing it, into a pure `.ts` module (`src/utils/`, `src/lib/map/`), and test that module.
-- **Do** verify rendered behavior manually with `npm run dev`, and say in the PR what you checked.
-- If a rune module (`.svelte.ts`) is added, name its test `*.svelte.test.ts` so Svelte compiles the runes in it. Wrap code that creates effects in `$effect.root`, call `flushSync()` before asserting, and call the cleanup function it returns.
+- **Do** move logic out of the component before testing it, into a pure `.ts` module (`src/utils/`, `src/lib/map/`), and test that module. Render a component to test what a visitor sees and does: rendered states, form flows, the request a submit sends.
+- **Do** query by role and label (`getByRole`, `getByLabelText`), and drive the component with the `fireEvent` helpers from `@testing-library/svelte`, which wait for Svelte to update.
+- **Do** stub `fetch` with `vi.stubGlobal` (undo it with `vi.unstubAllGlobals()` in `afterEach`) and assert the request the component sends, not its internal state.
+- jsdom has no layout, canvas, or WebGL, so MapLibre does not run there. Test map logic in `src/lib/map/` as plain TypeScript, check map behavior manually with `npm run dev`, and say in the PR what you checked.
+- Rune modules (`.svelte.ts`) use the same `*.svelte.test.ts` naming, so Svelte compiles the runes in them. Wrap code that creates effects in `$effect.root`, call `flushSync()` before asserting, and call the cleanup function it returns.
