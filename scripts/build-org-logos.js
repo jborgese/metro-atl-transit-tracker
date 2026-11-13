@@ -5,10 +5,10 @@
 import fs from 'fs';
 import path from 'path';
 
-const countiesPath = path.resolve('public/data/geo/counties-metadata.json');
+const countiesPath = path.resolve('static/data/geo/counties-metadata.json');
 const outputPath = path.resolve('src/data/static/orgLogos.ts');
 const logoDir = '/logos/';
-const logoDiskDir = path.resolve('public/logos');
+const logoDiskDir = path.resolve('static/logos');
 
 
 function toLogoFile(name) {
