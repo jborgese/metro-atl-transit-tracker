@@ -11,7 +11,7 @@ If `$ARGUMENTS` is provided, focus the analysis on that capability or path and s
 
 @.claude/snippets/project-context.md
 
-The dependency tree is deliberately small (jose, zod, maplibre-gl, tailwindcss at runtime), so expect a fair amount of hand-rolled capability. Likely candidates to inspect: auth/session handling (built on `jose`), rate limiting, GTFS/transit feed ingestion and parsing, caching layers, the D1 query layer (raw SQL vs a query builder like Drizzle, which has first-class D1 support), and OpenAPI route wiring. Constraint that shapes every recommendation: **the runtime is Cloudflare Workers** — candidates must work without Node-only APIs.
+The dependency tree is deliberately small (jose, zod, maplibre-gl, mimetext at runtime), so expect a fair amount of hand-rolled capability. Likely candidates to inspect: auth/session handling (built on `jose`), rate limiting, GTFS/transit feed ingestion and parsing, caching layers, the D1 query layer (raw SQL vs a query builder like Drizzle, which has first-class D1 support), and OpenAPI route wiring. Constraint that shapes every recommendation: **the runtime is Cloudflare Workers** — candidates must work without Node-only APIs.
 
 ## Step 1 — Inventory what the repo _does_
 

@@ -19,10 +19,6 @@ updates:
           - 'eslint'
           - 'eslint-*'
           - '@typescript-eslint/*'
-      tailwind:
-        patterns:
-          - 'tailwindcss'
-          - '@tailwindcss/*'
       vitest:
         patterns:
           - 'vitest'
