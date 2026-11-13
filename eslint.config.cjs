@@ -144,7 +144,6 @@ module.exports = [
       // Backlog — large existing surface; ratchet down in a follow-up PR.
       'svelte/require-each-key': 'warn',
       'svelte/no-navigation-without-resolve': 'warn',
-      'svelte/no-dom-manipulating': 'warn',
       'svelte/prefer-svelte-reactivity': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-expressions': 'warn',
