@@ -164,7 +164,7 @@ Environment controls:
 
 ## Local Development
 
-Prereqs: Node.js 22.22.2+, npm, Wrangler.
+Prereqs: Node.js 22.22.2+ or 24.15+ (enforced via `engines`), npm, Wrangler.
 
 ```bash
 npm install
