@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { listHistory } from '#lib/server/content/store.ts';
 import { parseLimit, toHttpError } from '#lib/server/content/http.ts';
-import type { ApiListResponse, ContentEntityType, ContentHistoryEvent } from '@/types/content';
+import type { ApiListResponse, ContentEntityType, ContentHistoryEvent } from '#types/content.ts';
 
 export const GET: RequestHandler = async (event) => {
   try {

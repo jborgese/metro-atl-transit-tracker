@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ContentEntityType, ContentHistoryEvent, Goal, Project } from '@/types/content';
+import type { ContentEntityType, ContentHistoryEvent, Goal, Project } from '#types/content.ts';
 import { ContentStoreError } from './errors';
 import { parseIntSafe, SEED_ACTOR } from './validators';
 

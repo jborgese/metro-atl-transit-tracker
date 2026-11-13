@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Goal, Project } from './types';
-  import { statusLabel, getStatusColor, getStatusTextColor } from '@/utils/statusHelpers';
-  import { countyOrder, getCountyName as lookupCountyName } from '@/utils/countyLookup';
+  import { statusLabel, getStatusColor, getStatusTextColor } from '#utils/statusHelpers.ts';
+  import { countyOrder, getCountyName as lookupCountyName } from '#utils/countyLookup.ts';
 
   let {
     goals = [],

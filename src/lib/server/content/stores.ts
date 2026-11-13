@@ -1,4 +1,4 @@
-import type { Goal, Project } from '@/types/content';
+import type { Goal, Project } from '#types/content.ts';
 import type { ContentStore } from './handlers';
 import {
   archiveGoal,

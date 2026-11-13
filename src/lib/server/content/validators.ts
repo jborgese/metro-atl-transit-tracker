@@ -3,7 +3,7 @@ import contentProjectsSeed from '../../../../data/content/projects.json';
 import contentGoalsSeed from '../../../../data/content/goals.json';
 import legacyProjectsSeed from '../../../data/geo/projects-metadata.json';
 import legacyGoalsSeed from '../../../data/geo/goals-metadata.json';
-import type { Goal, Project } from '@/types/content';
+import type { Goal, Project } from '#types/content.ts';
 import { ContentStoreError } from './errors';
 
 export const SEED_ACTOR = 'seed';

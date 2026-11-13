@@ -1,11 +1,11 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import Portal from './Portal.svelte';
-  import type { Goal, Project } from '@/types/content';
-  import { statusLabel, getStatusColor, getStatusTextColor } from '@/utils/statusHelpers';
-  import { getCountyName } from '@/utils/countyLookup';
-  import { formatDate, formatTimestamp } from '@/utils/dateFormat';
-  import { getRelatedGoals } from '@/utils/projectRelations';
+  import type { Goal, Project } from '#types/content.ts';
+  import { statusLabel, getStatusColor, getStatusTextColor } from '#utils/statusHelpers.ts';
+  import { getCountyName } from '#utils/countyLookup.ts';
+  import { formatDate, formatTimestamp } from '#utils/dateFormat.ts';
+  import { getRelatedGoals } from '#utils/projectRelations.ts';
 
   let {
     open = $bindable(false),

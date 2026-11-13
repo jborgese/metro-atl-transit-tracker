@@ -60,6 +60,9 @@
     "wrangler": "^4.159.0"
   },
   "imports": {
-    "#lib/*": "./src/lib/*"
+    "#lib/*": "./src/lib/*",
+    "#types": "./src/types/index.ts",
+    "#types/*": "./src/types/*",
+    "#utils/*": "./src/utils/*"
   }
 }
