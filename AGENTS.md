@@ -10,7 +10,7 @@ This file provides operational guidance for **all AI agents** (Cursor, Claude Co
 
 ## Setup
 
-**Prerequisites:** Node.js 22.17+ (SvelteKit 3's minimum; CI uses the latest Node 22; no version file is pinned), npm, and Wrangler (a dev dependency; run it with `npx wrangler`).
+**Prerequisites:** Node.js 22.22.2+ (jsdom 31's minimum; SvelteKit 3 needs 22.17+; CI uses the latest Node 22; no version file is pinned), npm, and Wrangler (a dev dependency; run it with `npx wrangler`).
 
 ```bash
 npm install
