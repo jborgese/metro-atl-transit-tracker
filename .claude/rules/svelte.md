@@ -113,4 +113,4 @@ These are unchanged in runes mode: `bind:this`, `bind:value`/`bind:checked` (to 
 
 - After changing Svelte code, run `npm run typecheck` and `npm run lint`, and fix what they report (type errors, accessibility warnings, unused CSS) without adding to the lint backlog. Do not add `svelte-ignore` comments to get past a warning; the repo has none.
 - If the session has the official Svelte tooling (the `svelte` plugin or the Svelte MCP server, both from `sveltejs/ai-tools`), run `svelte-autofixer` on each component you wrote or changed, and repeat until it reports nothing. If it is not available, do not install or `npx` it on your own; tell the user it exists.
-- Prettier formats `.svelte` files only when the repo's config loads `prettier-plugin-svelte`. This repo has no Prettier config, so match the surrounding file's formatting by hand (`docs/CODING_STANDARDS.md` → Legacy).
+- Prettier formats `.svelte` files through `prettier-plugin-svelte`, loaded in `.prettierrc`; run `npm run format` rather than formatting markup by hand.
