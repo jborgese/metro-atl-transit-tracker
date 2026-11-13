@@ -66,29 +66,12 @@
   const groupedByCounty = $derived(!selectedCounty ? groupGoalsByCounty(goals) : null);
 
   function groupGoalsByCounty(goalsList: Goal[]): Map<string, Goal[]> {
-    const grouped = new Map<string, Goal[]>();
-    
-    // Initialize all counties with empty arrays (in order)
-    for (const countyId of countyOrder) {
-      grouped.set(countyId, []);
-    }
-    
-    // Populate with goals (only non-regional goals)
-    for (const goal of goalsList) {
-      // Skip regional goals - they're displayed separately
-      if (isRegionalGoal(goal)) continue;
-      
-      // Add goal to each county it's related to
-      if (goal.related_counties) {
-        for (const countyId of goal.related_counties) {
-          if (grouped.has(countyId)) {
-            grouped.get(countyId)!.push(goal);
-          }
-        }
-      }
-    }
-    
-    return grouped;
+    return new Map(
+      countyOrder.map((countyId) => [
+        countyId,
+        goalsList.filter((goal) => goal.related_counties?.includes(countyId)),
+      ])
+    );
   }
 
   function getRelatedProjects(goal: Goal): Project[] {
