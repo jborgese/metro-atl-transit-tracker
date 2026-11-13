@@ -112,7 +112,6 @@ module.exports = [
       'no-empty': ['error', { allowEmptyCatch: true }],
       // Backlog — demote to warn for now, ratchet to error in a follow-up.
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-expressions': 'warn',
     },
   },
 
@@ -144,7 +143,6 @@ module.exports = [
       'svelte/require-each-key': 'warn',
       'svelte/no-navigation-without-resolve': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-expressions': 'warn',
     },
   },
 
