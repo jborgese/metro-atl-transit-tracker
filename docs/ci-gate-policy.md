@@ -42,13 +42,14 @@ Pass criteria:
 
 ## Enforcement
 
-- CI workflow file: `.github/workflows/ci-gates.yml`
-- Required status checks for protected deployment branches:
+- CI workflow file: `.github/workflows/ci-gates.yml`. The `Quality Checks` job runs typecheck, lint, unit tests, and the schema check; `Smoke Test` and `Integration Test` run after it.
+- Required status checks for `main`, enforced by the `main-protection` repository ruleset:
   - `Quality Checks`
   - `Smoke Test`
   - `Integration Test`
-- Deployments must only run from commits where all required checks are green.
-- Emergency bypass is allowed only for incident response, with a follow-up fix and retroactive CI pass on the hotfix commit.
+- The ruleset also requires PR branches to be up to date with `main` before merging, and blocks force-pushes to and deletion of `main`.
+- Deployments must only run from commits where all required checks are green. Every push to `main` deploys to production through Cloudflare Workers Builds, which does not wait for GitHub checks (`AGENTS.md` → Deployment), so the ruleset is what enforces this.
+- Emergency bypass is allowed only for incident response, with a follow-up fix and retroactive CI pass on the hotfix commit. Repository admins can bypass the ruleset when merging a PR, not by pushing to `main` directly.
 
 ## Local Preflight
 
