@@ -1,6 +1,5 @@
-@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";
-@import "maplibre-gl/dist/maplibre-gl.css";
+@import './preflight.css';
+@import 'maplibre-gl/dist/maplibre-gl.css';
 /* Inter + Merriweather are loaded via <link rel="preconnect">+<link rel="stylesheet">
    in src/app.html so the stylesheet request can race the connect handshake. */
 
@@ -14,8 +13,8 @@
   color-scheme: dark;
 
   /* Brand */
-  --atl-green: #33514D;
-  --atl-bronze: #7E6E4F;
+  --atl-green: #33514d;
+  --atl-bronze: #7e6e4f;
 
   --atl-red: #a73a32;
   --atl-magenta: #a32f65;
@@ -24,14 +23,14 @@
 
   /* Link text on dark surfaces. --atl-blue is too dark on --atl-green
      (2.1:1, fails WCAG AA); --link clears AA at ~5.2:1. */
-  --link: #7DD3FC;
+  --link: #7dd3fc;
   --link-hover: var(--text-on-dark);
 
   /* Neutrals */
-  --text-on-dark: #F3F2EE;
-  --text-muted: #C6CBC6;
-  --text-dim: #9FA7A2;
-  --text-on-light: #1F1F1F;
+  --text-on-dark: #f3f2ee;
+  --text-muted: #c6cbc6;
+  --text-dim: #9fa7a2;
+  --text-on-light: #1f1f1f;
 
   /* Surfaces */
   --surface-0: var(--atl-green);
@@ -39,15 +38,16 @@
   --surface-2: rgba(18, 32, 30, 0.92);
 
   /* Borders & shadows */
-  --border-subtle: rgba(126, 110, 79, 0.30);
+  --border-subtle: rgba(126, 110, 79, 0.3);
   --border-strong: rgba(126, 110, 79, 0.55);
 
   --shadow-1: 0 6px 18px rgba(0, 0, 0, 0.35);
   --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.45);
   /* Font stacks */
-  --font-sans: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: 'Merriweather', Georgia, "Times New Roman", Times, serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+  --font-sans:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: 'Merriweather', Georgia, 'Times New Roman', Times, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace;
 
   /* Layout */
   --content-max: 72rem;
@@ -55,6 +55,13 @@
   --content-padding: clamp(1rem, 4vw, 2.5rem);
   --section-gap: clamp(1.5rem, 3vw, 2.75rem);
   --header-gap: clamp(0.75rem, 2vw, 1.25rem);
+
+  --z-map-control: 10;
+  --z-skip-link: 10001;
+  --z-map-county-panel: 10050;
+  --z-debug: 99999;
+  --z-county-panel: 100000;
+  --z-modal: 200000;
 }
 
 /* Base document defaults */
@@ -100,31 +107,30 @@ a:hover {
   color: var(--link-hover);
 }
 
-
 .map-container {
   width: 100%;
   height: 100%;
 }
 
 /* County panel override to ensure deterministic layout regardless of tailwind purge/JIT */
-  .county-panel-content {
-    position: fixed;
-    left: 1rem;
-    bottom: 1rem;
-    width: 18rem; /* ~ w-72 */
-    max-width: calc(100% - 2rem);
-    max-height: calc(100vh - 2rem);
-    overflow-y: auto;
-    background: var(--surface-2);
-    color: var(--text-on-dark);
-    border: 1px solid var(--border-subtle);
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    box-shadow: var(--shadow-2);
-    z-index: 100000;
-    /* Add extra padding for sticky header */
-    padding-top: 1.5rem;
-  }
+.county-panel-content {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  width: 18rem; /* ~ w-72 */
+  max-width: calc(100% - 2rem);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: var(--surface-2);
+  color: var(--text-on-dark);
+  border: 1px solid var(--border-subtle);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-2);
+  z-index: var(--z-county-panel);
+  /* Add extra padding for sticky header */
+  padding-top: 1.5rem;
+}
 
 /* County panel overlay for map view only */
 .map-container .county-panel-content {
@@ -137,164 +143,165 @@ a:hover {
   max-width: 90vw;
   max-height: calc(100vh - 4rem);
   overflow-y: auto;
-  z-index: 10050;
+  z-index: var(--z-map-county-panel);
 }
 
-  .county-panel-content .panel-link {
+.county-panel-content .panel-link {
   color: var(--link);
   text-decoration: underline;
   text-underline-offset: 3px;
-  transition: color 0.15s, opacity 0.15s;
-    /* Ensure consistent vertical rhythm: when a section contains
+  transition:
+    color 0.15s,
+    opacity 0.15s;
+  /* Ensure consistent vertical rhythm: when a section contains
       a single link (not a list), give it the same bottom spacing
       as the `.panel-list` which uses margin-bottom: 0.5rem. */
-    display: inline-block;
-    margin-bottom: 0.5rem;
-  }
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
 
-  .county-panel-content .panel-link:hover,
-  .county-panel-content .panel-link:focus {
-    color: var(--link-hover);
-    opacity: 0.95;
-  }
+.county-panel-content .panel-link:hover,
+.county-panel-content .panel-link:focus {
+  color: var(--link-hover);
+  opacity: 0.95;
+}
 
-  /* High-level app layout styles */
-  .main-content {
-    width: min(100%, var(--content-max));
-    margin: clamp(1.5rem, 3vw, 2.5rem) auto 0 auto;
-    padding: 0 var(--content-padding) clamp(2rem, 4vw, 3rem);
-    display: flex;
-    flex-direction: column;
-    gap: var(--section-gap);
-  }
+/* High-level app layout styles */
+.main-content {
+  width: min(100%, var(--content-max));
+  margin: clamp(1.5rem, 3vw, 2.5rem) auto 0 auto;
+  padding: 0 var(--content-padding) clamp(2rem, 4vw, 3rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+}
 
-  .page-stack {
-    display: flex;
-    flex-direction: column;
-    gap: var(--section-gap);
-  }
+.page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+}
 
-  .lede {
-    color: var(--text-muted);
-    font-size: clamp(1rem, 0.95rem + 0.4vw, 1.15rem);
-    max-width: 60ch;
-  }
-  
-  .page-header {
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--border-subtle);
-    text-align: left;
-  }
-    .page-header h1 {
-      font-size: clamp(1.85rem, 3.2vw, 2.75rem);
-      font-weight: 800;
-      color: var(--text-on-dark);
-      margin: 0;
-      letter-spacing: -0.02em;
-      line-height: 1.1;
-      text-wrap: balance;
-    }
+.lede {
+  color: var(--text-muted);
+  font-size: clamp(1rem, 0.95rem + 0.4vw, 1.15rem);
+  max-width: 60ch;
+}
 
-  .table-scroll {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    container-type: inline-size;
-    border: 1px solid var(--border-subtle);
-    border-radius: 0.75rem;
-    background: var(--surface-2);
-    box-shadow: var(--shadow-1);
-  }
+.page-header {
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+}
+.page-header h1 {
+  font-size: clamp(1.85rem, 3.2vw, 2.75rem);
+  font-weight: 800;
+  color: var(--text-on-dark);
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
 
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  container-type: inline-size;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-1);
+}
+
+.data-table {
+  width: 100%;
+  min-width: 40rem;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid var(--border-subtle);
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table th {
+  background: var(--surface-1);
+  color: var(--text-on-dark);
+  font-weight: 600;
+}
+
+@container (max-width: 40rem) {
   .data-table {
-    width: 100%;
-    min-width: 40rem;
-    border-collapse: collapse;
+    min-width: 32rem;
   }
 
   .data-table th,
   .data-table td {
-    border: 1px solid var(--border-subtle);
-    padding: 0.65rem 0.75rem;
-    text-align: left;
-    vertical-align: top;
+    padding: 0.5rem;
+    font-size: 0.9rem;
   }
+}
 
-  .data-table th {
-    background: var(--surface-1);
-    color: var(--text-on-dark);
-    font-weight: 600;
+@container (max-width: 32rem) {
+  .data-table {
+    min-width: 28rem;
   }
+}
 
-  @container (max-width: 40rem) {
-    .data-table {
-      min-width: 32rem;
-    }
-
-    .data-table th,
-    .data-table td {
-      padding: 0.5rem;
-      font-size: 0.9rem;
-    }
-  }
-
-  @container (max-width: 32rem) {
-    .data-table {
-      min-width: 28rem;
-    }
-  }
-
-
-  /* Panel typography and utility styles */
-  .county-panel-content .panel-header {
+/* Panel typography and utility styles */
+.county-panel-content .panel-header {
   font-size: 1.125rem;
   font-weight: 700;
   margin: 0 0 0.5rem 0;
   color: var(--text-on-dark);
-  }
+}
 
-  .county-panel-content .panel-subheader {
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem 0;
-    color: var(--text-muted);
-  }
+.county-panel-content .panel-subheader {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-muted);
+}
 
-  .county-panel-content .panel-muted {
-    color: var(--text-dim);
-    font-size: 0.95rem;
-  }
+.county-panel-content .panel-muted {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
 
-  .county-panel-content .panel-source {
-    margin-top: 0.5rem;
-    font-size: 0.85rem;
-    color: var(--text-dim);
-  }
+.county-panel-content .panel-source {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
 
-  .county-panel-content .panel-list {
-    padding-left: 0; /* reset any list padding
+.county-panel-content .panel-list {
+  padding-left: 0; /* reset any list padding
                        we let li spacing control layout */
-    list-style: none;
-    margin: 0 0 0.5rem 0;
-  }
+  list-style: none;
+  margin: 0 0 0.5rem 0;
+}
 
-  .county-panel-content .panel-list li {
-    margin: 0.25rem 0;
-    display: flex;
-    align-items: center;
-  }
+.county-panel-content .panel-list li {
+  margin: 0.25rem 0;
+  display: flex;
+  align-items: center;
+}
 
-  /* Logo sizing inside lists - reuses .panel-logo but tighten spacing */
-  .county-panel-content .panel-logo {
-    height: auto;
-    max-height: 4rem;
-    width: auto;
-    max-width: 100%;
-    margin-right: 0.5rem;
-    object-fit: contain;
-    display: block;
-  }
+/* Logo sizing inside lists - reuses .panel-logo but tighten spacing */
+.county-panel-content .panel-logo {
+  height: auto;
+  max-height: 4rem;
+  width: auto;
+  max-width: 100%;
+  margin-right: 0.5rem;
+  object-fit: contain;
+  display: block;
+}
 
 @media (max-width: 640px) {
   .county-panel-content {
@@ -318,7 +325,7 @@ a:hover {
 .site-header {
   border-bottom: 1px solid var(--border-subtle);
   background: var(--surface-2);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.20);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 .site-header-inner {
   width: min(100%, var(--content-max));
@@ -416,7 +423,7 @@ a:hover {
   position: absolute;
   left: 1rem;
   top: 1rem;
-  z-index: 10001;
+  z-index: var(--z-skip-link);
 
   background: var(--surface-2);
   color: var(--text-on-dark);
@@ -429,7 +436,9 @@ a:hover {
 
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s, pointer-events 0.2s;
+  transition:
+    opacity 0.2s,
+    pointer-events 0.2s;
 }
 
 .skip-link:focus {

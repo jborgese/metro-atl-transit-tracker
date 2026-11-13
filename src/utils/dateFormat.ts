@@ -12,7 +12,10 @@ export function formatDate(value: string | null | undefined): string {
   return MEDIUM_DATE.format(date);
 }
 
-export function formatTimestamp(value: string | null | undefined, reference: number = Date.now()): string {
+export function formatTimestamp(
+  value: string | null | undefined,
+  reference: number = Date.now(),
+): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;

@@ -5,30 +5,30 @@
     handleMapClick,
     handlePanelClose,
     setupGlobalPanelListeners,
-  } from "../../lib/map/countyPanelHandlers";
-  import { loadCountyMetadata, loadProjectsMetadata } from "../../lib/map/metadataLoader";
-  import { getMetroCountyBounds } from "../../lib/map/getMetroCountyBounds";
-  import { onMount, tick } from "svelte";
-  import maplibregl, { type StyleSpecification } from "maplibre-gl";
-  import "maplibre-gl/dist/maplibre-gl.css";
-  import { initMetroMap } from "../../lib/map/initMetroMap";
+  } from '../../lib/map/countyPanelHandlers';
+  import { loadCountyMetadata, loadProjectsMetadata } from '../../lib/map/metadataLoader';
+  import { getMetroCountyBounds } from '../../lib/map/getMetroCountyBounds';
+  import { onMount, tick } from 'svelte';
+  import maplibregl, { type StyleSpecification } from 'maplibre-gl';
+  import 'maplibre-gl/dist/maplibre-gl.css';
+  import { initMetroMap } from '../../lib/map/initMetroMap';
   import { env } from '$env/dynamic/public';
 
-  import { createLogger } from "../../utils/logger"; // adjust if needed
-  import { metroCountyGeoids } from "../../lib/map/countyStyles";
-  import { addMetroCountyLayers } from "../../lib/map/addMetroCountyLayers";
+  import { createLogger } from '../../utils/logger'; // adjust if needed
+  import { metroCountyGeoids } from '../../lib/map/countyStyles';
+  import { addMetroCountyLayers } from '../../lib/map/addMetroCountyLayers';
   import MetroCountyPanel from './MetroCountyPanel.svelte';
   import { orgLogos } from '../../data/static/orgLogos';
 
-  const log = createLogger("MetroMap");
+  const log = createLogger('MetroMap');
 
   // Set this to true to show the debug panel
   const showDebugPanel = false;
 
   let {
-    title = "Metro Atlanta map",
-    height = "clamp(18rem, 45vh, 34rem)",
-    desktopHeight = "clamp(22rem, 58vh, 44rem)",
+    title = 'Metro Atlanta map',
+    height = 'clamp(18rem, 45vh, 34rem)',
+    desktopHeight = 'clamp(22rem, 58vh, 44rem)',
     oncountySelected,
   }: {
     title?: string;
@@ -42,9 +42,9 @@
     sources: {},
     layers: [
       {
-        id: "background",
-        type: "background",
-        paint: { "background-color": "#0b1d23" },
+        id: 'background',
+        type: 'background',
+        paint: { 'background-color': '#0b1d23' },
       },
     ],
   };
@@ -65,13 +65,12 @@
 
   let panelEl: HTMLElement | null = $state(null);
   let closeBtn: HTMLButtonElement | null = $state(null);
+  let mapUnavailable = $state(false);
 
   // derived related projects for the selected county
   // Use precomputed lookup to avoid scanning the full projects array on each selection
   const relatedProjects = $derived(
-    selectedCounty && projectsByCounty
-      ? (projectsByCounty[String(selectedCounty.geoid)] || [])
-      : []
+    selectedCounty && projectsByCounty ? projectsByCounty[String(selectedCounty.geoid)] || [] : [],
   );
 
   // Fetch projects metadata once (lazy). Called on first county selection or scheduled idle.
@@ -122,13 +121,13 @@
   const availableModes = $derived(
     projectsMetadata && projectsMetadata.length
       ? Array.from(new Set(projectsMetadata.flatMap((p: any) => p.modes || []))).sort()
-      : []
+      : [],
   );
 
   const debugAvailableCount = $derived(availableModes ? availableModes.length : 0);
   const debugRelatedCount = $derived(relatedProjects ? relatedProjects.length : 0);
   const debugSelectedKey = $derived(
-    selectedCounty ? (selectedCounty.geoid ?? selectedCounty.name ?? 'unknown') : 'none'
+    selectedCounty ? (selectedCounty.geoid ?? selectedCounty.name ?? 'unknown') : 'none',
   );
 
   function closePanel() {
@@ -136,11 +135,11 @@
   }
 
   function destroyMap(reason: string) {
-    log.info("map:destroy", { reason });
+    log.info('map:destroy', { reason });
     try {
       map?.remove();
     } catch (e) {
-      log.warn("map:destroy-failed", e);
+      log.warn('map:destroy-failed', e);
     } finally {
       map = null;
     }
@@ -149,12 +148,12 @@
   function safeResize() {
     if (!map || !mapEl) return;
     const r = mapEl.getBoundingClientRect();
-    log.debug("map:resize-check", { w: r.width, h: r.height });
+    log.debug('map:resize-check', { w: r.width, h: r.height });
     if (r.width > 0 && r.height > 0) {
       map.resize();
-      log.debug("map:resized");
+      log.debug('map:resized');
     } else {
-      log.warn("container-size-zero", r);
+      log.warn('container-size-zero', r);
     }
   }
 
@@ -163,10 +162,8 @@
     (map as any).__countyKeyboardActivate?.();
   }
 
-
-
   onMount(() => {
-    log.info("mount:start");
+    log.info('mount:start');
 
     let cancelled = false;
 
@@ -175,11 +172,11 @@
       await new Promise((r) => requestAnimationFrame(r));
       if (cancelled) return;
 
-      log.debug("container:post-layout", mapEl?.getBoundingClientRect());
+      log.debug('container:post-layout', mapEl?.getBoundingClientRect());
 
       try {
         if (!mapEl) {
-          log.error("mapEl is null, cannot construct map");
+          log.error('mapEl is null, cannot construct map');
           return;
         }
 
@@ -189,7 +186,7 @@
           ? `https://api.maptiler.com/maps/streets/style.json?key=${key}`
           : fallbackStyle;
         if (!hasMaptilerKey) {
-          log.warn("maptiler:key-missing; using fallback style");
+          log.warn('maptiler:key-missing; using fallback style');
         }
 
         map = initMetroMap({
@@ -199,13 +196,10 @@
           zoom: 9,
           attributionControl: false,
           customAttribution: hasMaptilerKey
-            ? [
-                "Map tiles (c) MapTiler",
-                "County boundaries (c) US Census Bureau (TIGER/Line)",
-              ]
-            : ["County boundaries (c) US Census Bureau (TIGER/Line)"],
+            ? ['Map tiles (c) MapTiler', 'County boundaries (c) US Census Bureau (TIGER/Line)']
+            : ['County boundaries (c) US Census Bureau (TIGER/Line)'],
           onLoad: async (mapInstance) => {
-            log.info("map:load (Atlanta)");
+            log.info('map:load (Atlanta)');
             safeResize();
             try {
               addMetroCountyLayers({ map: mapInstance, mapEl, log });
@@ -222,7 +216,11 @@
                     return;
                   }
                   try {
-                    mapInstance.fitBounds([bounds.sw, bounds.ne], { padding: 80, maxZoom: 12, duration: 1000 });
+                    mapInstance.fitBounds([bounds.sw, bounds.ne], {
+                      padding: 80,
+                      maxZoom: 12,
+                      duration: 1000,
+                    });
                     log.info('map:fitBounds:metro-counties', bounds);
                   } catch (e) {
                     log.warn('map:fitBounds-failed', e);
@@ -232,7 +230,11 @@
                 }
               })();
               {
-                const { countyMetadata: cm, countyMetadataMap: cmm, error: countyError } = await loadCountyMetadata();
+                const {
+                  countyMetadata: cm,
+                  countyMetadataMap: cmm,
+                  error: countyError,
+                } = await loadCountyMetadata();
                 countyMetadataMap = cmm;
                 if (countyError) log.warn('metadata:load-failed', countyError);
                 else log.info('metadata:loaded', { count: cm.length });
@@ -259,11 +261,11 @@
                 });
               });
             } catch (e) {
-              log.error("counties:add-layers-failed", e);
+              log.error('counties:add-layers-failed', e);
             }
           },
           onError: (e) => {
-            log.error("map:error", e);
+            log.error('map:error', e);
           },
         });
 
@@ -284,10 +286,11 @@
           /* ignore */
         }
 
-        log.info("map:constructed");
+        log.info('map:constructed');
         safeResize();
       } catch (e) {
-        log.error("map:construct-failed", e);
+        log.error('map:construct-failed', e);
+        mapUnavailable = true;
       }
     })();
 
@@ -296,10 +299,14 @@
       ro?.disconnect();
       ro = null;
       if (map) {
-        try { (map as any).__countyKeyboardActivate = undefined } catch { /* ignore */ }
+        try {
+          (map as any).__countyKeyboardActivate = undefined;
+        } catch {
+          /* ignore */
+        }
       }
-      destroyMap("unmount");
-      log.info("mount:cleanup");
+      destroyMap('unmount');
+      log.info('mount:cleanup');
     };
   });
 
@@ -331,7 +338,6 @@
   });
 
   // Insert <link rel="preload" as="image"> tags for logos used by a county
-  const _preloadedLogoHrefs = new Set<string>();
   function preloadLogosForCounty(county: any) {
     if (!county) return;
     const hrefs: string[] = [];
@@ -350,14 +356,13 @@
       for (const g of county.advocacy.groups) collect(g.name);
     }
     for (const h of hrefs) {
-      if (!_preloadedLogoHrefs.has(h)) {
+      if (!document.head.querySelector(`link[rel="preload"][href="${h}"]`)) {
         try {
           const link = document.createElement('link');
           link.rel = 'preload';
           link.as = 'image';
           link.href = h;
           document.head.appendChild(link);
-          _preloadedLogoHrefs.add(h);
         } catch (e) {
           /* ignore */
         }
@@ -367,9 +372,9 @@
 </script>
 
 <section aria-label={title}>
-  <div class="relative rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
+  <div>
     <div
-      class="map-frame relative w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950"
+      class="map-frame"
       style={`--map-height: ${height}; --map-height-desktop: ${desktopHeight};`}
       aria-label="Metro Atlanta map"
     >
@@ -377,13 +382,11 @@
            MapLibre's own canvas handles keyboard pan/zoom (arrows, +/-) and
            is exposed to assistive tech without a role="application" wrapper. -->
       <div class="map-container" bind:this={mapEl}>
-        <button
-          type="button"
-          class="select-center-button absolute top-2 right-2 z-40 rounded bg-neutral-900/80 px-3 py-2 text-xs text-neutral-100 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          onclick={selectCenteredCounty}
-        >
-          Select county at map center
-        </button>
+        {#if !mapUnavailable}
+          <button type="button" class="select-center-button" onclick={selectCenteredCounty}>
+            Select county at map center
+          </button>
+        {/if}
         {#if showDebugPanel}
           <DebugBadge
             selectedCountyKey={debugSelectedKey}
@@ -392,12 +395,22 @@
           />
         {/if}
         {#if selectedCounty}
-          <aside bind:this={panelEl} class="map-panel-wrapper absolute top-4 left-4 z-50">
-            <button bind:this={closeBtn} aria-label="Close county panel" class="text-neutral-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded absolute right-2 top-2 w-8 h-8 flex items-center justify-center text-xl leading-none" onclick={closePanel}>&times;</button>
+          <aside bind:this={panelEl} class="map-panel-wrapper">
+            <button bind:this={closeBtn} aria-label="Close county panel" onclick={closePanel}
+              >&times;</button
+            >
             <MetroCountyPanel county={selectedCounty} />
           </aside>
         {/if}
       </div>
+      {#if mapUnavailable}
+        <p class="map-unavailable" role="status">
+          <span>
+            The interactive map couldn't start in this browser. Try another browser or turn on
+            hardware acceleration; the county goals below still work.
+          </span>
+        </p>
+      {/if}
     </div>
   </div>
 </section>
@@ -410,7 +423,48 @@
   }
 
   .map-frame {
+    position: relative;
     height: var(--map-height);
+  }
+
+  .map-unavailable {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    padding: 1.5rem;
+    text-align: center;
+    background: var(--surface-1);
+    color: var(--text-muted);
+  }
+
+  .map-unavailable span {
+    max-width: var(--content-narrow);
+  }
+
+  .select-center-button {
+    position: absolute;
+    top: 10px;
+    right: calc(10px + 29px + 10px);
+    z-index: var(--z-map-control);
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.375rem;
+    background: var(--surface-2);
+    color: var(--text-on-dark);
+    font-size: 0.75rem;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  .select-center-button:hover {
+    border-color: var(--border-strong);
+  }
+
+  .select-center-button:focus-visible {
+    outline: 2px solid var(--atl-blue);
+    outline-offset: 2px;
   }
 
   @media (min-width: 1024px) {

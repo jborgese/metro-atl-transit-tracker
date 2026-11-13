@@ -19,9 +19,7 @@
   let projectModalOpen = $state(false);
 
   const selectedProject = $derived(
-    selectedProjectId
-      ? projects.find((p) => p.id === selectedProjectId) ?? null
-      : null
+    selectedProjectId ? (projects.find((p) => p.id === selectedProjectId) ?? null) : null,
   );
 
   function handleCountySelected(detail: { geoid: string | null }) {
@@ -83,8 +81,8 @@
       <h1>Metro Atlanta Interface for Transit Advocacy Intelligence</h1>
     </div>
     <p class="lede">
-      A public hub for Metro Atlanta transit goals, agencies, and advocacy. 
-      Your jumping-off point for deeper sources and ways to take action.
+      A public hub for Metro Atlanta transit goals, agencies, and advocacy. Your jumping-off point
+      for deeper sources and ways to take action.
     </p>
     {#if data?.usingFallback}
       <p class="fallback-banner" role="status">

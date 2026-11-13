@@ -89,7 +89,7 @@ export function getDb(event: StoreEvent): D1Database {
   if (!candidate || !isRecord(candidate)) {
     throw new ContentStoreError(
       503,
-      `D1 binding "${DB_BINDING_NAME}" is not available for this request. In local dev, make sure adapter-cloudflare platform proxy points at wrangler.jsonc and restart \`npm run dev\`.`
+      `D1 binding "${DB_BINDING_NAME}" is not available for this request. In local dev, make sure adapter-cloudflare platform proxy points at wrangler.jsonc and restart \`npm run dev\`.`,
     );
   }
 

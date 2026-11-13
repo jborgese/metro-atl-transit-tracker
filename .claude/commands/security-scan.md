@@ -16,7 +16,9 @@ If `$ARGUMENTS` is provided, limit the scan to that path and say so in the repor
 The attack surface to prioritize: API endpoints in `src/routes/**/+server.ts` and server logic in `src/lib/server`, JWT/session handling built on `jose`, raw SQL against D1 (parameterization is the line of defense), the rate-limiting implementation, the admin page, and Cloudflare config (`wrangler.jsonc` — bindings, secrets, routes). `.env.example` documents expected secrets; verify no real values are committed.
 
 ## Step 1 — Automated scanners
+
 Run what is available; these are independent, so run them in parallel (background Bash or one subagent per scanner):
+
 - **SAST:** `semgrep --config=auto --json` (or `npx semgrep`).
 - **Dependency vulnerabilities:** `npm audit --json`; `osv-scanner --format=json -r .` or `trivy fs --format json .` if installed.
 - **Secrets:** `gitleaks detect --report-format json` (scan git history too, not just the working tree) or `trufflehog filesystem --json .`.
@@ -25,7 +27,9 @@ Run what is available; these are independent, so run them in parallel (backgroun
 For each tool not installed and not fetchable, record a gap (Info) and continue.
 
 ## Step 2 — Manual review augmenting the scanners
+
 Scanners miss design-level issues. Specifically inspect:
+
 - Authentication flows: JWT signing/verification with `jose` (algorithm confusion, missing `exp`/`aud` checks, weak secrets), session handling, password storage if any (A07, A04).
 - Authorization at every protected endpoint — IDOR patterns, especially around `user_profiles` and admin routes. SvelteKit pitfall: checks done only in `+layout.server.ts` do not protect API `+server.ts` endpoints; verify each endpoint guards itself (A01).
 - Server-side fetches taking user-controlled URLs (A01/SSRF) — feed-fetching code is the place to look.
@@ -37,7 +41,9 @@ Scanners miss design-level issues. Specifically inspect:
 - Error handling: stack traces or internal paths leaked to users (A10).
 
 ## Step 3 — Report
+
 Use the shared rubric below, mapping each finding to its OWASP category. Each finding must include:
+
 - The tool output or file:line evidence.
 - The exact OWASP A0X:2025 category.
 - Whether it appears in any SBOM/CVE record (link to the advisory).

@@ -9,6 +9,7 @@ Against the `metro-atl-transit-tracker` Cloudflare account (prod D1 `metro-atl-t
 **Why:** User set this as a guardrail when enabling Cloudflare MCP (Bindings + Observability) on 2026-04-22. The Bindings server is write-capable; the user wants a human-in-the-loop checkpoint before touching live prod data.
 
 **How to apply:**
+
 - Read-only queries against prod D1, R2 listings, Worker/observability inspection — proceed without asking.
 - Any mutation against prod — describe the exact call and ask first, even if the user's broader task implies it.
 - Staging (`metro-atl-transit-staging`) is lower-risk; still surface mutations but don't require the same formal approval.

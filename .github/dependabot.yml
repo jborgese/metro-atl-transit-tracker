@@ -5,38 +5,34 @@ updates:
     schedule:
       interval: weekly
       day: monday
-      time: "09:00"
+      time: '09:00'
       timezone: America/New_York
     open-pull-requests-limit: 5
     groups:
       svelte:
         patterns:
-          - "svelte"
-          - "svelte-*"
-          - "@sveltejs/*"
+          - 'svelte'
+          - 'svelte-*'
+          - '@sveltejs/*'
       eslint:
         patterns:
-          - "eslint"
-          - "eslint-*"
-          - "@typescript-eslint/*"
-      tailwind:
-        patterns:
-          - "tailwindcss"
-          - "@tailwindcss/*"
+          - 'eslint'
+          - 'eslint-*'
+          - '@typescript-eslint/*'
       vitest:
         patterns:
-          - "vitest"
-          - "@vitest/*"
+          - 'vitest'
+          - '@vitest/*'
       cloudflare:
         patterns:
-          - "wrangler"
-          - "@cloudflare/*"
+          - 'wrangler'
+          - '@cloudflare/*'
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
-      time: "09:00"
+      time: '09:00'
       timezone: America/New_York
     open-pull-requests-limit: 5

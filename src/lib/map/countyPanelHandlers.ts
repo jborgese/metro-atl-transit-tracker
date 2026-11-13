@@ -1,5 +1,4 @@
-
-import type { Map as MaplibreMap } from "maplibre-gl";
+import type { Map as MaplibreMap } from 'maplibre-gl';
 
 interface CountySelectionParams {
   event: any;
@@ -22,10 +21,9 @@ export function handleCountySelection({
     const idKey = String(geoid);
     setSelectedCounty(countyMetadataMap[idKey] ?? { geoid: idKey, name: props.NAME || props.name });
   } catch (err) {
-    console.error("handleCountySelection error:", err);
+    console.error('handleCountySelection error:', err);
   }
 }
-
 
 interface MapClickParams {
   event: any;
@@ -41,7 +39,9 @@ export function handleMapClick({
   setSelectedCounty,
 }: MapClickParams): void {
   try {
-    const features = mapInstance.queryRenderedFeatures(event.point, { layers: ["ga-counties-fill"] });
+    const features = mapInstance.queryRenderedFeatures(event.point, {
+      layers: ['ga-counties-fill'],
+    });
     if (!features.length) {
       setSelectedCounty(null);
       return;
@@ -53,10 +53,9 @@ export function handleMapClick({
     });
     if (!metroHit) setSelectedCounty(null);
   } catch (err) {
-    console.error("handleMapClick error:", err);
+    console.error('handleMapClick error:', err);
   }
 }
-
 
 interface PanelCloseParams {
   mapEl: HTMLElement | null;
@@ -65,9 +64,12 @@ interface PanelCloseParams {
 
 export function handlePanelClose({ mapEl, setSelectedCounty }: PanelCloseParams): void {
   setSelectedCounty(null);
-  try { mapEl?.focus(); } catch (err) { /* ignore */ }
+  try {
+    mapEl?.focus();
+  } catch (err) {
+    /* ignore */
+  }
 }
-
 
 interface GlobalPanelListenersParams {
   selectedCounty: () => any;
@@ -75,10 +77,14 @@ interface GlobalPanelListenersParams {
   setSelectedCounty: (county: any) => void;
 }
 
-export function setupGlobalPanelListeners({ selectedCounty, panelEl, setSelectedCounty }: GlobalPanelListenersParams): () => void {
+export function setupGlobalPanelListeners({
+  selectedCounty,
+  panelEl,
+  setSelectedCounty,
+}: GlobalPanelListenersParams): () => void {
   function handleGlobalKey(e: KeyboardEvent) {
     if (!selectedCounty()) return;
-    if (e.key === "Escape") {
+    if (e.key === 'Escape') {
       setSelectedCounty(null);
     }
   }
@@ -92,10 +98,10 @@ export function setupGlobalPanelListeners({ selectedCounty, panelEl, setSelected
     }
   }
 
-  document.addEventListener("pointerdown", handlePointerDown);
-  window.addEventListener("keydown", handleGlobalKey);
+  document.addEventListener('pointerdown', handlePointerDown);
+  window.addEventListener('keydown', handleGlobalKey);
   return () => {
-    document.removeEventListener("pointerdown", handlePointerDown);
-    window.removeEventListener("keydown", handleGlobalKey);
+    document.removeEventListener('pointerdown', handlePointerDown);
+    window.removeEventListener('keydown', handleGlobalKey);
   };
 }

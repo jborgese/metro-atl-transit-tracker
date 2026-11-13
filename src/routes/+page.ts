@@ -8,7 +8,7 @@ type LoadFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Respo
 async function loadCollection<T>(
   fetchFn: LoadFetch,
   url: string,
-  fallback: T[]
+  fallback: T[],
 ): Promise<{ data: T[]; usedFallback: boolean }> {
   try {
     const response = await fetchFn(url);

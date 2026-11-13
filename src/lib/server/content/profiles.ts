@@ -31,7 +31,7 @@ function validateDisplayName(displayName: string): string {
   if (trimmed.length > DISPLAY_NAME_MAX_LENGTH) {
     throw new ContentStoreError(
       400,
-      `display_name must be ${DISPLAY_NAME_MAX_LENGTH} characters or fewer`
+      `display_name must be ${DISPLAY_NAME_MAX_LENGTH} characters or fewer`,
     );
   }
   if (CONTROL_CHAR_REGEX.test(trimmed)) {
@@ -71,7 +71,7 @@ export async function getProfile(event: StoreEvent, identity: string): Promise<U
 export async function upsertProfile(
   event: StoreEvent,
   identity: string,
-  displayName: string
+  displayName: string,
 ): Promise<UserProfile> {
   const key = normalizeIdentity(identity);
   if (!key) {
@@ -87,7 +87,7 @@ export async function upsertProfile(
          VALUES (?1, ?2, ?3)
          ON CONFLICT(identity) DO UPDATE SET
            display_name = excluded.display_name,
-           updated_at = excluded.updated_at`
+           updated_at = excluded.updated_at`,
       )
       .bind(key, validated, timestamp)
       .run();
@@ -95,7 +95,7 @@ export async function upsertProfile(
     if (isMissingTableError(err)) {
       throw new ContentStoreError(
         503,
-        'user profile storage is not provisioned (run migration 0002)'
+        'user profile storage is not provisioned (run migration 0002)',
       );
     }
     throw err;

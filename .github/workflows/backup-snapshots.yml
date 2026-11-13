@@ -2,24 +2,24 @@ name: Backup Snapshots
 
 on:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: '0 2 * * *'
   push:
     branches:
       - main
   workflow_dispatch:
     inputs:
       run_content_snapshot:
-        description: "Capture data/content snapshot"
+        description: 'Capture data/content snapshot'
         required: false
         default: true
         type: boolean
       run_d1_exports:
-        description: "Run D1 exports (prod + staging)"
+        description: 'Run D1 exports (prod + staging)'
         required: false
         default: true
         type: boolean
       configure_r2_governance:
-        description: "Ensure R2 lifecycle + lock rules (manual use)"
+        description: 'Ensure R2 lifecycle + lock rules (manual use)'
         required: false
         default: false
         type: boolean
@@ -53,7 +53,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
 
       - name: Setup Node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm

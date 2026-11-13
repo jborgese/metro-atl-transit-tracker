@@ -1,8 +1,4 @@
-import type {
-  ContentEntityType,
-  Goal,
-  Project,
-} from '@/types/content';
+import type { ContentEntityType, Goal, Project } from '@/types/content';
 import { ContentStoreError } from './errors';
 import {
   applyProfileMapToEntity,
@@ -56,7 +52,9 @@ export async function listProjects(event: StoreEvent, options: { includeArchived
     db.prepare(sql).all<StoredEntityRow>(),
     loadProfileMap(event),
   ]);
-  return rows.results.map((row) => applyProfileMapToEntity(rowToProject(row) as Record<string, unknown>, profiles)) as ReturnType<typeof rowToProject>[];
+  return rows.results.map((row) =>
+    applyProfileMapToEntity(rowToProject(row) as Record<string, unknown>, profiles),
+  ) as ReturnType<typeof rowToProject>[];
 }
 
 export async function listGoals(event: StoreEvent, options: { includeArchived?: boolean } = {}) {
@@ -72,13 +70,15 @@ export async function listGoals(event: StoreEvent, options: { includeArchived?: 
     db.prepare(sql).all<StoredEntityRow>(),
     loadProfileMap(event),
   ]);
-  return rows.results.map((row) => applyProfileMapToEntity(rowToGoal(row) as Record<string, unknown>, profiles)) as ReturnType<typeof rowToGoal>[];
+  return rows.results.map((row) =>
+    applyProfileMapToEntity(rowToGoal(row) as Record<string, unknown>, profiles),
+  ) as ReturnType<typeof rowToGoal>[];
 }
 
 export async function getProjectById(
   event: StoreEvent,
   id: string,
-  options: { includeArchived?: boolean } = {}
+  options: { includeArchived?: boolean } = {},
 ) {
   const db = getDb(event);
   await ensureSeeded(db);
@@ -99,7 +99,11 @@ export async function getProjectById(
   return project;
 }
 
-export async function getGoalById(event: StoreEvent, id: string, options: { includeArchived?: boolean } = {}) {
+export async function getGoalById(
+  event: StoreEvent,
+  id: string,
+  options: { includeArchived?: boolean } = {},
+) {
   const db = getDb(event);
   await ensureSeeded(db);
 
@@ -137,7 +141,12 @@ export async function createProject(event: StoreEvent, input: unknown, actor: st
     archived_by: null,
     provenance: ensureProvenance(candidate.provenance, actor, timestamp, true),
   };
-  const stored = normalizeEntityForStorage(created as unknown as Record<string, unknown>, actor, timestamp, true);
+  const stored = normalizeEntityForStorage(
+    created as unknown as Record<string, unknown>,
+    actor,
+    timestamp,
+    true,
+  );
   const history = buildHistoryEvent({
     entityType: 'project',
     entityId: created.id,
@@ -161,7 +170,7 @@ export async function createProject(event: StoreEvent, input: unknown, actor: st
           stored.createdAt,
           stored.createdBy,
           stored.updatedAt,
-          stored.updatedBy
+          stored.updatedBy,
         ),
       db
         .prepare(INSERT_HISTORY_SQL)
@@ -173,7 +182,7 @@ export async function createProject(event: StoreEvent, input: unknown, actor: st
           actor,
           timestamp,
           null,
-          toHistoryJson(history.after)
+          toHistoryJson(history.after),
         ),
     ]);
   } catch (err) {
@@ -204,7 +213,12 @@ export async function createGoal(event: StoreEvent, input: unknown, actor: strin
     archived_by: null,
     provenance: ensureProvenance(candidate.provenance, actor, timestamp, true),
   };
-  const stored = normalizeEntityForStorage(created as unknown as Record<string, unknown>, actor, timestamp, true);
+  const stored = normalizeEntityForStorage(
+    created as unknown as Record<string, unknown>,
+    actor,
+    timestamp,
+    true,
+  );
   const history = buildHistoryEvent({
     entityType: 'goal',
     entityId: created.id,
@@ -228,7 +242,7 @@ export async function createGoal(event: StoreEvent, input: unknown, actor: strin
           stored.createdAt,
           stored.createdBy,
           stored.updatedAt,
-          stored.updatedBy
+          stored.updatedBy,
         ),
       db
         .prepare(INSERT_HISTORY_SQL)
@@ -240,7 +254,7 @@ export async function createGoal(event: StoreEvent, input: unknown, actor: strin
           actor,
           timestamp,
           null,
-          toHistoryJson(history.after)
+          toHistoryJson(history.after),
         ),
     ]);
   } catch (err) {
@@ -253,7 +267,12 @@ export async function createGoal(event: StoreEvent, input: unknown, actor: strin
   return stored.entity as Goal;
 }
 
-export async function updateProject(event: StoreEvent, id: string, patchInput: unknown, actor: string) {
+export async function updateProject(
+  event: StoreEvent,
+  id: string,
+  patchInput: unknown,
+  actor: string,
+) {
   const db = getDb(event);
   await ensureSeeded(db);
 
@@ -304,7 +323,7 @@ export async function updateProject(event: StoreEvent, id: string, patchInput: u
         stored.createdBy,
         stored.updatedAt,
         stored.updatedBy,
-        id
+        id,
       ),
     db
       .prepare(INSERT_HISTORY_SQL)
@@ -316,7 +335,7 @@ export async function updateProject(event: StoreEvent, id: string, patchInput: u
         actor,
         timestamp,
         toHistoryJson(history.before),
-        toHistoryJson(history.after)
+        toHistoryJson(history.after),
       ),
   ]);
 
@@ -328,7 +347,12 @@ export async function updateProject(event: StoreEvent, id: string, patchInput: u
   return stored.entity as Project;
 }
 
-export async function updateGoal(event: StoreEvent, id: string, patchInput: unknown, actor: string) {
+export async function updateGoal(
+  event: StoreEvent,
+  id: string,
+  patchInput: unknown,
+  actor: string,
+) {
   const db = getDb(event);
   await ensureSeeded(db);
 
@@ -379,7 +403,7 @@ export async function updateGoal(event: StoreEvent, id: string, patchInput: unkn
         stored.createdBy,
         stored.updatedAt,
         stored.updatedBy,
-        id
+        id,
       ),
     db
       .prepare(INSERT_HISTORY_SQL)
@@ -391,7 +415,7 @@ export async function updateGoal(event: StoreEvent, id: string, patchInput: unkn
         actor,
         timestamp,
         toHistoryJson(history.before),
-        toHistoryJson(history.after)
+        toHistoryJson(history.after),
       ),
   ]);
 
@@ -447,7 +471,7 @@ export async function archiveProject(event: StoreEvent, id: string, actor: strin
         stored.createdBy,
         stored.updatedAt,
         stored.updatedBy,
-        id
+        id,
       ),
     db
       .prepare(INSERT_HISTORY_SQL)
@@ -459,7 +483,7 @@ export async function archiveProject(event: StoreEvent, id: string, actor: strin
         actor,
         timestamp,
         toHistoryJson(history.before),
-        toHistoryJson(history.after)
+        toHistoryJson(history.after),
       ),
   ]);
 
@@ -515,7 +539,7 @@ export async function restoreProject(event: StoreEvent, id: string, actor: strin
         stored.createdBy,
         stored.updatedAt,
         stored.updatedBy,
-        id
+        id,
       ),
     db
       .prepare(INSERT_HISTORY_SQL)
@@ -527,7 +551,7 @@ export async function restoreProject(event: StoreEvent, id: string, actor: strin
         actor,
         timestamp,
         toHistoryJson(history.before),
-        toHistoryJson(history.after)
+        toHistoryJson(history.after),
       ),
   ]);
 
@@ -583,7 +607,7 @@ export async function archiveGoal(event: StoreEvent, id: string, actor: string) 
         stored.createdBy,
         stored.updatedAt,
         stored.updatedBy,
-        id
+        id,
       ),
     db
       .prepare(INSERT_HISTORY_SQL)
@@ -595,7 +619,7 @@ export async function archiveGoal(event: StoreEvent, id: string, actor: string) 
         actor,
         timestamp,
         toHistoryJson(history.before),
-        toHistoryJson(history.after)
+        toHistoryJson(history.after),
       ),
   ]);
 
@@ -651,7 +675,7 @@ export async function restoreGoal(event: StoreEvent, id: string, actor: string) 
         stored.createdBy,
         stored.updatedAt,
         stored.updatedBy,
-        id
+        id,
       ),
     db
       .prepare(INSERT_HISTORY_SQL)
@@ -663,7 +687,7 @@ export async function restoreGoal(event: StoreEvent, id: string, actor: string) 
         actor,
         timestamp,
         toHistoryJson(history.before),
-        toHistoryJson(history.after)
+        toHistoryJson(history.after),
       ),
   ]);
 
@@ -681,12 +705,13 @@ export async function listHistory(
     entityType?: ContentEntityType;
     entityId?: string;
     limit?: number;
-  } = {}
+  } = {},
 ) {
   const db = getDb(event);
   await ensureSeeded(db);
 
-  const limit = typeof options.limit === 'number' && options.limit > 0 ? Math.floor(options.limit) : 200;
+  const limit =
+    typeof options.limit === 'number' && options.limit > 0 ? Math.floor(options.limit) : 200;
   const predicates: string[] = [];
   const values: unknown[] = [];
 
@@ -719,7 +744,10 @@ FROM content_history
   values.push(limit);
 
   const [rows, profiles] = await Promise.all([
-    db.prepare(sql).bind(...values).all<StoredHistoryRow>(),
+    db
+      .prepare(sql)
+      .bind(...values)
+      .all<StoredHistoryRow>(),
     loadProfileMap(event),
   ]);
   return rows.results.map((row) => applyProfileMapToHistoryEvent(rowToHistoryEvent(row), profiles));

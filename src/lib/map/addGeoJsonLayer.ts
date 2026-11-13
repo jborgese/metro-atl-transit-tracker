@@ -1,23 +1,23 @@
 // src/lib/map/addGeoJsonLayer.ts
-import type { Map } from 'maplibre-gl'
-import { createLogger } from '../../utils/logger'
-import type { AddGeoJsonLayerOptions } from '@/types'
+import type { Map } from 'maplibre-gl';
+import { createLogger } from '../../utils/logger';
+import type { AddGeoJsonLayerOptions } from '@/types';
 
-const log = createLogger('MapLayer')
+const log = createLogger('MapLayer');
 
 export function addGeoJsonLayer(
   map: Map,
   id: string,
   url: string,
-  options?: AddGeoJsonLayerOptions
+  options?: AddGeoJsonLayerOptions,
 ) {
-  log.info(`layer:add:${id}`)
+  log.info(`layer:add:${id}`);
 
   map.addSource(id, {
     type: 'geojson',
     data: url,
     generateId: options?.generateId ?? false,
-  })
+  });
 
   const fillLayer = {
     id: `${id}-fill`,
@@ -33,10 +33,10 @@ export function addGeoJsonLayer(
       ],
       'fill-opacity': options?.fillOpacity ?? 0.25,
     },
-  }
+  };
 
   // Add fill; allow explicit placement before a label layer
-  map.addLayer(fillLayer as any, options?.beforeId)
+  map.addLayer(fillLayer as any, options?.beforeId);
 
   const outlineLayer = {
     id: `${id}-outline`,
@@ -49,15 +49,10 @@ export function addGeoJsonLayer(
         options?.hoverOutlineColor ?? '#ffffff',
         options?.outlineColor ?? '#1e40af',
       ],
-      'line-width': [
-        'case',
-        ['boolean', ['feature-state', 'hover'], false],
-        2,
-        1,
-      ],
+      'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 2, 1],
     },
-  }
+  };
 
   // Keep outline above the fill (no beforeId) for clear borders
-  map.addLayer(outlineLayer as any)
+  map.addLayer(outlineLayer as any);
 }

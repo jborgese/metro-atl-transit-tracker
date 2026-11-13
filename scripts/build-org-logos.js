@@ -1,15 +1,13 @@
 // build-org-logos.js
 // Node.js script to generate src/data/static/orgLogos.ts from counties-metadata.json
 
-
 import fs from 'fs';
 import path from 'path';
 
-const countiesPath = path.resolve('public/data/geo/counties-metadata.json');
+const countiesPath = path.resolve('static/data/geo/counties-metadata.json');
 const outputPath = path.resolve('src/data/static/orgLogos.ts');
 const logoDir = '/logos/';
-const logoDiskDir = path.resolve('public/logos');
-
+const logoDiskDir = path.resolve('static/logos');
 
 function toLogoFile(name) {
   // kebab-case, remove special chars, lowercased
@@ -17,8 +15,7 @@ function toLogoFile(name) {
     name
       .toLowerCase()
       .replace(/[’'`]/g, '')
-      .replace(/[^a-z0-9]+/g, '')
-      + '.png'
+      .replace(/[^a-z0-9]+/g, '') + '.png'
   );
 }
 
@@ -28,8 +25,7 @@ function toKebabLogoFile(name) {
       .toLowerCase()
       .replace(/[’'`]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') +
-    '.png'
+      .replace(/^-+|-+$/g, '') + '.png'
   );
 }
 
@@ -55,19 +51,19 @@ for (const county of counties) {
   }
 }
 
-
-
 // Gather all PNGs in the logos directory (lowercase, no extension)
-const availablePngs = fs.readdirSync(logoDiskDir)
-  .filter(f => f.endsWith('.png'))
-  .map(f => f.toLowerCase().replace(/\.png$/, ''));
+const availablePngs = fs
+  .readdirSync(logoDiskDir)
+  .filter((f) => f.endsWith('.png'))
+  .map((f) => f.toLowerCase().replace(/\.png$/, ''));
 
 // Helper: find which logo file (if any) exists for a set of names
 function findLogoForNames(names) {
   // Try all names (plain, kebab, nospace)
-  const candidates = names.map(n => n.toLowerCase())
-    .flatMap(n => [n, n.replace(/[^a-z0-9]/g, ''), n.replace(/[^a-z0-9]+/g, '-')]);
-  const found = availablePngs.filter(png => candidates.includes(png));
+  const candidates = names
+    .map((n) => n.toLowerCase())
+    .flatMap((n) => [n, n.replace(/[^a-z0-9]/g, ''), n.replace(/[^a-z0-9]+/g, '-')]);
+  const found = availablePngs.filter((png) => candidates.includes(png));
   if (found.length === 1) return logoDir + found[0] + '.png';
   return null;
 }

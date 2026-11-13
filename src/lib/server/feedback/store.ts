@@ -25,7 +25,7 @@ VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8)
 
 export async function insertFeedback(
   event: StoreEvent,
-  input: FeedbackCreate & { client_key: string }
+  input: FeedbackCreate & { client_key: string },
 ): Promise<FeedbackRow> {
   const db = getDb(event);
   const row: FeedbackRow = {
@@ -44,7 +44,7 @@ export async function insertFeedback(
       row.category,
       row.page_url ?? null,
       row.client_key,
-      row.created_at
+      row.created_at,
     )
     .run();
 

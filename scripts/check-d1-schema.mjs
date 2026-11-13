@@ -32,12 +32,11 @@ function parseWranglerJson(stdout, context) {
 }
 
 async function executeSql(sql) {
-  const commandArg =
-    process.platform === 'win32' ? `"${sql.replace(/"/g, '\\"')}"` : sql;
+  const commandArg = process.platform === 'win32' ? `"${sql.replace(/"/g, '\\"')}"` : sql;
 
   const output = await runWrangler(
     ['d1', 'execute', databaseName, '--local', '--command', commandArg, '--json'],
-    { cwd: repoRoot, timeoutMs: 120_000 }
+    { cwd: repoRoot, timeoutMs: 120_000 },
   );
 
   const parsed = parseWranglerJson(output.stdout, `sql "${sql}"`);
@@ -150,7 +149,7 @@ async function run() {
 
   const quotedNames = expectedObjects.map((item) => quoteForSql(item.name)).join(', ');
   const rows = await executeSql(
-    `SELECT type, name, sql FROM sqlite_master WHERE name IN (${quotedNames}) ORDER BY name;`
+    `SELECT type, name, sql FROM sqlite_master WHERE name IN (${quotedNames}) ORDER BY name;`,
   );
   const byName = new Map(rows.map((row) => [String(row.name), row]));
 
@@ -160,14 +159,14 @@ async function run() {
     assert.equal(
       String(row.type),
       expected.type,
-      `[schema] "${expected.name}" should be type "${expected.type}" but was "${row.type}".`
+      `[schema] "${expected.name}" should be type "${expected.type}" but was "${row.type}".`,
     );
 
     const normalizedSql = normalizeSql(row.sql);
     for (const snippet of expected.sqlIncludes) {
       assert.ok(
         normalizedSql.includes(snippet),
-        `[schema] "${expected.name}" is missing SQL fragment: ${snippet}`
+        `[schema] "${expected.name}" is missing SQL fragment: ${snippet}`,
       );
     }
   }

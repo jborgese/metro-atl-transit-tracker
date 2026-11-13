@@ -12,13 +12,13 @@ const config = {
     adapter: adapter({
       config: 'wrangler.jsonc',
       platformProxy: {
-        configPath: 'wrangler.jsonc'
-      }
+        configPath: 'wrangler.jsonc',
+      },
     }),
     alias: {
-      '@': resolve(__dirname, 'src')
-    }
-  }
+      '@': resolve(__dirname, 'src'),
+    },
+  },
 };
 
 export default config;

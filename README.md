@@ -6,7 +6,7 @@ Public, data-driven transit advocacy map and content hub for Metro Atlanta.
 
 - SvelteKit + Svelte 5
 - MapLibre GL
-- Tailwind CSS
+- Scoped Svelte styles + CSS custom-property tokens (`src/styles/global.css`)
 - Cloudflare Workers + D1 (`projects`, `goals`, `content_history`, `user_profiles`)
 - Cloudflare Access (editor auth)
 - Cloudflare native rate-limit binding for write protection
@@ -215,7 +215,7 @@ Local quality/test commands:
 - `npm run test:integration` (history ordering + immutability checks)
 - `npm run test:all`
 - `npm run test` (vitest unit tests)
-- `npm run ci:gate` (typecheck + lint + test + schema + smoke)
+- `npm run ci:gate` (typecheck + lint + format check + test + schema + smoke)
 - `npm run ci:gate:full` (adds integration)
 
 CI workflows:
@@ -255,7 +255,7 @@ See `docs/backup-retention-policy.md` for:
 
 ## Utility Scripts
 
-- `npm run build:org-logos` generates `src/data/static/orgLogos.ts` from county metadata + `public/logos`
+- `npm run build:org-logos` generates `src/data/static/orgLogos.ts` from `static/data/geo/counties-metadata.json` + `static/logos`
 - `scripts/check-d1-schema.mjs` validates schema objects and immutability triggers
 - `scripts/smoke-content-api.mjs` and `scripts/integration-content-api.mjs` run local Wrangler-backed API checks
 - `scripts/convert-favicon.js <image-path>` rebuilds `static/favicon.ico` and `static/favicon.svg`

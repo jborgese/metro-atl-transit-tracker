@@ -1,0 +1,6 @@
+package-lock.json
+wrangler.jsonc
+data/
+static/
+src/data/geo/*.json
+src/data/static/orgLogos.ts

@@ -1,6 +1,7 @@
 # Shared report format
 
 ## Severity rubric
+
 - 🔴 **Critical** — Exploitable security flaw, data loss risk, or production-breaking bug. Ship a fix this week.
 - 🟠 **High** — Significant defect, accessibility blocker, or material maintainability problem. Plan within the sprint.
 - 🟡 **Medium** — Quality concern, performance issue, or technical debt with measurable cost. Schedule into the next quarter.
@@ -8,6 +9,7 @@
 - ℹ️ **Info** — Observation worth recording but not actionable on its own.
 
 ## Report skeleton
+
 - `# <Report Title>` — H1 with the topic.
 - **Header block:** Repo name, generated date (ISO), scope (files/dirs analyzed), tooling used (linters, scanners).
 - **Executive summary** — 3–5 plain-language bullets a tech lead reads first.

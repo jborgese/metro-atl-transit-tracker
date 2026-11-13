@@ -1,4 +1,8 @@
-import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
+import {
+  extendZodWithOpenApi,
+  OpenAPIRegistry,
+  OpenApiGeneratorV31,
+} from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 import {
   goalCreateSchema,
@@ -71,10 +75,7 @@ export function buildOpenApiDocument(serverUrl = '/') {
   const historySchema = registry.register('HistoryEvent', historyEvent);
   const meSchema = registry.register('Me', meResponse);
   const meUpdateSchema = registry.register('MeUpdate', meUpdate);
-  const feedbackSchema = registry.register(
-    'FeedbackCreate',
-    withOpenApi(feedbackCreateSchema),
-  );
+  const feedbackSchema = registry.register('FeedbackCreate', withOpenApi(feedbackCreateSchema));
   const feedbackResponse = registry.register(
     'FeedbackResponse',
     z.object({ data: z.object({ id: z.string().optional(), received: z.literal(true) }) }),
@@ -98,10 +99,7 @@ export function buildOpenApiDocument(serverUrl = '/') {
       meta: z.object({ count: z.number().int().nonnegative() }),
     }),
   );
-  const goalItemResponse = registry.register(
-    'GoalItemResponse',
-    z.object({ data: goalSchema }),
-  );
+  const goalItemResponse = registry.register('GoalItemResponse', z.object({ data: goalSchema }));
   const historyListResponse = registry.register(
     'HistoryListResponse',
     z.object({

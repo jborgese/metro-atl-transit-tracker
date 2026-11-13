@@ -67,26 +67,22 @@ export async function runProcess(command, args, options = {}) {
       if (timedOut) {
         reject(
           new Error(
-            `Command timed out after ${timeoutMs}ms: ${output.command}\n${stdout}\n${stderr}`
-          )
+            `Command timed out after ${timeoutMs}ms: ${output.command}\n${stdout}\n${stderr}`,
+          ),
         );
         return;
       }
 
       if (!expectFailure && exitCode !== 0) {
-        reject(
-          new Error(
-            `Command failed (${exitCode}): ${output.command}\n${stdout}\n${stderr}`
-          )
-        );
+        reject(new Error(`Command failed (${exitCode}): ${output.command}\n${stdout}\n${stderr}`));
         return;
       }
 
       if (expectFailure && exitCode === 0) {
         reject(
           new Error(
-            `Command was expected to fail but succeeded: ${output.command}\n${stdout}\n${stderr}`
-          )
+            `Command was expected to fail but succeeded: ${output.command}\n${stdout}\n${stderr}`,
+          ),
         );
         return;
       }

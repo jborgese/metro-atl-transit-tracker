@@ -28,7 +28,7 @@ function authHeaders() {
 
 async function fetchEntityHistory(entityType, entityId, limit = 20) {
   const response = await requestJson(
-    `${baseUrl}/api/history?entityType=${entityType}&entityId=${encodeURIComponent(entityId)}&limit=${limit}`
+    `${baseUrl}/api/history?entityType=${entityType}&entityId=${encodeURIComponent(entityId)}&limit=${limit}`,
   );
   assert.equal(response.status, 200, `GET /api/history failed: ${response.text}`);
   return response.data?.data ?? [];
@@ -41,12 +41,12 @@ async function expectMutationHistory(entityType, entityId, expectedLatestAction,
   assert.equal(
     after.length,
     before.length + 1,
-    `Expected history count to increment by 1 for ${entityType}:${entityId}`
+    `Expected history count to increment by 1 for ${entityType}:${entityId}`,
   );
   assert.equal(
     after[0]?.action,
     expectedLatestAction,
-    `Expected latest action to be "${expectedLatestAction}" for ${entityType}:${entityId}`
+    `Expected latest action to be "${expectedLatestAction}" for ${entityType}:${entityId}`,
   );
   return after;
 }
@@ -125,17 +125,22 @@ async function run() {
       assert.equal(response.status, 200, `Project archive failed: ${response.text}`);
     });
 
-    const projectHistory = await expectMutationHistory('project', projectId, 'restore', async () => {
-      const response = await requestJson(`${baseUrl}/api/projects/${projectId}/restore`, {
-        method: 'POST',
-        headers: authHeaders(),
-      });
-      assert.equal(response.status, 200, `Project restore failed: ${response.text}`);
-    });
+    const projectHistory = await expectMutationHistory(
+      'project',
+      projectId,
+      'restore',
+      async () => {
+        const response = await requestJson(`${baseUrl}/api/projects/${projectId}/restore`, {
+          method: 'POST',
+          headers: authHeaders(),
+        });
+        assert.equal(response.status, 200, `Project restore failed: ${response.text}`);
+      },
+    );
     assert.deepEqual(
       projectHistory.map((entry) => entry.action).slice(0, 4),
       ['restore', 'archive', 'update', 'create'],
-      'Project history actions should be complete and ordered'
+      'Project history actions should be complete and ordered',
     );
 
     await expectMutationHistory('goal', goalId, 'create', async () => {
@@ -174,7 +179,7 @@ async function run() {
     assert.deepEqual(
       goalHistory.map((entry) => entry.action).slice(0, 4),
       ['restore', 'archive', 'update', 'create'],
-      'Goal history actions should be complete and ordered'
+      'Goal history actions should be complete and ordered',
     );
 
     console.log('[integration] Verifying history immutability trigger...');
@@ -184,20 +189,20 @@ async function run() {
     const tamperSql = `UPDATE content_history SET actor = 'tampered' WHERE id = '${projectHistoryId}';`;
     const tamperAttempt = await runWrangler(
       ['d1', 'execute', 'metro-atl-transit-prod', '--local', '--command', tamperSql],
-      { cwd: repoRoot, expectFailure: true, timeoutMs: 120_000 }
+      { cwd: repoRoot, expectFailure: true, timeoutMs: 120_000 },
     );
     const tamperOutput = `${tamperAttempt.stdout}\n${tamperAttempt.stderr}`;
     assert.match(
       tamperOutput,
       /immutable|ABORT|constraint|content_history/i,
-      'Expected tamper attempt to fail due to immutable history trigger'
+      'Expected tamper attempt to fail due to immutable history trigger',
     );
 
     const afterTamperHistory = await fetchEntityHistory('project', projectId);
     assert.notEqual(
       afterTamperHistory[0]?.actor,
       'tampered',
-      'History actor should remain unchanged after tamper attempt'
+      'History actor should remain unchanged after tamper attempt',
     );
 
     console.log('[integration] Integration tests passed.');
