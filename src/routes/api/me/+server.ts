@@ -1,4 +1,4 @@
-import { json, type RequestHandler } from '@sveltejs/kit';
+import type { RequestHandler } from '@sveltejs/kit';
 import { requireAuthenticatedIdentity } from '#lib/server/auth/editor.ts';
 import { ContentStoreError } from '#lib/server/content/errors.ts';
 import { readJsonBody, toHttpError } from '#lib/server/content/http.ts';
@@ -21,7 +21,7 @@ export const GET: RequestHandler = async (event) => {
         display_name: profile?.display_name ?? null,
       },
     };
-    return json(body);
+    return Response.json(body);
   } catch (err) {
     toHttpError(err);
   }
@@ -51,7 +51,7 @@ export const PUT: RequestHandler = async (event) => {
     const body: { data: MeResponse } = {
       data: { identity, actor, display_name: displayName },
     };
-    return json(body);
+    return Response.json(body);
   } catch (err) {
     toHttpError(err);
   }
