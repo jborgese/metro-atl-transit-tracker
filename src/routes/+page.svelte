@@ -4,7 +4,7 @@
   import MetroMap from '../components/svelte/MetroMap.svelte';
   import GoalsTable from '../components/svelte/GoalsTable.svelte';
   import ProjectDetailModal from '../components/svelte/ProjectDetailModal.svelte';
-  import type { Project } from '@/types/content';
+  import type { Project } from '#types/content.ts';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();

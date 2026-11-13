@@ -107,7 +107,7 @@ These are unchanged in runes mode: `bind:this`, `bind:value`/`bind:checked` (to 
 - **App state comes from `$app/state`** (`page`, `navigating`, `updated`). SvelteKit 3 removed `$app/stores`. The repo imports neither today. State that should survive a reload or be shareable goes in the URL, as the selected project does on `/`.
 - **Route types come from `./$types`.** Pages use `PageData`, `PageLoad`, and `PageServerLoad`; the installed version also generates `PageProps`. API handlers in this repo are typed with `RequestHandler` from `@sveltejs/kit`; match the file.
 - **Environment.** Variables are declared in `src/env.ts` and imported from `$app/env/private` and `$app/env/public` (for example `PUBLIC_MAPTILER_KEY`); a new variable needs a declaration there. Cloudflare bindings come from `env` in `cloudflare:workers`: `DB` (D1, through `getDb`), `WRITE_LIMITER`, `FEEDBACK_LIMITER`, and `SEND_EMAIL`. Public values are declared in `wrangler.jsonc` `vars`, and `.env.example` documents local ones.
-- **Imports.** `#lib/...` (with the `.ts` extension, declared in `package.json` `imports`) and the `@/...` alias from `vite.config.js` work; SvelteKit 3 no longer provides `$lib/...`. Which style a file uses varies, so match the file (`docs/CODING_STANDARDS.md` → Legacy).
+- **Imports.** Subpath imports declared in `package.json` `imports` (`#lib/...`, `#types/...`, `#utils/...`, with the `.ts` extension) and relative paths work. SvelteKit 3 no longer provides `$lib/...`, and its `alias` option is deprecated. Which style a file uses varies, so match the file (`docs/CODING_STANDARDS.md` → Legacy).
 
 ## Checks And Tooling
 

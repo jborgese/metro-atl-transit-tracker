@@ -1,4 +1,4 @@
-import type { ContentEntityType, Goal, Project } from '@/types/content';
+import type { ContentEntityType, Goal, Project } from '#types/content.ts';
 import { ContentStoreError } from './errors';
 import {
   applyProfileMapToEntity,

@@ -4,7 +4,7 @@ import {
   applyProfileMapToHistoryEvent,
   resolveActorDisplay,
 } from './mappers';
-import type { ContentHistoryEvent } from '@/types/content';
+import type { ContentHistoryEvent } from '#types/content.ts';
 
 describe('resolveActorDisplay', () => {
   it('returns the actor unchanged when no override exists', () => {

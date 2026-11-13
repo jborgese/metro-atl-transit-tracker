@@ -1,5 +1,5 @@
 import type { PageLoad } from './$types';
-import type { ApiListResponse, ContentHistoryEvent } from '@/types/content';
+import type { ApiListResponse, ContentHistoryEvent } from '#types/content.ts';
 
 export const load: PageLoad = async ({ fetch }) => {
   try {

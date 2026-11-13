@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import BaseLayout from '../../layouts/BaseLayout.svelte';
-  import type { ContentHistoryEvent, Goal, Project } from '@/types/content';
+  import type { ContentHistoryEvent, Goal, Project } from '#types/content.ts';
 
   type EditorEntity = 'project' | 'goal';
   type EntityItem = Project | Goal;

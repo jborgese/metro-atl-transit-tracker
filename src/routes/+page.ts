@@ -1,7 +1,7 @@
 import projectsFallback from '../data/geo/projects-metadata.json';
 import goalsFallback from '../data/geo/goals-metadata.json';
 import type { PageLoad } from './$types';
-import type { ApiListResponse, Goal, Project } from '@/types/content';
+import type { ApiListResponse, Goal, Project } from '#types/content.ts';
 
 type LoadFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 

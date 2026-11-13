@@ -1,5 +1,5 @@
 import contentHistorySeed from '../../../../data/content/history.json';
-import type { ContentHistoryEvent, Goal, Project } from '@/types/content';
+import type { ContentHistoryEvent, Goal, Project } from '#types/content.ts';
 import { ContentStoreError } from './errors';
 import {
   ensureProvenance,

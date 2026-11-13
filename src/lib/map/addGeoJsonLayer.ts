@@ -1,7 +1,7 @@
 // src/lib/map/addGeoJsonLayer.ts
 import type { Map } from 'maplibre-gl';
 import { createLogger } from '../../utils/logger';
-import type { AddGeoJsonLayerOptions } from '@/types';
+import type { AddGeoJsonLayerOptions } from '#types';
 
 const log = createLogger('MapLayer');
 

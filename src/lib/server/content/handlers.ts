@@ -3,7 +3,7 @@ import { requireEditorActor } from '#lib/server/auth/editor.ts';
 import { ContentStoreError } from './errors';
 import { parseIncludeArchived, readJsonBody, toHttpError } from './http';
 import type { StoreEvent } from './mappers';
-import type { ApiItemResponse, ApiListResponse } from '@/types/content';
+import type { ApiItemResponse, ApiListResponse } from '#types/content.ts';
 
 export interface ContentStore<T> {
   list(event: StoreEvent, options?: { includeArchived?: boolean }): Promise<T[]>;

@@ -1,1 +1,1 @@
-export type { Goal, Project, RelatedOrg } from '@/types/content';
+export type { Goal, Project, RelatedOrg } from '#types/content.ts';
