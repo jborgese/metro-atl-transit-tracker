@@ -44,7 +44,7 @@ npm run dev
 
 ### Deployment
 
-`npm run deploy` builds and runs `wrangler deploy` to production (the top level of `wrangler.jsonc`; staging is `env.staging`). Agents do not deploy or apply remote migrations; see Boundaries. Remote migration commands are in the README ("Cloudflare / D1 Operations"). Backup and restore runbooks are in [`docs/backup-retention-policy.md`](docs/backup-retention-policy.md).
+`npm run deploy` builds and runs `wrangler deploy` to production (the top level of `wrangler.jsonc`; staging is `env.staging`). Cloudflare Workers Builds is also connected to this repo. Every pushed branch, including PR branches, gets a build that uploads a Worker version (the `Workers Builds: metro-atl-transit-tracker` check). Whether a push to `main` also deploys is set in the Cloudflare dashboard, not in this repo, so treat merging to `main` as a possible production deploy. Agents do not deploy or apply remote migrations; see Boundaries. Remote migration commands are in the README ("Cloudflare / D1 Operations"). Backup and restore runbooks are in [`docs/backup-retention-policy.md`](docs/backup-retention-policy.md).
 
 ---
 
@@ -125,7 +125,7 @@ See [`.claude/rules/github-operations.md`](.claude/rules/github-operations.md) f
 - Write descriptive commit messages; no WIP commits in final PRs.
 - All required CI checks must pass before a PR can merge. `.github/workflows/ci-gates.yml` runs three jobs on every PR and on pushes to `main`. **Quality Checks** runs typecheck, lint, and schema check; **Smoke Test** and **Integration Test** follow it. It does not run `npm run test`, so run that locally.
 
-Nothing auto-deploys. Pushes to `main` also trigger `.github/workflows/backup-snapshots.yml`, which snapshots `data/content/*` to R2.
+Pushes to `main` also trigger `.github/workflows/backup-snapshots.yml`, which snapshots `data/content/*` to R2, and a Cloudflare Workers Build that may deploy (see Deployment).
 
 ---
 
