@@ -1,5 +1,5 @@
 import { getDb } from '../content/repository';
-import { nowIso, type StoreEvent } from '../content/mappers';
+import { nowIso } from '../content/mappers';
 import type { FeedbackCreate } from './validators';
 
 export type FeedbackRow = FeedbackCreate & {
@@ -24,10 +24,9 @@ VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8)
 `;
 
 export async function insertFeedback(
-  event: StoreEvent,
   input: FeedbackCreate & { client_key: string },
 ): Promise<FeedbackRow> {
-  const db = getDb(event);
+  const db = getDb();
   const row: FeedbackRow = {
     ...input,
     id: crypto.randomUUID(),
@@ -51,7 +50,7 @@ export async function insertFeedback(
   return row;
 }
 
-export async function markEmailSent(event: StoreEvent, id: string) {
-  const db = getDb(event);
+export async function markEmailSent(id: string) {
+  const db = getDb();
   await db.prepare('UPDATE feedback SET email_sent = 1 WHERE id = ?1').bind(id).run();
 }

@@ -2,16 +2,15 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { requireEditorActor } from '#lib/server/auth/editor.ts';
 import { ContentStoreError } from './errors';
 import { parseIncludeArchived, readJsonBody, toHttpError } from './http';
-import type { StoreEvent } from './mappers';
 import type { ApiItemResponse, ApiListResponse } from '#types/content.ts';
 
 export interface ContentStore<T> {
-  list(event: StoreEvent, options?: { includeArchived?: boolean }): Promise<T[]>;
-  getById(event: StoreEvent, id: string, options?: { includeArchived?: boolean }): Promise<T>;
-  create(event: StoreEvent, input: unknown, actor: string): Promise<T>;
-  update(event: StoreEvent, id: string, patchInput: unknown, actor: string): Promise<T>;
-  archive(event: StoreEvent, id: string, actor: string): Promise<T>;
-  restore(event: StoreEvent, id: string, actor: string): Promise<T>;
+  list(options?: { includeArchived?: boolean }): Promise<T[]>;
+  getById(id: string, options?: { includeArchived?: boolean }): Promise<T>;
+  create(input: unknown, actor: string): Promise<T>;
+  update(id: string, patchInput: unknown, actor: string): Promise<T>;
+  archive(id: string, actor: string): Promise<T>;
+  restore(id: string, actor: string): Promise<T>;
 }
 
 function requireId(value: string | undefined): string {
@@ -28,7 +27,7 @@ export function makeCollectionHandlers<T>(store: Pick<ContentStore<T>, 'list' | 
   const GET: RequestHandler = async (event) => {
     try {
       const includeArchived = parseIncludeArchived(event.url.searchParams.get('includeArchived'));
-      const items = await store.list(event, { includeArchived });
+      const items = await store.list({ includeArchived });
       const response: ApiListResponse<T> = { data: items, meta: { count: items.length } };
       return Response.json(response);
     } catch (err) {
@@ -40,7 +39,7 @@ export function makeCollectionHandlers<T>(store: Pick<ContentStore<T>, 'list' | 
     try {
       const actor = await requireEditorActor(event, 'content:edit');
       const payload = await readJsonBody(event);
-      const created = await store.create(event, payload, actor);
+      const created = await store.create(payload, actor);
       const response: ApiItemResponse<T> = { data: created };
       return Response.json(response, { status: 201 });
     } catch (err) {
@@ -60,7 +59,7 @@ export function makeItemHandlers<T>(
       const includeArchivedParam = event.url.searchParams.get('includeArchived');
       const includeArchived =
         includeArchivedParam === null ? true : parseIncludeArchived(includeArchivedParam);
-      const item = await store.getById(event, id, { includeArchived });
+      const item = await store.getById(id, { includeArchived });
       const response: ApiItemResponse<T> = { data: item };
       return Response.json(response);
     } catch (err) {
@@ -73,7 +72,7 @@ export function makeItemHandlers<T>(
       const id = requireId(event.params.id);
       const actor = await requireEditorActor(event, 'content:edit');
       const payload = await readJsonBody(event);
-      const updated = await store.update(event, id, payload, actor);
+      const updated = await store.update(id, payload, actor);
       const response: ApiItemResponse<T> = { data: updated };
       return Response.json(response);
     } catch (err) {
@@ -85,7 +84,7 @@ export function makeItemHandlers<T>(
     try {
       const id = requireId(event.params.id);
       const actor = await requireEditorActor(event, 'content:archive');
-      const archived = await store.archive(event, id, actor);
+      const archived = await store.archive(id, actor);
       const response: ApiItemResponse<T> = { data: archived };
       return Response.json(response);
     } catch (err) {
@@ -103,7 +102,7 @@ export function makeRestoreHandler<T>(store: Pick<ContentStore<T>, 'restore'>): 
     try {
       const id = requireId(event.params.id);
       const actor = await requireEditorActor(event, 'content:archive');
-      const restored = await store.restore(event, id, actor);
+      const restored = await store.restore(id, actor);
       const response: ApiItemResponse<T> = { data: restored };
       return Response.json(response);
     } catch (err) {

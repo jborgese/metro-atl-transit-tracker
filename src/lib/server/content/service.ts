@@ -16,7 +16,6 @@ import {
   toHistoryJson,
   type StoredEntityRow,
   type StoredHistoryRow,
-  type StoreEvent,
 } from './mappers';
 import { loadProfileMap } from './profiles';
 import {
@@ -39,8 +38,8 @@ import {
   toProjectPatch,
 } from './validators';
 
-export async function listProjects(event: StoreEvent, options: { includeArchived?: boolean } = {}) {
-  const db = getDb(event);
+export async function listProjects(options: { includeArchived?: boolean } = {}) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const includeArchived = options.includeArchived === true;
@@ -50,15 +49,15 @@ export async function listProjects(event: StoreEvent, options: { includeArchived
 
   const [rows, profiles] = await Promise.all([
     db.prepare(sql).all<StoredEntityRow>(),
-    loadProfileMap(event),
+    loadProfileMap(),
   ]);
   return rows.results.map((row) =>
     applyProfileMapToEntity(rowToProject(row) as Record<string, unknown>, profiles),
   ) as ReturnType<typeof rowToProject>[];
 }
 
-export async function listGoals(event: StoreEvent, options: { includeArchived?: boolean } = {}) {
-  const db = getDb(event);
+export async function listGoals(options: { includeArchived?: boolean } = {}) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const includeArchived = options.includeArchived === true;
@@ -68,19 +67,15 @@ export async function listGoals(event: StoreEvent, options: { includeArchived?: 
 
   const [rows, profiles] = await Promise.all([
     db.prepare(sql).all<StoredEntityRow>(),
-    loadProfileMap(event),
+    loadProfileMap(),
   ]);
   return rows.results.map((row) =>
     applyProfileMapToEntity(rowToGoal(row) as Record<string, unknown>, profiles),
   ) as ReturnType<typeof rowToGoal>[];
 }
 
-export async function getProjectById(
-  event: StoreEvent,
-  id: string,
-  options: { includeArchived?: boolean } = {},
-) {
-  const db = getDb(event);
+export async function getProjectById(id: string, options: { includeArchived?: boolean } = {}) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const includeArchived = options.includeArchived !== false;
@@ -94,17 +89,13 @@ export async function getProjectById(
     throw new ContentStoreError(404, `project ${id} not found`);
   }
 
-  const profiles = await loadProfileMap(event);
+  const profiles = await loadProfileMap();
   applyProfileMapToEntity(project as unknown as Record<string, unknown>, profiles);
   return project;
 }
 
-export async function getGoalById(
-  event: StoreEvent,
-  id: string,
-  options: { includeArchived?: boolean } = {},
-) {
-  const db = getDb(event);
+export async function getGoalById(id: string, options: { includeArchived?: boolean } = {}) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const includeArchived = options.includeArchived !== false;
@@ -118,13 +109,13 @@ export async function getGoalById(
     throw new ContentStoreError(404, `goal ${id} not found`);
   }
 
-  const profiles = await loadProfileMap(event);
+  const profiles = await loadProfileMap();
   applyProfileMapToEntity(goal as unknown as Record<string, unknown>, profiles);
   return goal;
 }
 
-export async function createProject(event: StoreEvent, input: unknown, actor: string) {
-  const db = getDb(event);
+export async function createProject(input: unknown, actor: string) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const candidate = toProjectCreate(input);
@@ -195,8 +186,8 @@ export async function createProject(event: StoreEvent, input: unknown, actor: st
   return stored.entity as Project;
 }
 
-export async function createGoal(event: StoreEvent, input: unknown, actor: string) {
-  const db = getDb(event);
+export async function createGoal(input: unknown, actor: string) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const candidate = toGoalCreate(input);
@@ -267,13 +258,8 @@ export async function createGoal(event: StoreEvent, input: unknown, actor: strin
   return stored.entity as Goal;
 }
 
-export async function updateProject(
-  event: StoreEvent,
-  id: string,
-  patchInput: unknown,
-  actor: string,
-) {
-  const db = getDb(event);
+export async function updateProject(id: string, patchInput: unknown, actor: string) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const patch = toProjectPatch(patchInput);
@@ -347,13 +333,8 @@ export async function updateProject(
   return stored.entity as Project;
 }
 
-export async function updateGoal(
-  event: StoreEvent,
-  id: string,
-  patchInput: unknown,
-  actor: string,
-) {
-  const db = getDb(event);
+export async function updateGoal(id: string, patchInput: unknown, actor: string) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const patch = toGoalPatch(patchInput);
@@ -427,8 +408,8 @@ export async function updateGoal(
   return stored.entity as Goal;
 }
 
-export async function archiveProject(event: StoreEvent, id: string, actor: string) {
-  const db = getDb(event);
+export async function archiveProject(id: string, actor: string) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const existing = await findProjectRow(db, id);
@@ -495,8 +476,8 @@ export async function archiveProject(event: StoreEvent, id: string, actor: strin
   return stored.entity as Project;
 }
 
-export async function restoreProject(event: StoreEvent, id: string, actor: string) {
-  const db = getDb(event);
+export async function restoreProject(id: string, actor: string) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const existing = await findProjectRow(db, id);
@@ -563,8 +544,8 @@ export async function restoreProject(event: StoreEvent, id: string, actor: strin
   return stored.entity as Project;
 }
 
-export async function archiveGoal(event: StoreEvent, id: string, actor: string) {
-  const db = getDb(event);
+export async function archiveGoal(id: string, actor: string) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const existing = await findGoalRow(db, id);
@@ -631,8 +612,8 @@ export async function archiveGoal(event: StoreEvent, id: string, actor: string) 
   return stored.entity as Goal;
 }
 
-export async function restoreGoal(event: StoreEvent, id: string, actor: string) {
-  const db = getDb(event);
+export async function restoreGoal(id: string, actor: string) {
+  const db = getDb();
   await ensureSeeded(db);
 
   const existing = await findGoalRow(db, id);
@@ -700,14 +681,13 @@ export async function restoreGoal(event: StoreEvent, id: string, actor: string) 
 }
 
 export async function listHistory(
-  event: StoreEvent,
   options: {
     entityType?: ContentEntityType;
     entityId?: string;
     limit?: number;
   } = {},
 ) {
-  const db = getDb(event);
+  const db = getDb();
   await ensureSeeded(db);
 
   const limit =
@@ -748,7 +728,7 @@ FROM content_history
       .prepare(sql)
       .bind(...values)
       .all<StoredHistoryRow>(),
-    loadProfileMap(event),
+    loadProfileMap(),
   ]);
   return rows.results.map((row) => applyProfileMapToHistoryEvent(rowToHistoryEvent(row), profiles));
 }
