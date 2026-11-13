@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import { WRITE_RATE_LIMIT_ENABLED } from '$app/env/private';
 import { json, type RequestEvent, type RequestHandler } from '@sveltejs/kit';
 import { checkWriteRateLimit, getClientKey, type WriteRateLimit } from '../../../hooks.server';
 import { ContentStoreError } from '$lib/server/content/errors';
@@ -36,7 +36,7 @@ export const POST: RequestHandler = async (event) => {
     const parsed = toFeedbackCreate(payload);
 
     const clientKey = getClientKey(event);
-    if (env.WRITE_RATE_LIMIT_ENABLED !== 'false') {
+    if (WRITE_RATE_LIMIT_ENABLED !== 'false') {
       const { allowed } = await checkWriteRateLimit(getFeedbackLimiter(event), clientKey);
       if (!allowed) {
         throw new ContentStoreError(429, 'too many feedback submissions; try again later');

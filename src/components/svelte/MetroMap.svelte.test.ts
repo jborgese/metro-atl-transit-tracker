@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import MetroMap from './MetroMap.svelte';
 
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$app/env/public', () => ({ PUBLIC_MAPTILER_KEY: undefined }));
 vi.mock('../../lib/map/initMetroMap', () => ({
   initMetroMap: () => {
     throw new Error('Failed to initialize WebGL');

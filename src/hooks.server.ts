@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import { WRITE_RATE_LIMIT_ENABLED } from '$app/env/private';
 import { json, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 
 const API_PREFIX = '/api/';
@@ -148,7 +148,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     return response;
   }
 
-  const enabled = env.WRITE_RATE_LIMIT_ENABLED !== 'false';
+  const enabled = WRITE_RATE_LIMIT_ENABLED !== 'false';
   if (!enabled) {
     const response = await resolve(event);
     applySecurityHeaders(response.headers);
