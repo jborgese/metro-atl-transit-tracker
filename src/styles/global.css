@@ -55,6 +55,12 @@
   --content-padding: clamp(1rem, 4vw, 2.5rem);
   --section-gap: clamp(1.5rem, 3vw, 2.75rem);
   --header-gap: clamp(0.75rem, 2vw, 1.25rem);
+
+  --z-skip-link: 10001;
+  --z-map-county-panel: 10050;
+  --z-debug: 99999;
+  --z-county-panel: 100000;
+  --z-modal: 200000;
 }
 
 /* Base document defaults */
@@ -121,7 +127,7 @@ a:hover {
     padding: 0.75rem;
     border-radius: 0.5rem;
     box-shadow: var(--shadow-2);
-    z-index: 100000;
+    z-index: var(--z-county-panel);
     /* Add extra padding for sticky header */
     padding-top: 1.5rem;
   }
@@ -137,7 +143,7 @@ a:hover {
   max-width: 90vw;
   max-height: calc(100vh - 4rem);
   overflow-y: auto;
-  z-index: 10050;
+  z-index: var(--z-map-county-panel);
 }
 
   .county-panel-content .panel-link {
@@ -416,7 +422,7 @@ a:hover {
   position: absolute;
   left: 1rem;
   top: 1rem;
-  z-index: 10001;
+  z-index: var(--z-skip-link);
 
   background: var(--surface-2);
   color: var(--text-on-dark);

@@ -5,7 +5,7 @@ import { metroCountyColorMatch, metroCountyGeoids } from "./countyStyles";
 export interface AddMetroCountyLayersOptions {
   map: maplibregl.Map;
   mapEl?: HTMLDivElement | null;
-  log?: { info: Function; warn: Function };
+  log?: { info: (message: string, data?: unknown) => void; warn: (message: string, data?: unknown) => void };
 }
 
 /**

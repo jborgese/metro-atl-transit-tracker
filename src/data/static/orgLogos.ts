@@ -18,10 +18,7 @@ export const orgLogos: Record<string, string | null> = {
   "Henry County local providers": null,
   "Board of Commissioners": null,
   "BeltLine Rail Now!": "/logos/beltlinerailnow.png",
+  "Let's Propel ATL": "/logos/letspropelatl.png",
+  "MARTA Army": "/logos/martaarmy.png",
   "A Better Cobb": "/logos/abettercobb.png"
-  ,"Let's Propel ATL": "/logos/letspropelatl.png"
-  ,"Lets Propel ATL": "/logos/letspropelatl.png"
-  ,"MARTA Army": "/logos/martaarmy.png"
-  ,"MARTAA rmy": "/logos/martaarmy.png"
-  ,"MARTAArmy": "/logos/martaarmy.png"
 };

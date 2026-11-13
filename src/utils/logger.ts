@@ -10,34 +10,30 @@ function format(scope: string, level: LogLevel, message: string) {
   return `[${scope}] ${ts} ${level.toUpperCase()}: ${message}`
 }
 
+function toConsoleArgs(line: string, data: unknown): unknown[] {
+  return data === undefined ? [line] : [line, data]
+}
+
 export function createLogger(scope: string) {
   return {
     debug(message: string, data?: unknown) {
       if (!IS_DEV_OR_TEST) return
-      data === undefined
-        ? console.debug(format(scope, 'debug', message))
-        : console.debug(format(scope, 'debug', message), data)
+      console.debug(...toConsoleArgs(format(scope, 'debug', message), data))
     },
 
     info(message: string, data?: unknown) {
       if (!IS_DEV_OR_TEST) return
-      data === undefined
-        ? console.info(format(scope, 'info', message))
-        : console.info(format(scope, 'info', message), data)
+      console.info(...toConsoleArgs(format(scope, 'info', message), data))
     },
 
     warn(message: string, data?: unknown) {
       if (!IS_DEV_OR_TEST) return
-      data === undefined
-        ? console.warn(format(scope, 'warn', message))
-        : console.warn(format(scope, 'warn', message), data)
+      console.warn(...toConsoleArgs(format(scope, 'warn', message), data))
     },
 
     error(message: string, data?: unknown) {
       // errors should always log
-      data === undefined
-        ? console.error(format(scope, 'error', message))
-        : console.error(format(scope, 'error', message), data)
+      console.error(...toConsoleArgs(format(scope, 'error', message), data))
     },
   }
 }
