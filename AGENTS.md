@@ -10,7 +10,7 @@ This file provides operational guidance for **all AI agents** (Cursor, Claude Co
 
 ## Setup
 
-**Prerequisites:** Node.js 22.22.2+ (jsdom 31's minimum; SvelteKit 3 needs 22.17+; CI uses the latest Node 22; no version file is pinned), npm, and Wrangler (a dev dependency; run it with `npx wrangler`).
+**Prerequisites:** Node.js 22.22.2+ or 24.15+ (`engines` in `package.json`, enforced by `engine-strict=true` in `.npmrc`, so `npm ci` fails on older Node). CI uses the latest Node 22; Cloudflare Workers Builds uses its default Node 24. No version file is pinned, npm, and Wrangler (a dev dependency; run it with `npx wrangler`).
 
 ```bash
 npm install

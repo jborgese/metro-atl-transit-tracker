@@ -2,6 +2,9 @@
   "name": "metro-atl-transit-tracker",
   "type": "module",
   "version": "0.0.1",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
   "scripts": {
     "dev": "vite dev",
     "d1:migrate:local": "wrangler d1 migrations apply metro-atl-transit-prod --local",
