@@ -171,7 +171,6 @@ module.exports = [
       '*.config.{js,cjs,mjs,ts}',
       'eslint.config.cjs',
       'vitest.config.ts',
-      'tailwind.config.ts',
       'svelte.config.js',
       'vite.config.js',
     ],

@@ -6,7 +6,7 @@ Public, data-driven transit advocacy map and content hub for Metro Atlanta.
 
 - SvelteKit + Svelte 5
 - MapLibre GL
-- Tailwind CSS
+- Scoped Svelte styles + CSS custom-property tokens (`src/styles/global.css`)
 - Cloudflare Workers + D1 (`projects`, `goals`, `content_history`, `user_profiles`)
 - Cloudflare Access (editor auth)
 - Cloudflare native rate-limit binding for write protection

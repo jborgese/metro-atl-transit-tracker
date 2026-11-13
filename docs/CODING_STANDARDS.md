@@ -125,13 +125,13 @@ There is no infrastructure-as-code tool. Cloudflare configuration is `wrangler.j
 
 ### UI
 
-Svelte 5 components in runes mode live in `src/components/svelte/`, and pages live in `src/routes/`. Pages wrap themselves in `src/layouts/BaseLayout.svelte`. Styling is Tailwind 4 utilities plus scoped `<style>` blocks that use the tokens in `src/styles/global.css` ([`design-tokens.md`](design-tokens.md)). There is no component library. Modals render through `src/components/svelte/Portal.svelte`.
+Svelte 5 components in runes mode live in `src/components/svelte/`, and pages live in `src/routes/`. Pages wrap themselves in `src/layouts/BaseLayout.svelte`. Styling is scoped `<style>` blocks, plus shared rules in `src/styles/global.css`, that use the tokens defined there ([`design-tokens.md`](design-tokens.md)). There is no component library. Modals render through `src/components/svelte/Portal.svelte`.
 
 Design-quality review criteria live in `.claude/rules/design-review.md`, and Svelte specifics in `.claude/rules/svelte.md`. The cross-cutting rules:
 
 - **Thin pages.** Keep page shells thin; extract child components, pure `.ts` helpers, and submit functions.
 - **Pure helpers.** Data transforms are pure functions in their own module, testable without rendering (`src/utils/projectRelations.ts`, `src/lib/map/`).
-- **One styling approach.** Tailwind utilities and token-based scoped styles; do not introduce another (CSS modules, a CSS-in-JS library, a second framework). No inline styles except rare layout cases; pass dynamic values with `style:--name`.
+- **One styling approach.** Token-based scoped styles; do not introduce another (utility classes, CSS modules, a CSS-in-JS library). No inline styles except rare layout cases; pass dynamic values with `style:--name`.
 - **API calls out of markup and effects.** Page data loads in a `load` function with the `fetch` it receives. Writes and on-demand reads call the JSON API with `fetch` from event handlers or `onMount`, as `FeedbackModal.svelte` and the admin page do. There is no shared API client or error-monitoring service.
 - **Types.** Domain types are hand-written in `src/types/content.ts`, and the Zod schemas live in each domain's `validators.ts`; nothing infers one from the other, so change both together. Component-local prop types may stay in the component.
 - **Derived values, not effects.** Compute read-only values with `$derived` or a pure helper, never with an `$effect` that assigns.
@@ -228,7 +228,7 @@ When no row covers the case: match the file or folder you are editing, use the c
 | Writing content tables directly, or touching `content_history` rows | The content service, which appends the history event                                            |
 | Hardcoded environment values (URLs, resource IDs, addresses)        | `$env/dynamic/*` and `event.platform.env`                                                       |
 | String-interpolated SQL with user input                             | `.bind()` parameters and the query helpers in `repository.ts`                                   |
-| Hex literals or a second styling approach                           | Tailwind utilities and the tokens in `src/styles/global.css`                                    |
+| Hex literals or a second styling approach                           | Scoped styles and the tokens in `src/styles/global.css`                                         |
 | Copying a legacy feature as the scaffold for new work               | The canonical reference for that layer                                                          |
 | Production `data-testid` by default                                 | Accessible names and semantic structure first                                                   |
 | Unconditional data overwrites in production D1                      | Targeted or conditional writes, approved first                                                  |

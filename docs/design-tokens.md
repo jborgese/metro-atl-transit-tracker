@@ -7,7 +7,6 @@ The Atlanta-1996 design system is expressed as CSS custom properties on `:root` 
 ## How to use
 
 - In `.svelte` and `.css` files: `color: var(--text-on-dark); background: var(--surface-1);`
-- In Tailwind utility contexts where no shade is a faithful match, use the token via arbitrary value: `bg-[color:var(--surface-1)]` or `border-[color:var(--border-subtle)]`.
 - Do not hardcode brand hexes outside [global.css](../src/styles/global.css) and [src/utils/statusHelpers.ts](../src/utils/statusHelpers.ts) (see "Status badges" below).
 
 ## Color scheme: dark-only

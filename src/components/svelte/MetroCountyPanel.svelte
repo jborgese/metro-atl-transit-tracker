@@ -32,7 +32,7 @@
                   loading="lazy"
                   decoding="async"
                 />
-                <span class="sr-only">{group.name}</span>
+                <span>{group.name}</span>
               </a>
             {:else}
               <a class="panel-link" href={group.website} target="_blank" rel="noopener"
@@ -62,7 +62,7 @@
                   loading="lazy"
                   decoding="async"
                 />
-                <span class="sr-only">{agency.name}</span>
+                <span>{agency.name}</span>
               </a>
             {:else}
               <a class="panel-link" href={agency.contact_url} target="_blank" rel="noopener"
@@ -94,7 +94,7 @@
                   loading="lazy"
                   decoding="async"
                 />
-                <span class="sr-only">{group.name}</span>
+                <span>{group.name}</span>
               </a>
             {:else}
               <a class="panel-link" href={group.website} target="_blank" rel="noopener"
