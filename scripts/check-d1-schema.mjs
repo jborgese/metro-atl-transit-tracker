@@ -95,7 +95,7 @@ async function run() {
         'create table timed_actions',
         'payload_json text not null check (json_valid(payload_json))',
         'is_archived integer not null default 0 check (is_archived in (0, 1))',
-        "check (json_type(payload_json, '$.expires_on') = 'text')",
+        "check (json_type(payload_json, '$.expires_on') is 'text')",
       ],
     },
     {

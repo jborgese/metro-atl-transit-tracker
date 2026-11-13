@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS timed_actions (
   created_by TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   updated_by TEXT NOT NULL,
-  CHECK (json_type(payload_json, '$.expires_on') = 'text')
+  CHECK (json_type(payload_json, '$.expires_on') IS 'text')
 );
 
 CREATE INDEX IF NOT EXISTS idx_timed_actions_archive_state
@@ -37,20 +37,20 @@ INSERT INTO content_history
 
 DROP TABLE content_history_old;
 
--- DROP TABLE removed the old indexes and triggers; recreate them exactly as in 0001.
-CREATE INDEX IF NOT EXISTS idx_content_history_entity
+-- DROP TABLE removed the old indexes and triggers; recreate them as in 0001.
+CREATE INDEX idx_content_history_entity
   ON content_history (entity_type, entity_id, timestamp DESC);
 
-CREATE INDEX IF NOT EXISTS idx_content_history_timestamp
+CREATE INDEX idx_content_history_timestamp
   ON content_history (timestamp DESC);
 
-CREATE TRIGGER IF NOT EXISTS trg_content_history_immutable_update
+CREATE TRIGGER trg_content_history_immutable_update
 BEFORE UPDATE ON content_history
 BEGIN
   SELECT RAISE(ABORT, 'content_history is immutable');
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_content_history_immutable_delete
+CREATE TRIGGER trg_content_history_immutable_delete
 BEFORE DELETE ON content_history
 BEGIN
   SELECT RAISE(ABORT, 'content_history is immutable');
