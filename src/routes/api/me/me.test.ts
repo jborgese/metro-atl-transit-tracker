@@ -13,11 +13,11 @@ const requireAuthenticatedIdentity = vi.hoisted(() =>
   ),
 );
 const getProfile = vi.hoisted(() =>
-  vi.fn(async (_event: unknown, _identity: string): Promise<Profile | null> => null),
+  vi.fn(async (_identity: string): Promise<Profile | null> => null),
 );
 const upsertProfile = vi.hoisted(() =>
   vi.fn(
-    async (_event: unknown, identity: string, displayName: string): Promise<Profile> => ({
+    async (identity: string, displayName: string): Promise<Profile> => ({
       identity,
       display_name: displayName.trim(),
       updated_at: '2026-05-04T00:00:00.000Z',
@@ -25,7 +25,7 @@ const upsertProfile = vi.hoisted(() =>
   ),
 );
 const deleteProfile = vi.hoisted(() =>
-  vi.fn(async (_event: unknown, _identity: string): Promise<void> => undefined),
+  vi.fn(async (_identity: string): Promise<void> => undefined),
 );
 
 vi.mock('#lib/server/auth/editor.ts', () => ({ requireAuthenticatedIdentity }));
@@ -74,7 +74,7 @@ describe('GET /api/me', () => {
       actor: 'foo@bar.com',
       display_name: null,
     });
-    expect(getProfile).toHaveBeenCalledWith(expect.anything(), 'foo@bar.com');
+    expect(getProfile).toHaveBeenCalledWith('foo@bar.com');
   });
 
   it('returns the saved display_name when a profile exists', async () => {
@@ -107,7 +107,7 @@ describe('PUT /api/me', () => {
   it('saves a non-empty display_name via upsertProfile', async () => {
     const res = await PUT(makeEvent({ body: JSON.stringify({ display_name: 'Foo Bar' }) }))!;
     expect(res.status).toBe(200);
-    expect(upsertProfile).toHaveBeenCalledWith(expect.anything(), 'foo@bar.com', 'Foo Bar');
+    expect(upsertProfile).toHaveBeenCalledWith('foo@bar.com', 'Foo Bar');
     expect(deleteProfile).not.toHaveBeenCalled();
     const body = (await res.json()) as { data: { display_name: string | null } };
     expect(body.data.display_name).toBe('Foo Bar');
@@ -116,7 +116,7 @@ describe('PUT /api/me', () => {
   it('clears the profile when display_name is null', async () => {
     const res = await PUT(makeEvent({ body: JSON.stringify({ display_name: null }) }))!;
     expect(res.status).toBe(200);
-    expect(deleteProfile).toHaveBeenCalledWith(expect.anything(), 'foo@bar.com');
+    expect(deleteProfile).toHaveBeenCalledWith('foo@bar.com');
     expect(upsertProfile).not.toHaveBeenCalled();
     const body = (await res.json()) as { data: { display_name: string | null } };
     expect(body.data.display_name).toBeNull();
@@ -124,7 +124,7 @@ describe('PUT /api/me', () => {
 
   it('clears the profile when display_name trims to empty', async () => {
     await PUT(makeEvent({ body: JSON.stringify({ display_name: '   ' }) }))!;
-    expect(deleteProfile).toHaveBeenCalledWith(expect.anything(), 'foo@bar.com');
+    expect(deleteProfile).toHaveBeenCalledWith('foo@bar.com');
     expect(upsertProfile).not.toHaveBeenCalled();
   });
 

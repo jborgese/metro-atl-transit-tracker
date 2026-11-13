@@ -30,13 +30,13 @@ export const POST: RequestHandler = async (event) => {
       }
     }
 
-    const row = await insertFeedback(event, { ...parsed, client_key: clientKey });
+    const row = await insertFeedback({ ...parsed, client_key: clientKey });
 
     // Email is best-effort: the D1 row is canonical, so a delivery failure
     // still returns 201 (visible later via email_sent = 0).
     const emailSent = await sendFeedbackEmail(row);
     if (emailSent) {
-      await markEmailSent(event, row.id);
+      await markEmailSent(row.id);
     }
 
     const response = json({ data: { id: row.id, received: true } }, { status: 201 });

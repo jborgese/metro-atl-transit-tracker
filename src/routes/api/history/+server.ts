@@ -11,7 +11,7 @@ export const GET: RequestHandler = async (event) => {
     const entityId = event.url.searchParams.get('entityId') || undefined;
     const limit = parseLimit(event.url.searchParams.get('limit'), 200);
 
-    const history = await listHistory(event, { entityType, entityId, limit });
+    const history = await listHistory({ entityType, entityId, limit });
     const response: ApiListResponse<ContentHistoryEvent> = {
       data: history,
       meta: { count: history.length },

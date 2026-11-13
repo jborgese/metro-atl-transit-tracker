@@ -13,7 +13,7 @@ interface MeResponse {
 export const GET: RequestHandler = async (event) => {
   try {
     const { actor, identity } = await requireAuthenticatedIdentity(event);
-    const profile = await getProfile(event, identity);
+    const profile = await getProfile(identity);
     const body: { data: MeResponse } = {
       data: {
         identity,
@@ -41,10 +41,10 @@ export const PUT: RequestHandler = async (event) => {
 
     let displayName: string | null;
     if (candidate === null || candidate === undefined || candidate.trim().length === 0) {
-      await deleteProfile(event, identity);
+      await deleteProfile(identity);
       displayName = null;
     } else {
-      const profile = await upsertProfile(event, identity, candidate);
+      const profile = await upsertProfile(identity, candidate);
       displayName = profile.display_name;
     }
 

@@ -15,36 +15,36 @@ type Item = { id: string; name: string };
 function makeStore() {
   return {
     list: vi.fn(
-      async (_event: unknown, _options?: { includeArchived?: boolean }) =>
+      async (_options?: { includeArchived?: boolean }) =>
         [
           { id: 'a', name: 'alpha' },
           { id: 'b', name: 'bravo' },
         ] as Item[],
     ),
-    getById: vi.fn(async (_event: unknown, id: string) => ({ id, name: 'found' }) as Item),
+    getById: vi.fn(async (id: string) => ({ id, name: 'found' }) as Item),
     create: vi.fn(
-      async (_event: unknown, input: unknown, actor: string) =>
+      async (input: unknown, actor: string) =>
         ({
           id: (input as { id: string }).id,
           name: actor,
         }) as Item,
     ),
     update: vi.fn(
-      async (_event: unknown, id: string, _patch: unknown, actor: string) =>
+      async (id: string, _patch: unknown, actor: string) =>
         ({
           id,
           name: actor,
         }) as Item,
     ),
     archive: vi.fn(
-      async (_event: unknown, id: string, actor: string) =>
+      async (id: string, actor: string) =>
         ({
           id,
           name: `archived:${actor}`,
         }) as Item,
     ),
     restore: vi.fn(
-      async (_event: unknown, id: string, actor: string) =>
+      async (id: string, actor: string) =>
         ({
           id,
           name: `restored:${actor}`,
@@ -87,7 +87,7 @@ describe('makeCollectionHandlers', () => {
     const store = makeStore();
     const { GET } = makeCollectionHandlers<Item>(store);
     const res = await GET(makeEvent())!;
-    expect(store.list).toHaveBeenCalledWith(expect.anything(), { includeArchived: false });
+    expect(store.list).toHaveBeenCalledWith({ includeArchived: false });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: Item[]; meta: { count: number } };
     expect(body.meta.count).toBe(2);
@@ -98,7 +98,7 @@ describe('makeCollectionHandlers', () => {
     const store = makeStore();
     const { GET } = makeCollectionHandlers<Item>(store);
     await GET(makeEvent({ search: '?includeArchived=true' }))!;
-    expect(store.list).toHaveBeenCalledWith(expect.anything(), { includeArchived: true });
+    expect(store.list).toHaveBeenCalledWith({ includeArchived: true });
   });
 
   it('POST authenticates with content:edit, parses body, returns 201', async () => {
@@ -106,11 +106,7 @@ describe('makeCollectionHandlers', () => {
     const { POST } = makeCollectionHandlers<Item>(store);
     const res = await POST(makeEvent({ body: JSON.stringify({ id: 'new' }) }))!;
     expect(requireEditorActor).toHaveBeenCalledWith(expect.anything(), 'content:edit');
-    expect(store.create).toHaveBeenCalledWith(
-      expect.anything(),
-      { id: 'new' },
-      'tester@example.test',
-    );
+    expect(store.create).toHaveBeenCalledWith({ id: 'new' }, 'tester@example.test');
     expect(res.status).toBe(201);
     const body = (await res.json()) as { data: Item };
     expect(body.data).toEqual({ id: 'new', name: 'tester@example.test' });
@@ -136,14 +132,14 @@ describe('makeItemHandlers', () => {
     const store = makeStore();
     const { GET } = makeItemHandlers<Item>(store);
     await GET(makeEvent({ params: { id: 'abc' } }))!;
-    expect(store.getById).toHaveBeenCalledWith(expect.anything(), 'abc', { includeArchived: true });
+    expect(store.getById).toHaveBeenCalledWith('abc', { includeArchived: true });
   });
 
   it('GET respects explicit includeArchived=false', async () => {
     const store = makeStore();
     const { GET } = makeItemHandlers<Item>(store);
     await GET(makeEvent({ params: { id: 'abc' }, search: '?includeArchived=false' }))!;
-    expect(store.getById).toHaveBeenCalledWith(expect.anything(), 'abc', {
+    expect(store.getById).toHaveBeenCalledWith('abc', {
       includeArchived: false,
     });
   });
@@ -166,12 +162,7 @@ describe('makeItemHandlers', () => {
     const { PATCH } = makeItemHandlers<Item>(store);
     await PATCH(makeEvent({ params: { id: 'abc' }, body: JSON.stringify({ name: 'updated' }) }))!;
     expect(requireEditorActor).toHaveBeenCalledWith(expect.anything(), 'content:edit');
-    expect(store.update).toHaveBeenCalledWith(
-      expect.anything(),
-      'abc',
-      { name: 'updated' },
-      'tester@example.test',
-    );
+    expect(store.update).toHaveBeenCalledWith('abc', { name: 'updated' }, 'tester@example.test');
   });
 
   it('DELETE authenticates with content:archive', async () => {
@@ -179,7 +170,7 @@ describe('makeItemHandlers', () => {
     const { DELETE } = makeItemHandlers<Item>(store);
     const res = await DELETE(makeEvent({ params: { id: 'abc' } }))!;
     expect(requireEditorActor).toHaveBeenCalledWith(expect.anything(), 'content:archive');
-    expect(store.archive).toHaveBeenCalledWith(expect.anything(), 'abc', 'tester@example.test');
+    expect(store.archive).toHaveBeenCalledWith('abc', 'tester@example.test');
     expect(res.status).toBe(200);
   });
 
@@ -205,7 +196,7 @@ describe('makeRestoreHandler', () => {
     const { POST } = makeRestoreHandler<Item>(store);
     const res = await POST(makeEvent({ params: { id: 'abc' } }))!;
     expect(requireEditorActor).toHaveBeenCalledWith(expect.anything(), 'content:archive');
-    expect(store.restore).toHaveBeenCalledWith(expect.anything(), 'abc', 'tester@example.test');
+    expect(store.restore).toHaveBeenCalledWith('abc', 'tester@example.test');
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: Item };
     expect(body.data).toEqual({ id: 'abc', name: 'restored:tester@example.test' });

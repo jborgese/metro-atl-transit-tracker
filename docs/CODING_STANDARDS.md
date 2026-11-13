@@ -107,10 +107,10 @@ Line counts are signals, not rules. Split when a unit becomes hard to review or 
 
 ### Backend
 
-The backend is SvelteKit `+server.ts` endpoints and server `load` functions running on Cloudflare Workers. There are no queue consumers or scheduled handlers. Server code lives in `src/lib/server/<domain>/`. D1 comes from `getDb(event)` in `src/lib/server/content/repository.ts`; other bindings come from `env` in `cloudflare:workers` (adapter-cloudflare 8 no longer sets `event.platform`).
+The backend is SvelteKit `+server.ts` endpoints and server `load` functions running on Cloudflare Workers. There are no queue consumers or scheduled handlers. Server code lives in `src/lib/server/<domain>/`. D1 comes from `getDb()` in `src/lib/server/content/repository.ts`; other bindings come from `env` in `cloudflare:workers` (adapter-cloudflare 8 no longer sets `event.platform`).
 
 - Keep handlers thin: parse input, call domain logic, format the response. Domain logic lives in functions that take typed inputs, return typed outputs, and are testable without the Workers runtime.
-- Get D1 through `getDb(event)` instead of reading `env.DB` from `cloudflare:workers` in new handlers.
+- Get D1 through `getDb()` instead of reading `env.DB` from `cloudflare:workers` in new handlers.
 - Mappers and transforms are pure functions, not classes (`src/lib/server/content/mappers.ts`).
 - Grow file layout on demand: start in the entry file; when it is hard to review, extract domain-named siblings; move to `{domain}/` folders only when a cohesive domain or external API appears. Do not create domain folders or many sibling files upfront.
 - Error strategy follows the workflow: throw contextual errors where failure should stop the flow; log, continue, and isolate partial failures in best-effort paths (feedback email delivery logs the failure and still returns 201); otherwise match the result shape of sibling handlers in the same workflow.
@@ -155,7 +155,7 @@ Handlers are SvelteKit `+server.ts` functions. Domain code throws `ContentStoreE
 | Handler factories | Shared GET/POST/PATCH/DELETE/restore handlers over a store, with auth and body parsing               | `src/lib/server/content/handlers.ts`                                        |
 | Services          | Business logic and orchestration (seeding, history events, archive rules)                            | `src/lib/server/content/service.ts`, exposed through `stores.ts`            |
 | Data modules      | SQL constants, queries, batching                                                                     | `src/lib/server/content/repository.ts`, `src/lib/server/feedback/store.ts`  |
-| DB client         | The D1 binding                                                                                       | `getDb(event)` in `repository.ts`                                           |
+| DB client         | The D1 binding                                                                                       | `getDb()` in `repository.ts`                                                |
 | Hooks             | `www` redirect, security headers, cross-origin write rejection, write rate limit; no authorization   | `src/hooks.server.ts`                                                       |
 | Auth              | Access JWT verification and RBAC, called inside each handler                                         | `src/lib/server/auth/editor.ts`                                             |
 | Validation        | Request schemas (Zod), parsed inside the service and also registered in the OpenAPI spec             | `src/lib/server/<domain>/validators.ts`, `src/lib/server/openapi/spec.ts`   |
@@ -223,7 +223,7 @@ When no row covers the case: match the file or folder you are editing, use the c
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | A new `+server.ts` with inline CRUD logic for a content type        | The `make*Handlers(store)` factories in `handlers.ts`                                           |
 | New fat handlers with D1 queries and domain logic inline            | Queries in the domain's data module, logic in testable helpers under `src/lib/server/<domain>/` |
-| Reading `env.DB` from `cloudflare:workers` inline in new code       | `getDb(event)`                                                                                  |
+| Reading `env.DB` from `cloudflare:workers` inline in new code       | `getDb()`                                                                                       |
 | Authorization only in `hooks.server.ts` or a layout `load`          | `requireEditorActor` / `requireAuthenticatedIdentity` inside each handler and server `load`     |
 | Writing content tables directly, or touching `content_history` rows | The content service, which appends the history event                                            |
 | Hardcoded environment values (URLs, resource IDs, addresses)        | `$app/env/*` (declared in `src/env.ts`) and `cloudflare:workers` bindings                       |
