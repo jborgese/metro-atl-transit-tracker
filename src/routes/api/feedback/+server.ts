@@ -1,5 +1,6 @@
 import { WRITE_RATE_LIMIT_ENABLED } from '$app/env/private';
-import { json, type RequestEvent, type RequestHandler } from '@sveltejs/kit';
+import { json, type RequestHandler } from '@sveltejs/kit';
+import { env } from 'cloudflare:workers';
 import { checkWriteRateLimit, getClientKey, type WriteRateLimit } from '../../../hooks.server';
 import { ContentStoreError } from '#lib/server/content/errors.ts';
 import { readJsonBody, toHttpError } from '#lib/server/content/http.ts';
@@ -10,9 +11,8 @@ import { isHoneypotTripped, toFeedbackCreate } from '#lib/server/feedback/valida
 // Mirror of the `simple` block on the FEEDBACK_LIMITER binding in wrangler.jsonc.
 const FEEDBACK_LIMIT_WINDOW_SECONDS = 60;
 
-function getFeedbackLimiter(event: RequestEvent): WriteRateLimit | undefined {
-  const platformEnv = (event.platform as { env?: Record<string, unknown> } | undefined)?.env;
-  const candidate = platformEnv?.FEEDBACK_LIMITER;
+function getFeedbackLimiter(): WriteRateLimit | undefined {
+  const candidate = env.FEEDBACK_LIMITER;
   if (
     candidate &&
     typeof candidate === 'object' &&
@@ -37,7 +37,7 @@ export const POST: RequestHandler = async (event) => {
 
     const clientKey = getClientKey(event);
     if (WRITE_RATE_LIMIT_ENABLED !== 'false') {
-      const { allowed } = await checkWriteRateLimit(getFeedbackLimiter(event), clientKey);
+      const { allowed } = await checkWriteRateLimit(getFeedbackLimiter(), clientKey);
       if (!allowed) {
         throw new ContentStoreError(429, 'too many feedback submissions; try again later');
       }
@@ -47,7 +47,7 @@ export const POST: RequestHandler = async (event) => {
 
     // Email is best-effort: the D1 row is canonical, so a delivery failure
     // still returns 201 (visible later via email_sent = 0).
-    const emailSent = await sendFeedbackEmail(event, row);
+    const emailSent = await sendFeedbackEmail(row);
     if (emailSent) {
       await markEmailSent(event, row.id);
     }

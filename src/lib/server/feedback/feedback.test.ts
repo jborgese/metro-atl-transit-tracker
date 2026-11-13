@@ -1,8 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ContentStoreError } from '../content/errors';
 import { buildFeedbackEmailBody, sendFeedbackEmail } from './email';
 import type { FeedbackRow } from './store';
 import { isHoneypotTripped, toFeedbackCreate } from './validators';
+
+const workersEnv = vi.hoisted((): Record<string, unknown> => ({}));
+vi.mock('cloudflare:workers', () => ({ env: workersEnv }));
+
+beforeEach(() => {
+  for (const key of Object.keys(workersEnv)) delete workersEnv[key];
+});
 
 describe('toFeedbackCreate', () => {
   it('accepts a minimal payload and defaults category to general', () => {
@@ -99,37 +106,32 @@ class FakeEmailMessage {
   ) {}
 }
 
-function makeEvent(env: Record<string, unknown>) {
-  return { platform: { env } };
+function setBindings(bindings: Record<string, unknown>) {
+  Object.assign(workersEnv, bindings);
 }
 
 describe('sendFeedbackEmail', () => {
   it('returns false when the SEND_EMAIL binding is unavailable', async () => {
-    const sent = await sendFeedbackEmail(makeEvent({}), baseRow);
+    const sent = await sendFeedbackEmail(baseRow);
     expect(sent).toBe(false);
   });
 
   it('returns false when FEEDBACK_EMAIL_ENABLED is "false"', async () => {
     const send = vi.fn(async () => undefined);
-    const sent = await sendFeedbackEmail(
-      makeEvent({ SEND_EMAIL: { send }, FEEDBACK_EMAIL_ENABLED: 'false' }),
-      baseRow,
-    );
+    setBindings({ SEND_EMAIL: { send }, FEEDBACK_EMAIL_ENABLED: 'false' });
+    const sent = await sendFeedbackEmail(baseRow);
     expect(sent).toBe(false);
     expect(send).not.toHaveBeenCalled();
   });
 
   it('sends a MIME message with Reply-To and returns true', async () => {
     const send = vi.fn(async (_message: unknown) => undefined);
-    const sent = await sendFeedbackEmail(
-      makeEvent({
-        SEND_EMAIL: { send },
-        FEEDBACK_FROM_ADDRESS: 'feedback@maitai.observer',
-        FEEDBACK_TO_ADDRESS: 'owner@example.com',
-      }),
-      baseRow,
-      async () => FakeEmailMessage,
-    );
+    setBindings({
+      SEND_EMAIL: { send },
+      FEEDBACK_FROM_ADDRESS: 'feedback@maitai.observer',
+      FEEDBACK_TO_ADDRESS: 'owner@example.com',
+    });
+    const sent = await sendFeedbackEmail(baseRow, async () => FakeEmailMessage);
     expect(sent).toBe(true);
     expect(send).toHaveBeenCalledTimes(1);
     const message = send.mock.calls[0]![0] as FakeEmailMessage;
@@ -145,11 +147,8 @@ describe('sendFeedbackEmail', () => {
     const send = vi.fn(async () => {
       throw new Error('delivery refused');
     });
-    const sent = await sendFeedbackEmail(
-      makeEvent({ SEND_EMAIL: { send } }),
-      baseRow,
-      async () => FakeEmailMessage,
-    );
+    setBindings({ SEND_EMAIL: { send } });
+    const sent = await sendFeedbackEmail(baseRow, async () => FakeEmailMessage);
     expect(sent).toBe(false);
   });
 });
