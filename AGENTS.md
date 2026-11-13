@@ -40,7 +40,7 @@ npm run dev
 - Typecheck (`svelte-check`): `npm run typecheck`
 - Lint (ESLint): `npm run lint`
 - Local gate: `npm run ci:gate` (typecheck, lint, test, schema check, smoke); `npm run ci:gate:full` adds integration. [`docs/ci-gate-policy.md`](docs/ci-gate-policy.md) defines the gates.
-- No format script exists. Prettier is installed without a config; see "Legacy And Intentional Inconsistencies" in [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md).
+- Format: `npm run format` (Prettier with `prettier-plugin-svelte`; options in `.prettierrc`, exclusions in `.prettierignore`). `npm run format:check` lists unformatted files.
 
 ### Deployment
 
@@ -110,7 +110,7 @@ Follow [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) for cross-cutting 
 - D1 queries use bound parameters (`.bind()`) only.
 - Content writes go through the content service so they append a history event; never write the content tables directly.
 - Code runs on Cloudflare Workers (`nodejs_compat` enabled); a new dependency must run there.
-- No formatter config exists. Match the surrounding file: most code uses single quotes, 2-space indent, and semicolons, but the map code (`src/lib/map/`, `MetroMap.svelte`) uses double quotes.
+- Prettier owns formatting (single quotes, semicolons, 2-space indent, 100-column lines). Run `npm run format` instead of formatting by hand.
 
 ---
 
