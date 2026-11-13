@@ -34,6 +34,7 @@ src/data/geo/*.geojson
 
 # Misc
 *.local
+.claude/settings.local.json
 
 # VS Code
 .vscode/

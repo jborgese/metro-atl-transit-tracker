@@ -12,7 +12,7 @@ Following this ensures a single source-of-truth for types and makes imports cons
 
 Every component uses **runes**. Legacy syntax (`export let`, `$:`, `on:eventName`, `<slot />`, `createEventDispatcher`) is not accepted in new or changed code. The policy, the Svelte 4 → 5 mapping, and the rules of thumb live in [.claude/rules/svelte.md](.claude/rules/svelte.md).
 
-The lint warning ceiling (`--max-warnings=140`), raised during the runes migration, is tracked under "Legacy And Intentional Inconsistencies" in [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md).
+The lint warning ceiling (`--max-warnings` in `package.json`) is tracked under "Legacy And Intentional Inconsistencies" in [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md).
 
 ## Styling
 
