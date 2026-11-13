@@ -16,11 +16,15 @@ The following gates are blocking. Any failure blocks deployment.
    Command: `npm run lint`
    Pass criteria: ESLint reports zero errors and no more warnings than the `--max-warnings` ceiling in the `lint` script in `package.json`. Every warning comes from a backlog rule demoted to `warn` in `eslint.config.cjs`. The ceiling only goes down: a PR that clears a backlog rule's warnings promotes that rule to `error` and lowers the ceiling by the same count.
 
-3. Unit Tests
+3. Format Check
+   Command: `npm run format:check`
+   Pass criteria: Prettier reports every file it covers as formatted (`.prettierrc`, `.prettierignore`).
+
+4. Unit Tests
    Command: `npm run test`
    Pass criteria: every Vitest test passes.
 
-4. Schema Check
+5. Schema Check
    Command: `npm run schema:check`
    Pass criteria:
 
@@ -28,7 +32,7 @@ The following gates are blocking. Any failure blocks deployment.
 - Required tables, indexes, and immutability triggers exist in `sqlite_master`.
 - Expected SQL constraints for payload JSON validity and archive/history invariants are present.
 
-5. Smoke Test
+6. Smoke Test
    Command: `npm run test:smoke`
    Pass criteria:
 
@@ -36,7 +40,7 @@ The following gates are blocking. Any failure blocks deployment.
 - Public read routes return valid responses.
 - Project write/archive/restore flow succeeds end-to-end.
 
-6. Integration Test
+7. Integration Test
    Command: `npm run test:integration`
    Pass criteria:
 
@@ -45,7 +49,7 @@ The following gates are blocking. Any failure blocks deployment.
 
 ## Enforcement
 
-- CI workflow file: `.github/workflows/ci-gates.yml`. The `Quality Checks` job runs typecheck, lint, unit tests, and the schema check; `Smoke Test` and `Integration Test` run after it.
+- CI workflow file: `.github/workflows/ci-gates.yml`. The `Quality Checks` job runs typecheck, lint, format check, unit tests, and the schema check; `Smoke Test` and `Integration Test` run after it.
 - Required status checks for `main`, enforced by the `main-protection` repository ruleset:
   - `Quality Checks`
   - `Smoke Test`

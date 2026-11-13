@@ -215,7 +215,7 @@ Local quality/test commands:
 - `npm run test:integration` (history ordering + immutability checks)
 - `npm run test:all`
 - `npm run test` (vitest unit tests)
-- `npm run ci:gate` (typecheck + lint + test + schema + smoke)
+- `npm run ci:gate` (typecheck + lint + format check + test + schema + smoke)
 - `npm run ci:gate:full` (adds integration)
 
 CI workflows:
