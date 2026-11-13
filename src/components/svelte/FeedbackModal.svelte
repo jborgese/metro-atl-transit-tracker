@@ -237,7 +237,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200000;
+  z-index: var(--z-modal);
   padding: 1rem;
 }
 

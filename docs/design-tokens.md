@@ -85,6 +85,18 @@ Inter and Merriweather are loaded via `<link rel="preconnect">` + `<link rel="st
 | `--section-gap` | `clamp(1.5rem, 3vw, 2.75rem)` | Vertical rhythm between sections. |
 | `--header-gap` | `clamp(0.75rem, 2vw, 1.25rem)` | Space inside header rows. |
 
+### Stacking (5)
+
+Every `z-index` uses one of these tiers, lowest to highest. A new overlay reuses the tier it sits with; add a tier only when no existing one orders it correctly.
+
+| Token | Value | Use when |
+| --- | --- | --- |
+| `--z-skip-link` | `10001` | The focused skip link. |
+| `--z-map-county-panel` | `10050` | `.county-panel-content` inside `.map-container`. |
+| `--z-debug` | `99999` | `DebugBadge.svelte`. |
+| `--z-county-panel` | `100000` | `.county-panel-content` outside the map (fixed position). |
+| `--z-modal` | `200000` | Modal backdrops rendered through `Portal.svelte`. |
+
 ## Status badges (cross-reference)
 
 Status-badge fill colors are **not** CSS tokens. They live in [src/utils/statusHelpers.ts](../src/utils/statusHelpers.ts) so the SVG/legend renderers and the `.svelte` consumers share one source.
