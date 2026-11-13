@@ -396,8 +396,11 @@
         {/if}
         {#if selectedCounty}
           <aside bind:this={panelEl} class="map-panel-wrapper">
-            <button bind:this={closeBtn} aria-label="Close county panel" onclick={closePanel}
-              >&times;</button
+            <button
+              bind:this={closeBtn}
+              class="panel-close"
+              aria-label="Close county panel"
+              onclick={closePanel}>&times;</button
             >
             <MetroCountyPanel county={selectedCounty} />
           </aside>
@@ -465,6 +468,41 @@
   .select-center-button:focus-visible {
     outline: 2px solid var(--atl-blue);
     outline-offset: 2px;
+  }
+
+  .panel-close {
+    position: absolute;
+    top: calc(1rem + 0.25rem);
+    left: calc(1rem + 16rem - 2rem - 0.25rem);
+    z-index: calc(var(--z-map-county-panel) + 1);
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0.375rem;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1.375rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .panel-close:hover {
+    color: var(--text-on-dark);
+  }
+
+  .panel-close:focus-visible {
+    outline: 2px solid var(--atl-blue);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .panel-close {
+      top: calc(0.5rem + 0.25rem);
+      left: calc(0.5rem + min(20rem, 90vw) - 2rem - 0.25rem);
+    }
   }
 
   @media (min-width: 1024px) {
