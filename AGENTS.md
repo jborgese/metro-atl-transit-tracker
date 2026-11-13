@@ -39,7 +39,7 @@ npm run dev
 - Build / preview: `npm run build`, `npm run preview`
 - Typecheck (`svelte-check`): `npm run typecheck`
 - Lint (ESLint): `npm run lint`
-- Local gate: `npm run ci:gate` (typecheck, lint, test, schema check, smoke); `npm run ci:gate:full` adds integration. [`docs/ci-gate-policy.md`](docs/ci-gate-policy.md) defines the gates.
+- Local gate: `npm run ci:gate` (typecheck, lint, format check, test, schema check, smoke); `npm run ci:gate:full` adds integration. [`docs/ci-gate-policy.md`](docs/ci-gate-policy.md) defines the gates.
 - Format: `npm run format` (Prettier with `prettier-plugin-svelte`; options in `.prettierrc`, exclusions in `.prettierignore`). `npm run format:check` lists unformatted files.
 
 ### Deployment
@@ -123,7 +123,7 @@ See [`.claude/rules/github-operations.md`](.claude/rules/github-operations.md) f
 - **Branch names:** `chore/short-description` (or ask the user). The repo has no issue tracker, so there are no ticket-key branches.
 - Keep commits and PRs focused; avoid bundling unrelated changes.
 - Write descriptive commit messages; no WIP commits in final PRs.
-- All required CI checks must pass before a PR can merge. `.github/workflows/ci-gates.yml` runs three jobs on every PR and on pushes to `main`. **Quality Checks** runs typecheck, lint, unit tests, and schema check; **Smoke Test** and **Integration Test** follow it. The `main-protection` ruleset requires all three, so changes reach `main` only through a PR with green checks.
+- All required CI checks must pass before a PR can merge. `.github/workflows/ci-gates.yml` runs three jobs on every PR and on pushes to `main`. **Quality Checks** runs typecheck, lint, format check, unit tests, and schema check; **Smoke Test** and **Integration Test** follow it. The `main-protection` ruleset requires all three, so changes reach `main` only through a PR with green checks.
 
 Pushes to `main` also trigger `.github/workflows/backup-snapshots.yml`, which snapshots `data/content/*` to R2, and a Cloudflare Workers Build that deploys to production (see Deployment).
 
