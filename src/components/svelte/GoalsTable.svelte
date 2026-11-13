@@ -183,95 +183,7 @@
             </thead>
             <tbody>
               {#each regionalGoals as goal}
-                <tr class="goal-row">
-                  <td data-label="Goal">{goal.goal}</td>
-                  <td data-label="Status">
-                    {#if goal.status_related_projects}
-                      {#each parseStatusContent(goal.status_related_projects) as part}
-                        {#if part.type === 'url'}
-                          <a href={part.href} target="_blank" rel="noopener noreferrer"
-                            >{part.label}</a
-                          >
-                        {:else}
-                          {part.value}
-                        {/if}
-                      {/each}
-                    {/if}
-                  </td>
-                  <td data-label="Actions">{goal.actions || ''}</td>
-                  <td data-label="Orgs">
-                    {#if goal.related_orgs && goal.related_orgs.length > 0}
-                      {#each goal.related_orgs as org}
-                        <div class="related-org">
-                          {#if org.url}
-                            <a href={org.url} target="_blank" rel="noopener noreferrer"
-                              >{org.name}</a
-                            >
-                          {:else}
-                            <span>{org.name}</span>
-                          {/if}
-                          {#if org.contact_info}
-                            <span class="contact-info">{org.contact_info}</span>
-                          {/if}
-                        </div>
-                      {/each}
-                    {/if}
-                  </td>
-                </tr>
-                <!-- Nested project rows -->
-                {#each getRelatedProjects(goal) as project}
-                  <tr class="project-row">
-                    <td class="nested-cell" colspan="4">
-                      <div
-                        class="project-card"
-                        role="button"
-                        tabindex="0"
-                        aria-label="View details for {project.title}"
-                        style="--status-color: {getStatusColor(project.status)}"
-                        onclick={(e) => handleProjectCardClick(project, e)}
-                        onkeydown={(e) => handleProjectCardKeydown(project, e)}
-                      >
-                        <div class="project-header">
-                          <span class="project-indicator" aria-hidden="true">&rarr;</span>
-                          <span class="project-title">{project.title}</span>
-                          <span
-                            class="project-status"
-                            style="background: {getStatusColor(
-                              project.status,
-                            )}; color: {getStatusTextColor(project.status)}"
-                            >{statusLabel(project.status)}</span
-                          >
-                        </div>
-                        <p class="project-summary">{project.summary}</p>
-                        {#if project.lead_org}
-                          <div class="project-org">
-                            <span class="org-label">Lead:</span>
-                            {#if project.lead_org.url}
-                              <a
-                                href={project.lead_org.url}
-                                target="_blank"
-                                rel="noopener noreferrer">{project.lead_org.name}</a
-                              >
-                            {:else}
-                              <span>{project.lead_org.name}</span>
-                            {/if}
-                          </div>
-                        {/if}
-                        <div class="project-card-footer">
-                          <span class="project-card-hint">View details</span>
-                          {#if project.sources?.[0]?.url}
-                            <a
-                              class="project-source-link"
-                              href={project.sources[0].url}
-                              target="_blank"
-                              rel="noopener noreferrer">View source →</a
-                            >
-                          {/if}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                {/each}
+                {@render goalRows(goal)}
               {/each}
             </tbody>
           </table>
@@ -303,95 +215,7 @@
               </thead>
               <tbody>
                 {#each countyGoals as goal}
-                  <tr class="goal-row">
-                    <td data-label="Goal">{goal.goal}</td>
-                    <td data-label="Status">
-                      {#if goal.status_related_projects}
-                        {#each parseStatusContent(goal.status_related_projects) as part}
-                          {#if part.type === 'url'}
-                            <a href={part.href} target="_blank" rel="noopener noreferrer"
-                              >{part.label}</a
-                            >
-                          {:else}
-                            {part.value}
-                          {/if}
-                        {/each}
-                      {/if}
-                    </td>
-                    <td data-label="Actions">{goal.actions || ''}</td>
-                    <td data-label="Orgs">
-                      {#if goal.related_orgs && goal.related_orgs.length > 0}
-                        {#each goal.related_orgs as org}
-                          <div class="related-org">
-                            {#if org.url}
-                              <a href={org.url} target="_blank" rel="noopener noreferrer"
-                                >{org.name}</a
-                              >
-                            {:else}
-                              <span>{org.name}</span>
-                            {/if}
-                            {#if org.contact_info}
-                              <span class="contact-info">({org.contact_info})</span>
-                            {/if}
-                          </div>
-                        {/each}
-                      {/if}
-                    </td>
-                  </tr>
-                  <!-- Nested project rows -->
-                  {#each getRelatedProjects(goal) as project}
-                    <tr class="project-row">
-                      <td class="nested-cell" colspan="4">
-                        <div
-                          class="project-card"
-                          role="button"
-                          tabindex="0"
-                          aria-label="View details for {project.title}"
-                          style="--status-color: {getStatusColor(project.status)}"
-                          onclick={(e) => handleProjectCardClick(project, e)}
-                          onkeydown={(e) => handleProjectCardKeydown(project, e)}
-                        >
-                          <div class="project-header">
-                            <span class="project-indicator" aria-hidden="true">&rarr;</span>
-                            <span class="project-title">{project.title}</span>
-                            <span
-                              class="project-status"
-                              style="background: {getStatusColor(
-                                project.status,
-                              )}; color: {getStatusTextColor(project.status)}"
-                              >{statusLabel(project.status)}</span
-                            >
-                          </div>
-                          <p class="project-summary">{project.summary}</p>
-                          {#if project.lead_org}
-                            <div class="project-org">
-                              <span class="org-label">Lead:</span>
-                              {#if project.lead_org.url}
-                                <a
-                                  href={project.lead_org.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer">{project.lead_org.name}</a
-                                >
-                              {:else}
-                                <span>{project.lead_org.name}</span>
-                              {/if}
-                            </div>
-                          {/if}
-                          <div class="project-card-footer">
-                            <span class="project-card-hint">View details</span>
-                            {#if project.sources?.[0]?.url}
-                              <a
-                                class="project-source-link"
-                                href={project.sources[0].url}
-                                target="_blank"
-                                rel="noopener noreferrer">View source →</a
-                              >
-                            {/if}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  {/each}
+                  {@render goalRows(goal)}
                 {/each}
               </tbody>
             </table>
@@ -423,95 +247,7 @@
             </thead>
             <tbody>
               {#each filtered as goal}
-                <tr class="goal-row">
-                  <td data-label="Goal">{goal.goal}</td>
-                  <td data-label="Status">
-                    {#if goal.status_related_projects}
-                      {#each parseStatusContent(goal.status_related_projects) as part}
-                        {#if part.type === 'url'}
-                          <a href={part.href} target="_blank" rel="noopener noreferrer"
-                            >{part.label}</a
-                          >
-                        {:else}
-                          {part.value}
-                        {/if}
-                      {/each}
-                    {/if}
-                  </td>
-                  <td data-label="Actions">{goal.actions || ''}</td>
-                  <td data-label="Orgs">
-                    {#if goal.related_orgs && goal.related_orgs.length > 0}
-                      {#each goal.related_orgs as org}
-                        <div class="related-org">
-                          {#if org.url}
-                            <a href={org.url} target="_blank" rel="noopener noreferrer"
-                              >{org.name}</a
-                            >
-                          {:else}
-                            <span>{org.name}</span>
-                          {/if}
-                          {#if org.contact_info}
-                            <span class="contact-info">({org.contact_info})</span>
-                          {/if}
-                        </div>
-                      {/each}
-                    {/if}
-                  </td>
-                </tr>
-                <!-- Nested project rows -->
-                {#each getRelatedProjects(goal) as project}
-                  <tr class="project-row">
-                    <td class="nested-cell" colspan="4">
-                      <div
-                        class="project-card"
-                        role="button"
-                        tabindex="0"
-                        aria-label="View details for {project.title}"
-                        style="--status-color: {getStatusColor(project.status)}"
-                        onclick={(e) => handleProjectCardClick(project, e)}
-                        onkeydown={(e) => handleProjectCardKeydown(project, e)}
-                      >
-                        <div class="project-header">
-                          <span class="project-indicator" aria-hidden="true">&rarr;</span>
-                          <span class="project-title">{project.title}</span>
-                          <span
-                            class="project-status"
-                            style="background: {getStatusColor(
-                              project.status,
-                            )}; color: {getStatusTextColor(project.status)}"
-                            >{statusLabel(project.status)}</span
-                          >
-                        </div>
-                        <p class="project-summary">{project.summary}</p>
-                        {#if project.lead_org}
-                          <div class="project-org">
-                            <span class="org-label">Lead:</span>
-                            {#if project.lead_org.url}
-                              <a
-                                href={project.lead_org.url}
-                                target="_blank"
-                                rel="noopener noreferrer">{project.lead_org.name}</a
-                              >
-                            {:else}
-                              <span>{project.lead_org.name}</span>
-                            {/if}
-                          </div>
-                        {/if}
-                        <div class="project-card-footer">
-                          <span class="project-card-hint">View details</span>
-                          {#if project.sources?.[0]?.url}
-                            <a
-                              class="project-source-link"
-                              href={project.sources[0].url}
-                              target="_blank"
-                              rel="noopener noreferrer">View source →</a
-                            >
-                          {/if}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                {/each}
+                {@render goalRows(goal)}
               {/each}
             </tbody>
           </table>
@@ -542,95 +278,7 @@
             </thead>
             <tbody>
               {#each regionalGoals as goal}
-                <tr class="goal-row">
-                  <td data-label="Goal">{goal.goal}</td>
-                  <td data-label="Status">
-                    {#if goal.status_related_projects}
-                      {#each parseStatusContent(goal.status_related_projects) as part}
-                        {#if part.type === 'url'}
-                          <a href={part.href} target="_blank" rel="noopener noreferrer"
-                            >{part.label}</a
-                          >
-                        {:else}
-                          {part.value}
-                        {/if}
-                      {/each}
-                    {/if}
-                  </td>
-                  <td data-label="Actions">{goal.actions || ''}</td>
-                  <td data-label="Orgs">
-                    {#if goal.related_orgs && goal.related_orgs.length > 0}
-                      {#each goal.related_orgs as org}
-                        <div class="related-org">
-                          {#if org.url}
-                            <a href={org.url} target="_blank" rel="noopener noreferrer"
-                              >{org.name}</a
-                            >
-                          {:else}
-                            <span>{org.name}</span>
-                          {/if}
-                          {#if org.contact_info}
-                            <span class="contact-info">{org.contact_info}</span>
-                          {/if}
-                        </div>
-                      {/each}
-                    {/if}
-                  </td>
-                </tr>
-                <!-- Nested project rows -->
-                {#each getRelatedProjects(goal) as project}
-                  <tr class="project-row">
-                    <td class="nested-cell" colspan="4">
-                      <div
-                        class="project-card"
-                        role="button"
-                        tabindex="0"
-                        aria-label="View details for {project.title}"
-                        style="--status-color: {getStatusColor(project.status)}"
-                        onclick={(e) => handleProjectCardClick(project, e)}
-                        onkeydown={(e) => handleProjectCardKeydown(project, e)}
-                      >
-                        <div class="project-header">
-                          <span class="project-indicator" aria-hidden="true">&rarr;</span>
-                          <span class="project-title">{project.title}</span>
-                          <span
-                            class="project-status"
-                            style="background: {getStatusColor(
-                              project.status,
-                            )}; color: {getStatusTextColor(project.status)}"
-                            >{statusLabel(project.status)}</span
-                          >
-                        </div>
-                        <p class="project-summary">{project.summary}</p>
-                        {#if project.lead_org}
-                          <div class="project-org">
-                            <span class="org-label">Lead:</span>
-                            {#if project.lead_org.url}
-                              <a
-                                href={project.lead_org.url}
-                                target="_blank"
-                                rel="noopener noreferrer">{project.lead_org.name}</a
-                              >
-                            {:else}
-                              <span>{project.lead_org.name}</span>
-                            {/if}
-                          </div>
-                        {/if}
-                        <div class="project-card-footer">
-                          <span class="project-card-hint">View details</span>
-                          {#if project.sources?.[0]?.url}
-                            <a
-                              class="project-source-link"
-                              href={project.sources[0].url}
-                              target="_blank"
-                              rel="noopener noreferrer">View source →</a
-                            >
-                          {/if}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                {/each}
+                {@render goalRows(goal)}
               {/each}
             </tbody>
           </table>
@@ -639,6 +287,90 @@
     </div>
   {/if}
 </div>
+{#snippet goalRows(goal: Goal)}
+  <tr class="goal-row">
+    <td data-label="Goal">{goal.goal}</td>
+    <td data-label="Status">
+      {#if goal.status_related_projects}
+        {#each parseStatusContent(goal.status_related_projects) as part}
+          {#if part.type === 'url'}
+            <a href={part.href} target="_blank" rel="noopener noreferrer">{part.label}</a>
+          {:else}
+            {part.value}
+          {/if}
+        {/each}
+      {/if}
+    </td>
+    <td data-label="Actions">{goal.actions || ''}</td>
+    <td data-label="Orgs">
+      {#if goal.related_orgs && goal.related_orgs.length > 0}
+        {#each goal.related_orgs as org}
+          <div class="related-org">
+            {#if org.url}
+              <a href={org.url} target="_blank" rel="noopener noreferrer">{org.name}</a>
+            {:else}
+              <span>{org.name}</span>
+            {/if}
+            {#if org.contact_info}
+              <span class="contact-info">({org.contact_info})</span>
+            {/if}
+          </div>
+        {/each}
+      {/if}
+    </td>
+  </tr>
+  <!-- Nested project rows -->
+  {#each getRelatedProjects(goal) as project}
+    <tr class="project-row">
+      <td class="nested-cell" colspan="4">
+        <div
+          class="project-card"
+          role="button"
+          tabindex="0"
+          aria-label="View details for {project.title}"
+          style="--status-color: {getStatusColor(project.status)}"
+          onclick={(e) => handleProjectCardClick(project, e)}
+          onkeydown={(e) => handleProjectCardKeydown(project, e)}
+        >
+          <div class="project-header">
+            <span class="project-indicator" aria-hidden="true">&rarr;</span>
+            <span class="project-title">{project.title}</span>
+            <span
+              class="project-status"
+              style="background: {getStatusColor(project.status)}; color: {getStatusTextColor(
+                project.status,
+              )}">{statusLabel(project.status)}</span
+            >
+          </div>
+          <p class="project-summary">{project.summary}</p>
+          {#if project.lead_org}
+            <div class="project-org">
+              <span class="org-label">Lead:</span>
+              {#if project.lead_org.url}
+                <a href={project.lead_org.url} target="_blank" rel="noopener noreferrer"
+                  >{project.lead_org.name}</a
+                >
+              {:else}
+                <span>{project.lead_org.name}</span>
+              {/if}
+            </div>
+          {/if}
+          <div class="project-card-footer">
+            <span class="project-card-hint">View details</span>
+            {#if project.sources?.[0]?.url}
+              <a
+                class="project-source-link"
+                href={project.sources[0].url}
+                target="_blank"
+                rel="noopener noreferrer">View source →</a
+              >
+            {/if}
+          </div>
+        </div>
+      </td>
+    </tr>
+  {/each}
+{/snippet}
 
 <style>
   .goals-table {
