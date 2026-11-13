@@ -3,12 +3,6 @@ import type { ContentEntityType, ContentHistoryEvent, Goal, Project } from '#typ
 import { ContentStoreError } from './errors';
 import { parseIntSafe, SEED_ACTOR } from './validators';
 
-export type StoreEvent = {
-  platform?: {
-    env?: Record<string, unknown>;
-  };
-};
-
 export type StoredEntityRow = {
   id: string;
   payload_json: string;

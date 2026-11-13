@@ -1,5 +1,5 @@
 import { ContentStoreError } from './errors';
-import { nowIso, type StoreEvent } from './mappers';
+import { nowIso } from './mappers';
 import { getDb } from './repository';
 
 export type UserProfile = {
@@ -48,8 +48,8 @@ function rowToProfile(row: StoredProfileRow): UserProfile {
   };
 }
 
-export async function getProfile(event: StoreEvent, identity: string): Promise<UserProfile | null> {
-  const db = getDb(event);
+export async function getProfile(identity: string): Promise<UserProfile | null> {
+  const db = getDb();
   const key = normalizeIdentity(identity);
   if (!key) {
     return null;
@@ -68,18 +68,14 @@ export async function getProfile(event: StoreEvent, identity: string): Promise<U
   }
 }
 
-export async function upsertProfile(
-  event: StoreEvent,
-  identity: string,
-  displayName: string,
-): Promise<UserProfile> {
+export async function upsertProfile(identity: string, displayName: string): Promise<UserProfile> {
   const key = normalizeIdentity(identity);
   if (!key) {
     throw new ContentStoreError(400, 'identity must not be empty');
   }
   const validated = validateDisplayName(displayName);
   const timestamp = nowIso();
-  const db = getDb(event);
+  const db = getDb();
   try {
     await db
       .prepare(
@@ -103,12 +99,12 @@ export async function upsertProfile(
   return { identity: key, display_name: validated, updated_at: timestamp };
 }
 
-export async function deleteProfile(event: StoreEvent, identity: string): Promise<void> {
+export async function deleteProfile(identity: string): Promise<void> {
   const key = normalizeIdentity(identity);
   if (!key) {
     return;
   }
-  const db = getDb(event);
+  const db = getDb();
   try {
     await db.prepare('DELETE FROM user_profiles WHERE identity = ?1').bind(key).run();
   } catch (err) {
@@ -119,8 +115,8 @@ export async function deleteProfile(event: StoreEvent, identity: string): Promis
   }
 }
 
-export async function loadProfileMap(event: StoreEvent): Promise<Map<string, string>> {
-  const db = getDb(event);
+export async function loadProfileMap(): Promise<Map<string, string>> {
+  const db = getDb();
   try {
     const rows = await db
       .prepare('SELECT identity, display_name FROM user_profiles')

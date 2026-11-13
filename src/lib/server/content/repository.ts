@@ -1,7 +1,7 @@
 import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 import { env } from 'cloudflare:workers';
 import { ContentStoreError } from './errors';
-import { isRecord, type StoredEntityRow, type StoreEvent } from './mappers';
+import { isRecord, type StoredEntityRow } from './mappers';
 
 export const DB_BINDING_NAME = 'DB';
 export const D1_LOCAL_MIGRATION_CMD =
@@ -85,7 +85,7 @@ WHERE id = ?9
 
 export type { D1Database, D1PreparedStatement };
 
-export function getDb(_event: StoreEvent): D1Database {
+export function getDb(): D1Database {
   const candidate = env[DB_BINDING_NAME];
   if (!candidate || !isRecord(candidate)) {
     throw new ContentStoreError(
