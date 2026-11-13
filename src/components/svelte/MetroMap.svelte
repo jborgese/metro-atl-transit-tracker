@@ -12,7 +12,7 @@
   import maplibregl, { type StyleSpecification } from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
   import { initMetroMap } from '../../lib/map/initMetroMap';
-  import { env } from '$env/dynamic/public';
+  import { PUBLIC_MAPTILER_KEY } from '$app/env/public';
 
   import { createLogger } from '../../utils/logger'; // adjust if needed
   import { metroCountyGeoids } from '../../lib/map/countyStyles';
@@ -180,7 +180,7 @@
           return;
         }
 
-        const key = env.PUBLIC_MAPTILER_KEY?.trim();
+        const key = PUBLIC_MAPTILER_KEY?.trim();
         const hasMaptilerKey = Boolean(key);
         const style = hasMaptilerKey
           ? `https://api.maptiler.com/maps/streets/style.json?key=${key}`

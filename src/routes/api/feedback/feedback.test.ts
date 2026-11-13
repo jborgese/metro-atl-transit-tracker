@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
 
 const sendFeedbackEmail = vi.hoisted(() => vi.fn(async (): Promise<boolean> => false));
-vi.mock('$lib/server/feedback/email', () => ({ sendFeedbackEmail }));
+vi.mock('#lib/server/feedback/email.ts', () => ({ sendFeedbackEmail }));
+
+const workersEnv = vi.hoisted((): Record<string, unknown> => ({}));
+vi.mock('cloudflare:workers', () => ({ env: workersEnv }));
 
 const { POST } = await import('./+server');
 
@@ -32,11 +35,9 @@ function makeEvent(init: {
   calls?: DbCall[];
 }): RequestEvent {
   const url = new URL('http://example.test/api/feedback');
-  const env: Record<string, unknown> = {
-    DB: makeDb(init.calls ?? []),
-  };
+  workersEnv.DB = makeDb(init.calls ?? []);
   if (init.limiter) {
-    env.FEEDBACK_LIMITER = init.limiter;
+    workersEnv.FEEDBACK_LIMITER = init.limiter;
   }
   return {
     url,
@@ -46,11 +47,11 @@ function makeEvent(init: {
       headers: { 'content-type': 'application/json', 'cf-connecting-ip': '203.0.113.7' },
       body: JSON.stringify(init.body),
     }),
-    platform: { env },
   } as unknown as RequestEvent;
 }
 
 beforeEach(() => {
+  for (const key of Object.keys(workersEnv)) delete workersEnv[key];
   sendFeedbackEmail.mockClear();
   sendFeedbackEmail.mockImplementation(async () => false);
 });

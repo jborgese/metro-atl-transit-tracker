@@ -1,5 +1,5 @@
+import { env } from 'cloudflare:workers';
 import { createMimeMessage, Mailbox } from 'mimetext';
-import type { StoreEvent } from '../content/mappers';
 import type { FeedbackRow } from './store';
 
 const DEFAULT_FROM_ADDRESS = 'feedback@maitai.observer';
@@ -13,12 +13,8 @@ export type SendEmailBinding = {
 
 type EmailMessageCtor = new (from: string, to: string, raw: string) => unknown;
 
-function getPlatformEnv(event: StoreEvent): Record<string, unknown> {
-  return event.platform?.env ?? {};
-}
-
-export function getSendEmailBinding(event: StoreEvent): SendEmailBinding | undefined {
-  const candidate = getPlatformEnv(event).SEND_EMAIL;
+export function getSendEmailBinding(): SendEmailBinding | undefined {
+  const candidate = env.SEND_EMAIL;
   if (
     candidate &&
     typeof candidate === 'object' &&
@@ -29,8 +25,8 @@ export function getSendEmailBinding(event: StoreEvent): SendEmailBinding | undef
   return undefined;
 }
 
-function getStringVar(event: StoreEvent, name: string, fallback: string): string {
-  const value = getPlatformEnv(event)[name];
+function getStringVar(name: string, fallback: string): string {
+  const value = env[name];
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
 }
 
@@ -56,23 +52,22 @@ async function loadEmailMessageCtor(): Promise<EmailMessageCtor> {
 }
 
 export async function sendFeedbackEmail(
-  event: StoreEvent,
   feedback: FeedbackRow,
   loadCtor: () => Promise<EmailMessageCtor> = loadEmailMessageCtor,
 ): Promise<boolean> {
-  if (getStringVar(event, 'FEEDBACK_EMAIL_ENABLED', 'true') === 'false') {
+  if (getStringVar('FEEDBACK_EMAIL_ENABLED', 'true') === 'false') {
     console.warn('[feedback] email delivery disabled via FEEDBACK_EMAIL_ENABLED');
     return false;
   }
 
-  const binding = getSendEmailBinding(event);
+  const binding = getSendEmailBinding();
   if (!binding) {
     console.warn('[feedback] SEND_EMAIL binding unavailable; submission stored without email');
     return false;
   }
 
-  const from = getStringVar(event, 'FEEDBACK_FROM_ADDRESS', DEFAULT_FROM_ADDRESS);
-  const to = getStringVar(event, 'FEEDBACK_TO_ADDRESS', DEFAULT_TO_ADDRESS);
+  const from = getStringVar('FEEDBACK_FROM_ADDRESS', DEFAULT_FROM_ADDRESS);
+  const to = getStringVar('FEEDBACK_TO_ADDRESS', DEFAULT_TO_ADDRESS);
 
   try {
     const msg = createMimeMessage();

@@ -9,8 +9,8 @@ import {
   goalPatchSchema,
   projectCreateSchema,
   projectPatchSchema,
-} from '$lib/server/content/validators';
-import { feedbackCreateSchema } from '$lib/server/feedback/validators';
+} from '#lib/server/content/validators.ts';
+import { feedbackCreateSchema } from '#lib/server/feedback/validators.ts';
 
 // Extend Zod with `.openapi()` BEFORE we touch any schemas in this module.
 // Zod 4 copies prototype methods onto each instance at construction time, so
