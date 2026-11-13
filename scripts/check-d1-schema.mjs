@@ -82,10 +82,20 @@ async function run() {
       name: 'content_history',
       sqlIncludes: [
         'create table content_history',
-        "entity_type text not null check (entity_type in ('project', 'goal'))",
+        'entity_type text not null, entity_id text not null',
         "action text not null check (action in ('create', 'update', 'archive', 'restore'))",
         'before_json text check (before_json is null or json_valid(before_json))',
         'after_json text check (after_json is null or json_valid(after_json))',
+      ],
+    },
+    {
+      type: 'table',
+      name: 'timed_actions',
+      sqlIncludes: [
+        'create table timed_actions',
+        'payload_json text not null check (json_valid(payload_json))',
+        'is_archived integer not null default 0 check (is_archived in (0, 1))',
+        "check (json_type(payload_json, '$.expires_on') = 'text')",
       ],
     },
     {
@@ -112,6 +122,11 @@ async function run() {
       type: 'index',
       name: 'idx_goals_archive_state',
       sqlIncludes: ['on goals (is_archived, updated_at desc)'],
+    },
+    {
+      type: 'index',
+      name: 'idx_timed_actions_archive_state',
+      sqlIncludes: ['on timed_actions (is_archived, updated_at desc)'],
     },
     {
       type: 'index',
