@@ -1,4 +1,4 @@
-import { json, type RequestHandler } from '@sveltejs/kit';
+import type { RequestHandler } from '@sveltejs/kit';
 import { requireEditorActor } from '#lib/server/auth/editor.ts';
 import { ContentStoreError } from './errors';
 import { parseIncludeArchived, readJsonBody, toHttpError } from './http';
@@ -30,7 +30,7 @@ export function makeCollectionHandlers<T>(store: Pick<ContentStore<T>, 'list' | 
       const includeArchived = parseIncludeArchived(event.url.searchParams.get('includeArchived'));
       const items = await store.list(event, { includeArchived });
       const response: ApiListResponse<T> = { data: items, meta: { count: items.length } };
-      return json(response);
+      return Response.json(response);
     } catch (err) {
       toHttpError(err);
     }
@@ -42,7 +42,7 @@ export function makeCollectionHandlers<T>(store: Pick<ContentStore<T>, 'list' | 
       const payload = await readJsonBody(event);
       const created = await store.create(event, payload, actor);
       const response: ApiItemResponse<T> = { data: created };
-      return json(response, { status: 201 });
+      return Response.json(response, { status: 201 });
     } catch (err) {
       toHttpError(err);
     }
@@ -62,7 +62,7 @@ export function makeItemHandlers<T>(
         includeArchivedParam === null ? true : parseIncludeArchived(includeArchivedParam);
       const item = await store.getById(event, id, { includeArchived });
       const response: ApiItemResponse<T> = { data: item };
-      return json(response);
+      return Response.json(response);
     } catch (err) {
       toHttpError(err);
     }
@@ -75,7 +75,7 @@ export function makeItemHandlers<T>(
       const payload = await readJsonBody(event);
       const updated = await store.update(event, id, payload, actor);
       const response: ApiItemResponse<T> = { data: updated };
-      return json(response);
+      return Response.json(response);
     } catch (err) {
       toHttpError(err);
     }
@@ -87,7 +87,7 @@ export function makeItemHandlers<T>(
       const actor = await requireEditorActor(event, 'content:archive');
       const archived = await store.archive(event, id, actor);
       const response: ApiItemResponse<T> = { data: archived };
-      return json(response);
+      return Response.json(response);
     } catch (err) {
       toHttpError(err);
     }
@@ -105,7 +105,7 @@ export function makeRestoreHandler<T>(store: Pick<ContentStore<T>, 'restore'>): 
       const actor = await requireEditorActor(event, 'content:archive');
       const restored = await store.restore(event, id, actor);
       const response: ApiItemResponse<T> = { data: restored };
-      return json(response);
+      return Response.json(response);
     } catch (err) {
       toHttpError(err);
     }
