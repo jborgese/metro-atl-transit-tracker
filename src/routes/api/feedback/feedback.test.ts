@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
 
 const sendFeedbackEmail = vi.hoisted(() => vi.fn(async (): Promise<boolean> => false));
@@ -50,7 +50,12 @@ function makeEvent(init: {
   } as unknown as RequestEvent;
 }
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 beforeEach(() => {
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
   for (const key of Object.keys(workersEnv)) delete workersEnv[key];
   sendFeedbackEmail.mockClear();
   sendFeedbackEmail.mockImplementation(async () => false);
@@ -112,9 +117,10 @@ describe('POST /api/feedback', () => {
     expect(sendFeedbackEmail).not.toHaveBeenCalled();
   });
 
-  it('fails open when no limiter binding is present', async () => {
+  it('fails open but warns when no limiter binding is present', async () => {
     const res = await POST(makeEvent({ body: { message: 'no limiter configured' } }))!;
     expect(res.status).toBe(201);
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('FEEDBACK_LIMITER'));
   });
 
   it('rejects invalid payloads with 400 before touching D1', async () => {

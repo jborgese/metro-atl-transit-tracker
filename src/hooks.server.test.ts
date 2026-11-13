@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
 import { checkWriteRateLimit, getClientKey, handle, type WriteRateLimit } from './hooks.server';
 
@@ -7,6 +7,10 @@ vi.mock('cloudflare:workers', () => ({ env: workersEnv }));
 
 beforeEach(() => {
   for (const key of Object.keys(workersEnv)) delete workersEnv[key];
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 function makeEvent(headers: Record<string, string>): RequestEvent {
@@ -134,6 +138,23 @@ describe('handle', () => {
 
     expect(response.status).toBe(403);
     expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it('allows an API write but warns when the write limiter binding is missing', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const url = new URL('https://maitai.observer/api/projects');
+    const event = {
+      url,
+      route: { id: '/api/projects' },
+      request: new Request(url, { method: 'POST' }),
+      getClientAddress: () => '10.0.0.1',
+    } as unknown as RequestEvent;
+    const resolve = vi.fn(async () => new Response('ok'));
+
+    const response = await handle({ event, resolve });
+
+    expect(response.status).toBe(200);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('WRITE_LIMITER'));
   });
 
   it('answers 429 when the write limiter rejects an API write', async () => {
