@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from './+page.svelte';
 
@@ -73,15 +73,33 @@ async function renderLoaded() {
   await screen.findByRole('tab', { name: 'Actions (1)' });
 }
 
+async function openActionsTabAndSelect(label: string) {
+  await renderLoaded();
+  await fireEvent.click(tab(/^Actions/));
+  await fireEvent.click(screen.getByRole('button', { name: new RegExp(label) }));
+}
+
+async function selectGoal(label: string) {
+  await renderLoaded();
+  await fireEvent.click(tab(/^Goals/));
+  await fireEvent.click(screen.getByRole('button', { name: new RegExp(label) }));
+}
+
+async function typeIntoEditor(value: string) {
+  await fireEvent.input(document.querySelector('textarea')!, { target: { value } });
+}
+
 describe('admin page editor target', () => {
   beforeEach(() => {
     failActionsReload = false;
     stubFetch();
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => true),
-    );
-    window.confirm = vi.fn(() => true);
+    HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+      this.open = true;
+    };
+    HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+      this.open = false;
+      this.dispatchEvent(new Event('close'));
+    };
   });
 
   afterEach(() => {
@@ -164,5 +182,41 @@ describe('admin page editor target', () => {
     await fireEvent.input(document.querySelector('textarea')!, { target: { value: '{}' } });
     await fireEvent.click(tab(/^Goals/));
     expect(heading().textContent?.trim()).toBe('New Project');
+  });
+
+  it('asks before discarding changes when another record is clicked', async () => {
+    await openActionsTabAndSelect('Existing action');
+    await typeIntoEditor('{}');
+    await fireEvent.click(screen.getByRole('tab', { name: /Goals/ }));
+    await fireEvent.click(screen.getByRole('button', { name: /Regional goal/ }));
+    expect(screen.getByRole('alertdialog')).toHaveProperty('open', true);
+    expect(screen.getByText('Discard your changes to Action ta-existing?')).toBeTruthy();
+    await fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    expect(screen.getByRole('heading', { name: 'Editing Action ta-existing' })).toBeTruthy();
+    await fireEvent.click(screen.getByRole('button', { name: /Regional goal/ }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+    expect(screen.getByRole('heading', { name: 'Editing Goal g1' })).toBeTruthy();
+  });
+
+  it('archives only after the dialog is confirmed, and says what archiving a goal does', async () => {
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByRole('button', { name: 'Archive' }));
+    expect(screen.getByText(/along with its actions/)).toBeTruthy();
+    expect(writes()).toHaveLength(0);
+    await fireEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Archive' }),
+    );
+    await waitFor(() => expect(writes()).toEqual([{ method: 'DELETE', path: '/api/goals/g1' }]));
+  });
+
+  it('moves between the record tabs with the arrow keys', async () => {
+    await renderLoaded();
+    const projectsTab = screen.getByRole('tab', { name: /Projects/ });
+    projectsTab.focus();
+    await fireEvent.keyDown(projectsTab, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: /Goals/ }).getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: /Goals/ }));
+    await fireEvent.keyDown(document.activeElement!, { key: 'End' });
+    expect(screen.getByRole('tab', { name: /Actions/ }).getAttribute('aria-selected')).toBe('true');
   });
 });

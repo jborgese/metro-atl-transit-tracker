@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { beforeNavigate } from '$app/navigation';
+  import ConfirmDialog from '../../components/svelte/admin/ConfirmDialog.svelte';
   import BaseLayout from '../../layouts/BaseLayout.svelte';
   import type { ContentHistoryEvent, Goal, Project, TimedAction } from '#types/content.ts';
   import { entityTypeLabel } from '../../utils/entityLabels';
@@ -24,6 +26,7 @@
   let message = $state('');
   let messageKind: MessageKind = $state('info');
   let dirty = $state(false);
+  let confirmDialog: ConfirmDialog | undefined = $state();
   let editorIsPlaceholder = false;
   let editorError = $state('');
   let lastLoadedAt = $state('');
@@ -159,12 +162,71 @@
     setEditorFromEntity(entity);
   }
 
-  function closeEditor() {
-    if (dirty && !window.confirm('Discard unsaved changes?')) {
+  async function confirmLeave(): Promise<boolean> {
+    if (!dirty) {
+      return true;
+    }
+    const title = DATASETS[selectedDataset].title;
+    return (
+      (await confirmDialog?.ask({
+        title: selectedId
+          ? `Discard your changes to ${title} ${selectedId}?`
+          : `Discard your changes to this new ${title.toLowerCase()}?`,
+        body: 'Your unsaved changes will be lost.',
+        confirmLabel: 'Discard changes',
+        cancelLabel: 'Keep editing',
+      })) ?? false
+    );
+  }
+
+  async function handleSelect(id: string, kind: EditorEntity) {
+    if (await confirmLeave()) {
+      selectEntity(id, kind);
+    }
+  }
+
+  async function handleNew() {
+    if (await confirmLeave()) {
+      startNew(dataset);
+    }
+  }
+
+  async function handleRefresh() {
+    if (await confirmLeave()) {
+      await loadData();
+    }
+  }
+
+  async function closeEditor() {
+    if (await confirmLeave()) {
+      startNew(dataset, true);
+    }
+  }
+
+  function handleTabKeydown(event: KeyboardEvent, kind: EditorEntity) {
+    const last = entityKinds.length - 1;
+    const index = entityKinds.indexOf(kind);
+    const targets: Record<string, number> = {
+      ArrowRight: index === last ? 0 : index + 1,
+      ArrowLeft: index === 0 ? last : index - 1,
+      Home: 0,
+      End: last,
+    };
+    const target = targets[event.key];
+    const nextKind = target === undefined ? undefined : entityKinds[target];
+    if (!nextKind) {
       return;
     }
-    startNew(dataset, true);
+    event.preventDefault();
+    setDataset(nextKind);
+    document.getElementById(`tab-${nextKind}`)?.focus();
   }
+
+  beforeNavigate(({ cancel }) => {
+    if (dirty) {
+      cancel();
+    }
+  });
 
   function entityNoun(kind: EditorEntity) {
     return DATASETS[kind].title.toLowerCase();
@@ -420,6 +482,14 @@
     }
   }
 
+  const archiveBodies: Record<EditorEntity, string> = {
+    project:
+      'It will disappear from the public site and from the goals that link to it. You can restore it later.',
+    goal: 'It will disappear from the public site, along with its actions. You can restore it later, but an action cannot be restored while its goal is archived.',
+    timed_action:
+      'Its banner will disappear from the public site. You can restore it until its last day has passed.',
+  };
+
   async function archiveSelected() {
     if (!selectedId) {
       setMessage('Select an item to archive.', 'error');
@@ -433,9 +503,11 @@
 
     const targetDataset = selectedDataset;
     const targetId = selectedId;
-    const proceed = window.confirm(
-      `Archive ${DATASETS[targetDataset].title.toLowerCase()} ${targetId}?`,
-    );
+    const proceed = await confirmDialog?.ask({
+      title: `Archive ${DATASETS[targetDataset].title} ${targetId}?`,
+      body: archiveBodies[targetDataset],
+      confirmLabel: 'Archive',
+    });
     if (!proceed) {
       return;
     }
@@ -601,9 +673,7 @@
               Refreshed {formatRelative(lastLoadedAt, now)}
             </span>
           {/if}
-          <button class="refresh-button" onclick={() => loadData()} disabled={loading}
-            >Refresh</button
-          >
+          <button class="refresh-button" onclick={handleRefresh} disabled={loading}>Refresh</button>
         </div>
 
         {#if myIdentity}
@@ -685,7 +755,9 @@
               aria-selected={dataset === kind}
               aria-controls="content-list-panel"
               class:active={dataset === kind}
+              tabindex={dataset === kind ? 0 : -1}
               onclick={() => setDataset(kind)}
+              onkeydown={(event) => handleTabKeydown(event, kind)}
               disabled={loading}
             >
               {DATASETS[kind].tabLabel} ({lists[kind].length})
@@ -708,7 +780,7 @@
           </label>
 
           <div class="list-toolbar">
-            <button class="new-button" onclick={() => startNew(dataset)} disabled={loading}>
+            <button class="new-button" onclick={handleNew} disabled={loading}>
               + New {DATASETS[dataset].title}
             </button>
             <label class="archive-toggle">
@@ -724,7 +796,7 @@
               {#each filteredItems as item (item.id)}
                 <li class:selected={selectedDataset === dataset && selectedId === item.id}>
                   <button
-                    onclick={() => selectEntity(item.id, dataset)}
+                    onclick={() => handleSelect(item.id, dataset)}
                     disabled={loading}
                     title={item.id}
                   >
@@ -828,7 +900,7 @@
                 class="entity-ref"
                 onclick={() => {
                   if (isEditorEntity(event.entity_type)) {
-                    selectEntity(event.entity_id, event.entity_type);
+                    void handleSelect(event.entity_id, event.entity_type);
                   }
                 }}
                 disabled={loading}
@@ -850,6 +922,7 @@
       {/if}
     </section>
   </section>
+  <ConfirmDialog bind:this={confirmDialog} />
 </BaseLayout>
 
 <style>
