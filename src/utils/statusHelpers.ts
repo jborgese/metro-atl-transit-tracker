@@ -1,20 +1,7 @@
+import { projectStatusLabel } from '#lib/content/options.ts';
+
 export function statusLabel(status: string | undefined | null): string {
-  switch (status) {
-    case 'planning':
-      return 'Planning';
-    case 'public-outreach':
-      return 'Public Outreach';
-    case 'funding-application':
-      return 'Funding Application';
-    case 'implementation':
-      return 'Implementation';
-    case 'completed':
-      return 'Completed';
-    case 'ongoing':
-      return 'Ongoing';
-    default:
-      return status ?? '';
-  }
+  return status ? projectStatusLabel(status) : '';
 }
 
 export function getStatusColor(status: string | undefined | null): string {

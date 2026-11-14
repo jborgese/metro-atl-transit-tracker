@@ -1,84 +1,33 @@
-import { z } from 'zod';
+import type { z } from 'zod';
 import contentProjectsSeed from '../../../../data/content/projects.json';
 import contentGoalsSeed from '../../../../data/content/goals.json';
 import legacyProjectsSeed from '../../../data/geo/projects-metadata.json';
 import legacyGoalsSeed from '../../../data/geo/goals-metadata.json';
 import type { Goal, Project, TimedActionLink, TimedActionLocation } from '#types/content.ts';
-import { hasLoneSurrogate } from '#utils/timedActions.ts';
+import {
+  goalCreateSchema,
+  goalPatchSchema,
+  projectCreateSchema,
+  projectPatchSchema,
+  timedActionCreateSchema,
+  timedActionReplaceSchema,
+  timedActionWindowError,
+} from '#lib/content/schemas.ts';
 import { ContentStoreError } from './errors';
+
+export {
+  ID_PATTERN,
+  goalCreateSchema,
+  goalPatchSchema,
+  projectCreateSchema,
+  projectPatchSchema,
+  timedActionCreateSchema,
+  timedActionInputSchema,
+  timedActionReplaceSchema,
+} from '#lib/content/schemas.ts';
 
 export const SEED_ACTOR = 'seed';
 export const FORBIDDEN_MUTATION_FIELDS = new Set(['is_archived', 'archived_at', 'archived_by']);
-export const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
-
-const nonEmptyStringSchema = z.string().trim().min(1);
-const idSchema = nonEmptyStringSchema
-  .max(120)
-  .regex(ID_PATTERN, 'must use lowercase letters, numbers, and hyphens only');
-const nullableDateStringSchema = z.union([nonEmptyStringSchema.max(120), z.null()]);
-const provenanceSchema = z.record(z.string(), z.unknown());
-const genericRecordSchema = z.record(z.string(), z.unknown());
-
-const organizationRefSchema = z
-  .object({
-    name: nonEmptyStringSchema.max(160),
-    url: z.httpUrl().optional(),
-  })
-  .passthrough();
-
-const relatedOrgSchema = z
-  .object({
-    name: nonEmptyStringSchema.max(160),
-    url: z.httpUrl().optional(),
-    contact_info: z.string().max(600).optional(),
-  })
-  .passthrough();
-
-const contentSourceSchema = z
-  .object({
-    label: nonEmptyStringSchema.max(200),
-    url: z.httpUrl(),
-    last_verified: nonEmptyStringSchema.max(120).optional(),
-  })
-  .passthrough();
-
-export const projectCreateSchema = z
-  .object({
-    id: idSchema,
-    title: nonEmptyStringSchema.max(240),
-    summary: z.string().max(5000).optional(),
-    status: nonEmptyStringSchema.max(120).optional(),
-    lead_org: organizationRefSchema.optional(),
-    partners: z.array(organizationRefSchema).optional(),
-    start_date: nullableDateStringSchema.optional(),
-    end_date: nullableDateStringSchema.optional(),
-    milestones: z.array(genericRecordSchema).optional(),
-    geo_scope: nonEmptyStringSchema.max(160).optional(),
-    modes: z.array(nonEmptyStringSchema.max(120)).optional(),
-    related_counties: z.array(nonEmptyStringSchema.max(120)).optional(),
-    sources: z.array(contentSourceSchema).optional(),
-    provenance: provenanceSchema.optional(),
-  })
-  .passthrough();
-
-export const projectPatchSchema = projectCreateSchema.partial();
-
-export const goalCreateSchema = z
-  .object({
-    id: idSchema,
-    goal: nonEmptyStringSchema.max(2000),
-    status_related_projects: z.string().max(5000).optional(),
-    actions: z.string().max(5000).optional(),
-    related_orgs: z.array(relatedOrgSchema).optional(),
-    related_project_ids: z.array(idSchema).optional(),
-    related_counties: z.array(nonEmptyStringSchema.max(120)).optional(),
-    provenance: provenanceSchema.optional(),
-  })
-  .passthrough();
-
-export const goalPatchSchema = goalCreateSchema.partial();
-
-const TIMED_ACTION_MAX_DAYS_AHEAD = 366;
 
 export interface TimedActionInput {
   goal_id: string;
@@ -88,71 +37,10 @@ export interface TimedActionInput {
   expires_on: string;
 }
 
-function hasNoCredentials(url: string): boolean {
-  if (!URL.canParse(url)) {
-    return true;
-  }
-  const parsed = new URL(url);
-  return parsed.username === '' && parsed.password === '';
-}
-
-const wellFormedText = (text: string) => !hasLoneSurrogate(text);
-const ILL_FORMED = 'must be well-formed text';
-
-const timedActionLinkSchema = z.strictObject({
-  label: nonEmptyStringSchema.max(40).refine(wellFormedText, ILL_FORMED),
-  url: z
-    .string()
-    .trim()
-    .max(2048)
-    .pipe(z.httpUrl())
-    .refine(hasNoCredentials, 'must not contain credentials'),
-});
-
-const timedActionLocationSchema = z.strictObject({
-  label: nonEmptyStringSchema.max(40).refine(wellFormedText, ILL_FORMED),
-  address: nonEmptyStringSchema.max(200).refine(wellFormedText, ILL_FORMED),
-});
-
-export const timedActionInputSchema = z.strictObject({
-  goal_id: idSchema,
-  description: nonEmptyStringSchema.max(300).refine(wellFormedText, ILL_FORMED),
-  link: timedActionLinkSchema.nullable(),
-  location: timedActionLocationSchema.nullable(),
-  expires_on: z.iso.date(),
-});
-
-export const timedActionCreateSchema = z.strictObject({
-  goal_id: timedActionInputSchema.shape.goal_id,
-  description: timedActionInputSchema.shape.description,
-  link: timedActionLinkSchema.nullable().default(null),
-  location: timedActionLocationSchema.nullable().default(null),
-  expires_on: timedActionInputSchema.shape.expires_on,
-  provenance: provenanceSchema.optional(),
-});
-
-export const timedActionReplaceSchema = z.strictObject({
-  id: z.string().optional(),
-  goal_id: timedActionInputSchema.shape.goal_id,
-  description: timedActionInputSchema.shape.description,
-  link: timedActionLinkSchema.nullable().default(null),
-  location: timedActionLocationSchema.nullable().default(null),
-  expires_on: timedActionInputSchema.shape.expires_on,
-  provenance: provenanceSchema.optional(),
-});
-
-function addDays(date: string, days: number): string {
-  const shifted = new Date(`${date}T00:00:00Z`);
-  shifted.setUTCDate(shifted.getUTCDate() + days);
-  return shifted.toISOString().slice(0, 10);
-}
-
-function assertTimedActionDateWindow(expiresOn: string, today: string) {
-  if (expiresOn < today || expiresOn > addDays(today, TIMED_ACTION_MAX_DAYS_AHEAD)) {
-    throw new ContentStoreError(
-      400,
-      `timed action validation failed - expires_on: must be between ${today} and ${addDays(today, TIMED_ACTION_MAX_DAYS_AHEAD)}`,
-    );
+function assertTimedActionDateWindow(expiresOn: string, today: string, previousExpiresOn?: string) {
+  const problem = timedActionWindowError(expiresOn, today, previousExpiresOn);
+  if (problem !== null) {
+    throw new ContentStoreError(400, `timed action validation failed - expires_on: ${problem}`);
   }
 }
 
@@ -197,9 +85,7 @@ export function toTimedActionReplace(
       'timed action validation failed - id: must match the id in the path',
     );
   }
-  if (payload.expires_on !== previousExpiresOn) {
-    assertTimedActionDateWindow(payload.expires_on, today);
-  }
+  assertTimedActionDateWindow(payload.expires_on, today, previousExpiresOn);
   return payload;
 }
 
