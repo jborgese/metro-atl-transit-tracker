@@ -222,6 +222,15 @@ async function runTimedActionChecks(suffix) {
   const restored = await sendEditorRequest('POST', `/api/timed-actions/${actionId}/restore`);
   assert.equal(restored.status, 200, `Timed action restore failed: ${restored.text}`);
   assert.equal(restored.data?.data?.is_archived, false, 'Restore did not set is_archived=false');
+  const restoredAgain = await sendEditorRequest('POST', `/api/timed-actions/${actionId}/restore`);
+  assert.equal(restoredAgain.status, 200, `Second restore failed: ${restoredAgain.text}`);
+  assert.equal(
+    (await fetchEntityHistory('timed_action', actionId)).filter(
+      (entry) => entry.action === 'restore',
+    ).length,
+    1,
+    'Restoring an active action should write no event',
+  );
 
   console.log('[integration] Checking the expiry sweep...');
   const expiredId = `ta-exp${String(Date.now()).slice(-5)}`;

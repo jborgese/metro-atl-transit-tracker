@@ -13,6 +13,7 @@ import {
   rowToTimedAction,
   toHistoryJson,
   type StoredEntityRow,
+  type StoredEntityWrite,
 } from './mappers';
 import { loadProfileMap } from './profiles';
 import {
@@ -23,11 +24,13 @@ import {
   SELECT_ALL_TIMED_ACTIONS_SQL,
   SELECT_EXPIRED_TIMED_ACTIONS_SQL,
   SELECT_LIVE_TIMED_ACTIONS_SQL,
+  UPDATE_TIMED_ACTION_CONTENT_SQL,
   UPDATE_TIMED_ACTION_SQL,
   findGoalRow,
   findTimedActionRow,
   getDb,
   type D1Database,
+  type D1PreparedStatement,
 } from './repository';
 import { ensureSeeded } from './seeding';
 import {
@@ -51,6 +54,7 @@ type TimedActionWrite = {
   action: 'update' | 'restore';
   actor: string;
   timestamp: string;
+  writeRow: (stored: StoredEntityWrite) => D1PreparedStatement;
 };
 
 function isMissingTimedActionsTable(err: unknown): boolean {
@@ -164,7 +168,7 @@ async function writeArchive(
 }
 
 async function writeTimedAction(db: D1Database, change: TimedActionWrite): Promise<TimedAction> {
-  const { previous, next, action, actor, timestamp } = change;
+  const { previous, next, action, actor, timestamp, writeRow } = change;
   const stored = normalizeEntityForStorage({ ...next }, actor, timestamp, false);
   const history = buildHistoryEvent({
     entityType: 'timed_action',
@@ -177,19 +181,7 @@ async function writeTimedAction(db: D1Database, change: TimedActionWrite): Promi
   });
 
   const results = await db.batch([
-    db
-      .prepare(UPDATE_TIMED_ACTION_SQL)
-      .bind(
-        stored.payloadJson,
-        stored.isArchived,
-        stored.archivedAt,
-        stored.archivedBy,
-        stored.createdAt,
-        stored.createdBy,
-        stored.updatedAt,
-        stored.updatedBy,
-        previous.id,
-      ),
+    writeRow(stored),
     db
       .prepare(INSERT_HISTORY_SQL)
       .bind(
@@ -294,10 +286,16 @@ export async function sweepExpiredTimedActions(
       .all<StoredEntityRow>();
     const expired = rows.results.map(rowToTimedAction);
     const timestamp = now.toISOString();
-    const archived = await Promise.all(
+    const results = await Promise.allSettled(
       expired.map((action) => writeArchive(db, action, SYSTEM_ACTOR, timestamp)),
     );
-    return archived.filter((action) => action !== null).length;
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        log.error(`timed action sweep could not archive ${expired[index]?.id}`, result.reason);
+      }
+    });
+    return results.filter((result) => result.status === 'fulfilled' && result.value !== null)
+      .length;
   } catch (err) {
     log.error('timed action sweep failed', err);
     return 0;
@@ -392,6 +390,10 @@ export async function updateTimedAction(
       action: 'update',
       actor,
       timestamp,
+      writeRow: (stored) =>
+        db
+          .prepare(UPDATE_TIMED_ACTION_CONTENT_SQL)
+          .bind(stored.payloadJson, stored.updatedAt, stored.updatedBy, id),
     });
     return withDisplayNames(updated, await loadProfileMap());
   });
@@ -423,6 +425,9 @@ export async function restoreTimedAction(id: string, actor: string): Promise<Tim
     if ((await readGoalState(db, previous.goal_id)) !== 'active') {
       throw new ContentStoreError(409, 'its goal is archived or missing');
     }
+    if (previous.is_archived !== true) {
+      return withDisplayNames(previous, await loadProfileMap());
+    }
 
     const timestamp = nowIso();
     const restored = await writeTimedAction(db, {
@@ -437,6 +442,20 @@ export async function restoreTimedAction(id: string, actor: string): Promise<Tim
       action: 'restore',
       actor,
       timestamp,
+      writeRow: (stored) =>
+        db
+          .prepare(UPDATE_TIMED_ACTION_SQL)
+          .bind(
+            stored.payloadJson,
+            stored.isArchived,
+            stored.archivedAt,
+            stored.archivedBy,
+            stored.createdAt,
+            stored.createdBy,
+            stored.updatedAt,
+            stored.updatedBy,
+            id,
+          ),
     });
     return withDisplayNames(restored, await loadProfileMap());
   });

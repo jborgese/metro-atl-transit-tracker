@@ -112,6 +112,15 @@ SET
 WHERE id = ?9
 `;
 
+export const UPDATE_TIMED_ACTION_CONTENT_SQL = `
+UPDATE timed_actions
+SET
+  payload_json = ?1,
+  updated_at = ?2,
+  updated_by = ?3
+WHERE id = ?4
+`;
+
 export const INSERT_TIMED_ACTION_ARCHIVE_EVENT_SQL = `
 INSERT INTO content_history (id, entity_type, entity_id, action, actor, timestamp, before_json, after_json)
 SELECT ?1, 'timed_action', ?2, 'archive', ?3, ?4, ?5, ?6

@@ -23,6 +23,22 @@ function expiredRow(id: string) {
   };
 }
 
+const changedBatch = [{ meta: { changes: 1 } }, { meta: { changes: 1 } }];
+
+function fakeDb(rows: Array<ReturnType<typeof expiredRow>>, batch: ReturnType<typeof vi.fn>) {
+  const bound: Array<{ sql: string; values: unknown[] }> = [];
+  const db = {
+    prepare: (sql: string) => ({
+      bind: (...values: unknown[]) => {
+        bound.push({ sql, values });
+        return { all: async () => ({ results: rows }) };
+      },
+    }),
+    batch,
+  } as unknown as D1Database;
+  return { db, bound };
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -44,21 +60,13 @@ describe('sweepExpiredTimedActions', () => {
   });
 
   it('selects by the Atlanta date, archives as system, and counts only rows it changed', async () => {
-    const bound: Array<{ sql: string; values: unknown[] }> = [];
-    const db = {
-      prepare: (sql: string) => ({
-        bind: (...values: unknown[]) => {
-          bound.push({ sql, values });
-          return {
-            all: async () => ({ results: [expiredRow('ta-aaaaaaaa'), expiredRow('ta-bbbbbbbb')] }),
-          };
-        },
-      }),
-      batch: vi
+    const { db, bound } = fakeDb(
+      [expiredRow('ta-aaaaaaaa'), expiredRow('ta-bbbbbbbb')],
+      vi
         .fn()
-        .mockResolvedValueOnce([{ meta: { changes: 1 } }, { meta: { changes: 1 } }])
+        .mockResolvedValueOnce(changedBatch)
         .mockResolvedValueOnce([{ meta: { changes: 0 } }, { meta: { changes: 0 } }]),
-    } as unknown as D1Database;
+    );
 
     const archived = await sweepExpiredTimedActions(db, new Date('2026-11-14T03:00:00Z'));
 
@@ -72,5 +80,29 @@ describe('sweepExpiredTimedActions', () => {
       ['ta-aaaaaaaa', SYSTEM_ACTOR],
       ['ta-bbbbbbbb', SYSTEM_ACTOR],
     ]);
+  });
+
+  it('waits for every batch when one rejects, logs it, and counts the others', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let lateBatchSettled = false;
+    const { db } = fakeDb(
+      [expiredRow('ta-aaaaaaaa'), expiredRow('ta-bbbbbbbb'), expiredRow('ta-cccccccc')],
+      vi
+        .fn()
+        .mockResolvedValueOnce(changedBatch)
+        .mockRejectedValueOnce(new Error('batch failed'))
+        .mockImplementationOnce(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          lateBatchSettled = true;
+          return changedBatch;
+        }),
+    );
+
+    await expect(sweepExpiredTimedActions(db)).resolves.toBe(2);
+    expect(lateBatchSettled).toBe(true);
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining('ta-bbbbbbbb'),
+      expect.any(Error),
+    );
   });
 });

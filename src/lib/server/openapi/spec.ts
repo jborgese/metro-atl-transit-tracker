@@ -10,6 +10,7 @@ import {
   projectCreateSchema,
   projectPatchSchema,
   timedActionInputSchema,
+  timedActionReplaceSchema,
 } from '#lib/server/content/validators.ts';
 import { feedbackCreateSchema } from '#lib/server/feedback/validators.ts';
 
@@ -54,6 +55,15 @@ const historyEvent = z.object({
   after: z.union([z.record(z.string(), z.unknown()), z.null()]).optional(),
 });
 
+const timedActionResponse = z.object({
+  id: z.string(),
+  ...timedActionInputSchema.shape,
+  is_archived: z.boolean(),
+  archived_at: z.union([z.string(), z.null()]),
+  archived_by: z.union([z.string(), z.null()]),
+  provenance: z.record(z.string(), z.unknown()),
+});
+
 const meResponse = z.object({
   identity: z.string(),
   actor: z.string(),
@@ -77,7 +87,15 @@ export function buildOpenApiDocument(serverUrl = '/') {
   const projectPatch = registry.register('ProjectPatch', withOpenApi(projectPatchSchema));
   const goalSchema = registry.register('Goal', withOpenApi(goalCreateSchema));
   const goalPatch = registry.register('GoalPatch', withOpenApi(goalPatchSchema));
-  const timedActionSchema = registry.register('TimedAction', withOpenApi(timedActionInputSchema));
+  const timedActionSchema = registry.register('TimedAction', timedActionResponse);
+  const timedActionCreate = registry.register(
+    'TimedActionCreate',
+    withOpenApi(timedActionInputSchema),
+  );
+  const timedActionReplace = registry.register(
+    'TimedActionReplace',
+    withOpenApi(timedActionReplaceSchema),
+  );
   const errorSchema = registry.register('ErrorResponse', errorResponse);
   const historySchema = registry.register('HistoryEvent', historyEvent);
   const meSchema = registry.register('Me', meResponse);
@@ -142,6 +160,10 @@ export function buildOpenApiDocument(serverUrl = '/') {
 
   const editorAuth = [{ [editorTokenScheme.name]: [] }, { [accessJwtScheme.name]: [] }];
   const errorContent = { description: 'Error', content: jsonContent(errorSchema) };
+  const timedActionsUnavailable = {
+    description: 'Timed actions are not available yet',
+    content: jsonContent(errorSchema),
+  };
 
   registry.registerPath({
     method: 'get',
@@ -352,7 +374,7 @@ export function buildOpenApiDocument(serverUrl = '/') {
     summary: 'Create a timed action',
     tags: ['timed-actions'],
     security: editorAuth,
-    request: { body: { content: jsonContent(timedActionSchema), required: true } },
+    request: { body: { content: jsonContent(timedActionCreate), required: true } },
     responses: {
       201: { description: 'Created', content: jsonContent(timedActionItemResponse) },
       400: errorContent,
@@ -360,6 +382,7 @@ export function buildOpenApiDocument(serverUrl = '/') {
       403: errorContent,
       413: errorContent,
       429: errorContent,
+      503: timedActionsUnavailable,
     },
   });
 
@@ -386,7 +409,7 @@ export function buildOpenApiDocument(serverUrl = '/') {
     security: editorAuth,
     request: {
       params: z.object({ id: timedActionIdParam }),
-      body: { content: jsonContent(timedActionSchema), required: true },
+      body: { content: jsonContent(timedActionReplace), required: true },
     },
     responses: {
       200: { description: 'Updated', content: jsonContent(timedActionItemResponse) },
@@ -396,6 +419,7 @@ export function buildOpenApiDocument(serverUrl = '/') {
       404: errorContent,
       413: errorContent,
       429: errorContent,
+      503: timedActionsUnavailable,
     },
   });
 
@@ -412,6 +436,7 @@ export function buildOpenApiDocument(serverUrl = '/') {
       403: errorContent,
       404: errorContent,
       429: errorContent,
+      503: timedActionsUnavailable,
     },
   });
 
@@ -429,6 +454,7 @@ export function buildOpenApiDocument(serverUrl = '/') {
       404: errorContent,
       409: errorContent,
       429: errorContent,
+      503: timedActionsUnavailable,
     },
   });
 

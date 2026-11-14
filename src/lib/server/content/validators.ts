@@ -105,7 +105,7 @@ export const timedActionInputSchema = z.strictObject({
   expires_on: z.iso.date(),
 });
 
-const timedActionReplaceSchema = z.strictObject({
+export const timedActionReplaceSchema = z.strictObject({
   id: z.string().optional(),
   goal_id: timedActionInputSchema.shape.goal_id,
   description: timedActionInputSchema.shape.description,

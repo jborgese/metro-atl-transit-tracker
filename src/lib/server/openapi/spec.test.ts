@@ -38,6 +38,39 @@ describe('buildOpenApiDocument', () => {
     expect(Object.keys(doc.components?.schemas ?? {})).toContain('TimedAction');
   });
 
+  it('publishes a timed-action response schema that carries id and allows extra fields', () => {
+    const timedAction = doc.components?.schemas?.TimedAction;
+    expect(timedAction).toMatchObject({ properties: { id: { type: 'string' } } });
+    expect(timedAction).not.toHaveProperty('additionalProperties', false);
+  });
+
+  it('uses the create and replace schemas as the timed-action request bodies', () => {
+    const bodySchema = (ref: string) => ({
+      content: { 'application/json': { schema: { $ref: `#/components/schemas/${ref}` } } },
+    });
+    expect(doc.paths?.['/api/timed-actions']?.post?.requestBody).toMatchObject(
+      bodySchema('TimedActionCreate'),
+    );
+    expect(doc.paths?.['/api/timed-actions/{id}']?.patch?.requestBody).toMatchObject(
+      bodySchema('TimedActionReplace'),
+    );
+    expect(doc.components?.schemas?.TimedActionReplace).toMatchObject({
+      required: ['goal_id', 'description', 'expires_on'],
+    });
+  });
+
+  it('declares 503 on every timed-action write', () => {
+    const writes: Array<[string, 'post' | 'patch' | 'delete']> = [
+      ['/api/timed-actions', 'post'],
+      ['/api/timed-actions/{id}', 'patch'],
+      ['/api/timed-actions/{id}', 'delete'],
+      ['/api/timed-actions/{id}/restore', 'post'],
+    ];
+    for (const [path, method] of writes) {
+      expect(doc.paths?.[path]?.[method]?.responses?.['503']).toBeDefined();
+    }
+  });
+
   it('publishes timed_action as a history entity type in the event and the filter', () => {
     const entityTypes = {
       anyOf: ['project', 'goal', 'timed_action'].map((value) => ({
