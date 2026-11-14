@@ -58,7 +58,7 @@ const hintOf = (element: HTMLElement) => {
     .map((id) => document.getElementById(id)!.textContent);
 };
 const badge = () => document.querySelector<HTMLElement>('.badge');
-const colourOf = (value: string) => {
+const colorOf = (value: string) => {
   const probe = document.createElement('span');
   probe.style.color = value;
   return probe.style.color;
@@ -78,9 +78,9 @@ describe('ProjectFields labels and hints', () => {
     'Start date',
     'End date',
     'Geographic scope',
-    'Lead organisation name',
-    'Lead organisation web address',
-  ])('has one control labelled %s', (label) => {
+    'Lead organization name',
+    'Lead organization web address',
+  ])('has one control labeled %s', (label) => {
     renderFields({ isNew: true });
     expect(screen.getAllByLabelText(label)).toHaveLength(1);
   });
@@ -109,7 +109,7 @@ describe('ProjectFields labels and hints', () => {
     expect(new Set([...controls].map((element) => element.id)).size).toBe(controls.length);
   });
 
-  it.each(['Counties', 'Modes', 'Lead organisation', 'Partners', 'Milestones', 'Sources'])(
+  it.each(['Counties', 'Modes', 'Lead organization', 'Partners', 'Milestones', 'Sources'])(
     'has a group named %s',
     (name) => {
       renderFields();
@@ -127,11 +127,11 @@ describe('ProjectFields labels and hints', () => {
       [control('Start date'), 'project-start_date'],
       [control('End date'), 'project-end_date'],
       [control('Geographic scope'), 'project-geo_scope'],
-      [control('Lead organisation name'), 'project-lead_org-name'],
-      [control('Lead organisation web address'), 'project-lead_org-url'],
+      [control('Lead organization name'), 'project-lead_org-name'],
+      [control('Lead organization web address'), 'project-lead_org-url'],
       [group('Counties'), 'project-related_counties'],
       [group('Modes'), 'project-modes'],
-      [group('Lead organisation'), 'project-lead_org'],
+      [group('Lead organization'), 'project-lead_org'],
       [group('Partners'), 'project-partners'],
       [group('Milestones'), 'project-milestones'],
       [group('Sources'), 'project-sources'],
@@ -166,8 +166,8 @@ describe('ProjectFields labels and hints', () => {
     renderFields({ initial: stored });
     expect(control('Summary').tagName).toBe('TEXTAREA');
     expect(projectTitle().type).toBe('text');
-    expect(control('Lead organisation web address').type).toBe('text');
-    expect(control('Lead organisation web address').inputMode).toBe('url');
+    expect(control('Lead organization web address').type).toBe('text');
+    expect(control('Lead organization web address').inputMode).toBe('url');
     expect(control('Web address', group('Partner 1')).inputMode).toBe('url');
     expect(control('Web address (required)', group('Source 1')).inputMode).toBe('url');
   });
@@ -192,12 +192,12 @@ describe('ProjectFields sections', () => {
     renderFields();
     expect(
       screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent),
-    ).toEqual(['Basics', 'Dates and milestones', 'Where and how', 'Organisations', 'Sources']);
+    ).toEqual(['Basics', 'Dates and milestones', 'Where and how', 'Organizations', 'Sources']);
   });
 
   it('puts each field under its section, in the brief order', () => {
     renderFields({ isNew: true, initial: stored });
-    const [basics, dates, where, organisations, sources] = screen.getAllByRole('heading', {
+    const [basics, dates, where, organizations, sources] = screen.getAllByRole('heading', {
       level: 3,
     });
     const order = [
@@ -214,8 +214,8 @@ describe('ProjectFields sections', () => {
       control('Geographic scope'),
       group('Counties'),
       group('Modes'),
-      organisations!,
-      group('Lead organisation'),
+      organizations!,
+      group('Lead organization'),
       group('Partners'),
       sources!,
       group('Sources'),
@@ -279,19 +279,19 @@ describe('ProjectFields status', () => {
     expect(screen.queryByRole('option', { name: 'Not set' })).toBeNull();
   });
 
-  it('previews the badge in the status colours, hidden from assistive technology', async () => {
+  it('previews the badge in the status colors, hidden from assistive technology', async () => {
     renderFields({ initial: stored });
     const preview = badge()!;
     expect(preview.textContent).toBe('Implementation');
-    expect(preview.style.backgroundColor).toBe(colourOf(getStatusColor('implementation')));
-    expect(preview.style.color).toBe(colourOf(getStatusTextColor('implementation')));
+    expect(preview.style.backgroundColor).toBe(colorOf(getStatusColor('implementation')));
+    expect(preview.style.color).toBe(colorOf(getStatusTextColor('implementation')));
     expect(preview.closest('[aria-hidden="true"]')).toBeTruthy();
     expect(preview.closest('[aria-hidden="true"]')!.textContent).toContain('Preview');
 
     await fireEvent.change(select('Status'), { target: { value: 'ongoing' } });
     expect(badge()!.textContent).toBe('Ongoing');
-    expect(badge()!.style.backgroundColor).toBe(colourOf(getStatusColor('ongoing')));
-    expect(badge()!.style.color).toBe(colourOf(getStatusTextColor('ongoing')));
+    expect(badge()!.style.backgroundColor).toBe(colorOf(getStatusColor('ongoing')));
+    expect(badge()!.style.color).toBe(colorOf(getStatusTextColor('ongoing')));
   });
 
   it('previews a status that is not in the list by its stored text', () => {
@@ -444,7 +444,7 @@ describe('ProjectFields choices', () => {
     ]);
   });
 
-  it('ticks the stored county and mode', () => {
+  it('checks the stored county and mode', () => {
     renderFields({ initial: stored });
     expect(box('Fulton').checked).toBe(true);
     expect(box('DeKalb').checked).toBe(false);
@@ -452,7 +452,7 @@ describe('ProjectFields choices', () => {
     expect(box('Rail').checked).toBe(false);
   });
 
-  it('keeps an unknown county and an unknown mode ticked and labelled', () => {
+  it('keeps an unknown county and an unknown mode checked and labeled', () => {
     renderFields({ initial: { ...stored, related_counties: ['13999'], modes: ['ferry'] } });
     expect(box('13999 (not in the list)').checked).toBe(true);
     expect(group('Counties').contains(box('13999 (not in the list)'))).toBe(true);
@@ -466,22 +466,22 @@ describe('ProjectFields choices', () => {
   });
 });
 
-describe('ProjectFields lead organisation', () => {
-  it('shows the stored lead organisation', () => {
+describe('ProjectFields lead organization', () => {
+  it('shows the stored lead organization', () => {
     renderFields({ initial: stored, hasStoredLeadOrg: true });
-    expect(control('Lead organisation name').value).toBe('MARTA');
-    expect(control('Lead organisation web address').value).toBe('https://itsmarta.com/');
+    expect(control('Lead organization name').value).toBe('MARTA');
+    expect(control('Lead organization web address').value).toBe('https://itsmarta.com/');
   });
 
-  it('says a stored lead organisation can be changed but not removed', () => {
+  it('says a stored lead organization can be changed but not removed', () => {
     renderFields({ initial: stored, hasStoredLeadOrg: true });
-    expect(hintOf(group('Lead organisation'))).toEqual([KEEP_HINT]);
-    expect(group('Lead organisation').contains(screen.getByText(KEEP_HINT))).toBe(true);
+    expect(hintOf(group('Lead organization'))).toEqual([KEEP_HINT]);
+    expect(group('Lead organization').contains(screen.getByText(KEEP_HINT))).toBe(true);
   });
 
-  it('has no hint without a stored lead organisation', () => {
+  it('has no hint without a stored lead organization', () => {
     renderFields({ initial: { id: 'p1', title: 'T' } });
-    expect(group('Lead organisation').hasAttribute('aria-describedby')).toBe(false);
+    expect(group('Lead organization').hasAttribute('aria-describedby')).toBe(false);
     expect(screen.queryByText(KEEP_HINT)).toBeNull();
   });
 });
@@ -496,8 +496,8 @@ describe('ProjectFields editing', () => {
     await fireEvent.change(select('Geographic scope'), { target: { value: 'local' } });
     await fireEvent.input(control('Start date'), { target: { value: '2026-12-01' } });
     await fireEvent.input(control('End date'), { target: { value: '2027-06-30' } });
-    await fireEvent.input(control('Lead organisation name'), { target: { value: 'MARTA' } });
-    await fireEvent.input(control('Lead organisation web address'), {
+    await fireEvent.input(control('Lead organization name'), { target: { value: 'MARTA' } });
+    await fireEvent.input(control('Lead organization web address'), {
       target: { value: 'https://itsmarta.com/' },
     });
     expect(latest()).toMatchObject({
@@ -512,7 +512,7 @@ describe('ProjectFields editing', () => {
     });
   });
 
-  it('writes ticks into the draft lists', async () => {
+  it('writes checks into the draft lists', async () => {
     const latest = renderTracked({ initial: stored });
     await fireEvent.click(box('Cobb'));
     await fireEvent.click(box('Fulton'));
@@ -607,8 +607,8 @@ describe('ProjectFields errors', () => {
     ['geo_scope', () => control('Geographic scope')],
     ['start_date', () => control('Start date')],
     ['end_date', () => control('End date')],
-    ['lead_org.name', () => control('Lead organisation name')],
-    ['lead_org.url', () => control('Lead organisation web address')],
+    ['lead_org.name', () => control('Lead organization name')],
+    ['lead_org.url', () => control('Lead organization web address')],
     ['partners.0.name', () => control('Name (required)', group('Partner 1'))],
     ['partners.0.url', () => control('Web address', group('Partner 1'))],
     ['milestones.0.title', () => control('Title (required)', group('Milestone 1'))],

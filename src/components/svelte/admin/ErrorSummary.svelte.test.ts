@@ -31,8 +31,8 @@ describe('ErrorSummary', () => {
     render(ErrorSummary, {
       props: { issues: [{ path: 'title', message: 'Enter a title', href: '#project-title' }] },
     });
-    const notCancelled = await fireEvent.click(screen.getByRole('link', { name: 'Enter a title' }));
-    expect(notCancelled).toBe(false);
+    const notCanceled = await fireEvent.click(screen.getByRole('link', { name: 'Enter a title' }));
+    expect(notCanceled).toBe(false);
     expect(document.activeElement).toBe(input);
     input.remove();
   });

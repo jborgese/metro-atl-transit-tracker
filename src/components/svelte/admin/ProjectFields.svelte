@@ -283,19 +283,19 @@
     </div>
 
     <div class="section">
-      <h3>Organisations</h3>
+      <h3>Organizations</h3>
       <fieldset
         class="group"
         id={id('lead_org')}
         aria-describedby={hasStoredLeadOrg ? leadHintId : undefined}
       >
-        <legend>Lead organisation</legend>
+        <legend>Lead organization</legend>
         {#if hasStoredLeadOrg}
           <p class="hint" id={leadHintId}>{KEEP_HINT}</p>
         {/if}
         <FormField
           id={id('lead_org.name')}
-          label="Lead organisation name"
+          label="Lead organization name"
           error={errorAt('lead_org.name')}
         >
           {#snippet children({ describedBy, invalid })}
@@ -310,7 +310,7 @@
         </FormField>
         <FormField
           id={id('lead_org.url')}
-          label="Lead organisation web address"
+          label="Lead organization web address"
           error={errorAt('lead_org.url')}
         >
           {#snippet children({ describedBy, invalid })}

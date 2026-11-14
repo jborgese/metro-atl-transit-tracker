@@ -35,7 +35,7 @@ describe('TimedActionFields labels', () => {
     'Link web address',
     'Location button label',
     'Address',
-  ])('has a control labelled %s', (label) => {
+  ])('has a control labeled %s', (label) => {
     renderFields();
     expect(screen.getByLabelText(label)).toBeTruthy();
   });

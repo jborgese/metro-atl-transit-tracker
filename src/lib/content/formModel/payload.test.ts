@@ -275,7 +275,7 @@ describe('pruneBlankRows with validation', () => {
     ]);
   });
 
-  it('reports a goal organisation at its visible position', () => {
+  it('reports a goal organization at its visible position', () => {
     const goalLoaded = { id: 'g', goal: 'G', related_orgs: [] };
     const draft = toFormDraft('goal', goalLoaded) as GoalDraft;
     draft.related_orgs.push(emptyRelatedOrgRow(), {

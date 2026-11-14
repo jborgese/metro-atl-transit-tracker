@@ -3,7 +3,7 @@
 **Status:** In Progress
 **Owner:** Jared B.
 **Last updated:** 2026-11-14
-**Related:** [Timed actions spec](2026-11-timed-actions.md); research notes summarised in [Appendix D](#d-references)
+**Related:** [Timed actions spec](2026-11-timed-actions.md); research notes summarized in [Appendix D](#d-references)
 
 ---
 
@@ -15,7 +15,7 @@
 2. The editor gives no help with relationships. Attaching an action to a goal, or a project to a goal, means copying an id from another tab.
 3. The editor loses work without warning. Selecting another record or pressing Refresh replaces unsaved text.
 4. The editor is not accessible. The text area has no label, the tabs have no keyboard support, and errors are announced only as one status line.
-5. Two defects exist independently of how records are edited: organisation and source link fields accept `javascript:` and `data:` addresses that the public page renders as links, and the colors available for error text, input borders and focus rings fail WCAG 2.1 AA on the admin panel.
+5. Two defects exist independently of how records are edited: organization and source link fields accept `javascript:` and `data:` addresses that the public page renders as links, and the colors available for error text, input borders and focus rings fail WCAG 2.1 AA on the admin panel.
 
 **Spec category:** Feature. It replaces how three existing content types are edited; storage and the public pages do not change.
 
@@ -45,7 +45,7 @@
 ## 2. Goals
 
 **Goal 1 — Edit by form**
-As an editor, I want labelled fields, pickers and add/remove rows for every part of a project, goal or action, so that I never type JSON for ordinary edits.
+As an editor, I want labeled fields, pickers and add/remove rows for every part of a project, goal or action, so that I never type JSON for ordinary edits.
 **Success signal:** each record type can be created, edited, archived and restored end to end without opening the JSON view.
 
 **Goal 2 — Relationships without ids**
@@ -72,7 +72,7 @@ As the site owner, I want a raw view kept for the rare edit a form cannot expres
 - **A version check or locking between editors.** A pre-save freshness warning is in scope; real conflict detection needs an API change.
 - **Recovering a draft after the sign-in session expires.** The page says what happened and offers the draft as text to copy.
 - **Removing the stray misspelled key on the goal `regional-amtrak-intercity-rail`.** The API cannot delete it; it needs a direct database edit approved separately.
-- **A registry of organisations, drag-and-drop reordering, rich text, image upload, bulk edits.**
+- **A registry of organizations, drag-and-drop reordering, rich text, image upload, bulk edits.**
 - **Changing the public pages**, other than what tighter link validation prevents.
 - **A forms library, SvelteKit remote functions or form actions.** See [Appendix A](#a-alternatives-considered).
 
@@ -114,7 +114,7 @@ flowchart LR
 - **This tightens validation on existing routes.** Every URL in the live data is `https`, so no stored record is affected, but it is a behavior change on the published API and needs the owner's approval.
 - **Seeding uses the same schemas.** Confirm the seed files still load.
 
-**Open questions:** none. The owner authorised this plan, including tightening these three URL fields, on 2026-11-14.
+**Open questions:** none. The owner authorized this plan, including tightening these three URL fields, on 2026-11-14.
 
 #### 4.3.2 Shared schemas and option lists
 
@@ -145,9 +145,9 @@ flowchart LR
 
 **Callouts:**
 
-- **Round-trip identity is the acceptance test:** `toRecord(toFormDraft(kind, r))` deep-equals `r` for a fixture copy of every live record (personal values anonymised).
+- **Round-trip identity is the acceptance test:** `toRecord(toFormDraft(kind, r))` deep-equals `r` for a fixture copy of every live record (personal values anonymized).
 - **Never write Zod's parse output back into the draft.** It trims strings and reorders keys.
-- **Context rules, outside the schema:** the expiry window against today's date in Atlanta (only when the date changed on an edit); the goal exists and is active (checked on create, and on an edit only when the goal changed, as the server does); a new id is not already used, including by archived records; a stored lead organisation or geographic scope cannot be blanked.
+- **Context rules, outside the schema:** the expiry window against today's date in Atlanta (only when the date changed on an edit); the goal exists and is active (checked on create, and on an edit only when the goal changed, as the server does); a new id is not already used, including by archived records; a stored lead organization or geographic scope cannot be blanked.
 - **Messages are mapped in the browser** from the issue code and the field's label ("Enter a title", "Description must be 300 characters or fewer", "Source 2: enter a full web address starting with https://"). The server's message text does not change.
 - **Server errors:** read `message`, falling back to `error` (the 403 and 429 bodies use `error` and currently show as raw JSON); find the field with the existing `"… validation failed - <path>: <message>"` format; map 409 "already exists" to the id field.
 
@@ -188,7 +188,7 @@ flowchart LR
 - **Warnings where the API would ignore or keep an edit:** deleting a top-level key of a project or goal ("can't be removed through the API; it will keep its stored value"); adding a key the form does not know (it will be stored, shown nowhere, and cannot be removed later; ask first). Unknown keys on a timed action are an error.
 - **When a record has fields the form does not show,** the form says so and names them.
 
-**Open questions:** none. The owner authorised this plan with the JSON view kept editable on 2026-11-14.
+**Open questions:** none. The owner authorized this plan with the JSON view kept editable on 2026-11-14.
 
 #### 4.3.6 Form controls
 
@@ -208,7 +208,7 @@ flowchart LR
 - **Optional link and location:** always-visible fieldsets, "both fields or neither".
 - **Tokens:** `--danger-text: #f0b8b3`, `--field-border: #9fa7a2`, `--focus-ring: #7dd3fc`, documented in `docs/design-tokens.md`. The existing red, blue and border tokens measure 1.68:1, 2.61:1 and at most 1.52:1 on the admin panel, below the 4.5:1 and 3:1 that WCAG 2.1 AA requires. Errors also carry the word "Error", never color alone.
 
-**Open questions:** none. The owner authorised this plan, including the three new tokens, on 2026-11-14.
+**Open questions:** none. The owner authorized this plan, including the three new tokens, on 2026-11-14.
 
 #### 4.3.7 The three forms
 
@@ -219,14 +219,14 @@ flowchart LR
 | Form    | Sections and fields                                                                                                                                                                                                                                                                                                                                                                                        |
 | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Action  | Goal (select of active goals; the current goal always present), description (counter), last day (date, with the allowed window in the hint), link (label, web address), location (label, address)                                                                                                                                                                                                          |
-| Goal    | **Goal:** id (create only), goal text, counties ("leave all unticked to list under Regional"). **Progress:** status text (hint: web addresses become links), ongoing actions. **Links:** related projects (active first, archived under their own heading, unknown ids kept and labelled), related organisations (name, web address, contact info), this goal's actions with "Add an action for this goal" |
-| Project | **Basics:** id (create only), title, status (with a live badge), summary. **Dates and milestones:** start, end, milestones (title, date). **Where and how:** geographic scope, counties, modes. **Organisations:** lead (name, web address), partners. **Sources:** label, web address, last verified; reorderable                                                                                         |
+| Goal    | **Goal:** id (create only), goal text, counties ("leave all unchecked to list under Regional"). **Progress:** status text (hint: web addresses become links), ongoing actions. **Links:** related projects (active first, archived under their own heading, unknown ids kept and labeled), related organizations (name, web address, contact info), this goal's actions with "Add an action for this goal" |
+| Project | **Basics:** id (create only), title, status (with a live badge), summary. **Dates and milestones:** start, end, milestones (title, date). **Where and how:** geographic scope, counties, modes. **Organizations:** lead (name, web address), partners. **Sources:** label, web address, last verified; reorderable                                                                                         |
 
 **Callouts:**
 
 - **"Add an action for this goal"** is offered only for a saved, active goal, and otherwise says why not. It opens the action form with the goal preselected and changeable. After the action is created the editor shows it, with a "Back to goal" button.
 - **A project's or goal's id is read-only after creation.**
-- **Fields the API cannot clear** (lead organisation, geographic scope) say so in their hint once they hold a value.
+- **Fields the API cannot clear** (lead organization, geographic scope) say so in their hint once they hold a value.
 - **Order of delivery:** actions first (five fields, newest editors' task), then goals, then projects.
 
 **Open questions:** none.
@@ -237,7 +237,7 @@ flowchart LR
 
 Tickets are in dependency order; each is one pull request, mergeable and deployable alone.
 
-### Ticket 1 — Accept only http(s) links for organisations and sources
+### Ticket 1 — Accept only http(s) links for organizations and sources
 
 **User Story:**
 As a visitor, I need published links to be ordinary web links so that a link on the site cannot run script.
@@ -245,7 +245,7 @@ As a visitor, I need published links to be ordinary web links so that a link on 
 **Acceptance Criteria (checkbox-ready):**
 
 - **Validation**
-  - [ ] Creating or updating a project or goal with an organisation or source `url` of `javascript:alert(1)` or `data:text/html,x` returns 400 naming the field
+  - [ ] Creating or updating a project or goal with an organization or source `url` of `javascript:alert(1)` or `data:text/html,x` returns 400 naming the field
   - [ ] `https://` and `http://` URLs are accepted as before
   - [ ] The seed data still loads
 
@@ -319,7 +319,7 @@ As an editor, I need to be asked before losing changes, and I need saves that se
 - [ ] 403 and 429 errors show their message, not raw JSON
 - [ ] The record-type tabs work with arrow, Home and End keys
 
-**Callouts:** `src/routes/admin/+page.svelte` shrinks; new `EditorPane`, `JsonView`, `ConfirmDialog`; `page.svelte.test.ts` is rewritten (its six tests drive an unlabelled text area and two expect a write from an unedited record).
+**Callouts:** `src/routes/admin/+page.svelte` shrinks; new `EditorPane`, `JsonView`, `ConfirmDialog`; `page.svelte.test.ts` is rewritten (its six tests drive an unlabeled text area and two expect a write from an unedited record).
 
 **Rollout:**
 **Test plan:** page-level tests with `fetch` stubbed, asserting whole request bodies; dialog tests with `showModal`/`close` stubbed (jsdom lacks them); a browser click-through on a local Worker.
@@ -353,12 +353,12 @@ As an editor, I need to create and edit an action by filling in fields so that I
 ### Ticket 6 — Goal form
 
 **User Story:**
-As an editor, I need to edit a goal's text, counties, related projects and organisations by form, and start an action from it.
+As an editor, I need to edit a goal's text, counties, related projects and organizations by form, and start an action from it.
 
 **Acceptance Criteria (checkbox-ready):**
 
-- [ ] Every goal field is editable by form, including add/remove rows for organisations
-- [ ] Related projects are ticked from a list; ids that match no project are kept and labelled
+- [ ] Every goal field is editable by form, including add/remove rows for organizations
+- [ ] Related projects are checked from a list; ids that match no project are kept and labeled
 - [ ] "Add an action for this goal" opens the action form with the goal preselected, and is unavailable with a reason for unsaved or archived goals
 - [ ] A goal with a field the form does not show says so and keeps it
 
@@ -378,7 +378,7 @@ As an editor, I need to edit every part of a project by form.
 
 **Acceptance Criteria (checkbox-ready):**
 
-- [ ] Every project field is editable by form: status with a badge preview, dates, milestones, scope, counties, modes, lead organisation, partners, sources
+- [ ] Every project field is editable by form: status with a badge preview, dates, milestones, scope, counties, modes, lead organization, partners, sources
 - [ ] Sources can be moved up and down
 - [ ] A stored value outside a fixed list is kept and shown
 - [ ] `README.md` and `AGENTS.md` describe the form editor and where a new field is added
@@ -434,7 +434,7 @@ Seven merges in order. Tickets 1 to 3 change nothing an editor sees. Ticket 4 ch
 | Project and goal id                          | lowercase letters, digits, hyphens; up to 120; set once |
 | Title / summary / goal text                  | up to 240 / 5,000 / 2,000                               |
 | Goal status text, ongoing actions            | up to 5,000 each                                        |
-| Organisation and source names and labels     | up to 160 and 200                                       |
+| Organization and source names and labels     | up to 160 and 200                                       |
 | Contact info                                 | up to 600                                               |
 | Action description / labels / address / link | 300 / 40 / 200 / 2,048, http(s), no credentials         |
 | Action last day                              | today through 366 days out, Atlanta time                |

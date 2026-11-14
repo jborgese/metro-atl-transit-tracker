@@ -53,7 +53,7 @@ describe('DATASETS', () => {
     });
   });
 
-  it('recognises stored entity types only', () => {
+  it('recognizes stored entity types only', () => {
     expect(isEditorEntity('timed_action')).toBe(true);
     expect(isEditorEntity('action')).toBe(false);
   });

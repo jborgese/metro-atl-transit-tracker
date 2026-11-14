@@ -27,15 +27,15 @@ const FIXED: Record<string, string> = {
   related_counties: 'Counties',
   modes: 'Modes',
   related_project_ids: 'Related projects',
-  lead_org: 'Lead organisation',
+  lead_org: 'Lead organization',
   partners: 'Partners',
   milestones: 'Milestones',
   sources: 'Sources',
-  related_orgs: 'Related organisations',
+  related_orgs: 'Related organizations',
   link: 'Link',
   location: 'Location',
-  'lead_org.name': 'Lead organisation name',
-  'lead_org.url': 'Lead organisation web address',
+  'lead_org.name': 'Lead organization name',
+  'lead_org.url': 'Lead organization web address',
   'link.label': 'Link button label',
   'link.url': 'Link web address',
   'location.label': 'Location button label',
@@ -50,7 +50,7 @@ const ROWS: Record<string, { noun: string; fields: Record<string, string> }> = {
     fields: { label: 'label', url: 'web address', last_verified: 'last verified' },
   },
   related_orgs: {
-    noun: 'Organisation',
+    noun: 'Organization',
     fields: { name: 'name', url: 'web address', contact_info: 'contact info' },
   },
 };
@@ -62,7 +62,7 @@ const ITEMS: Record<string, string> = {
   partners: 'Partner',
   milestones: 'Milestone',
   sources: 'Source',
-  related_orgs: 'Organisation',
+  related_orgs: 'Organization',
 };
 
 function itemLabel(path: string): string | undefined {
