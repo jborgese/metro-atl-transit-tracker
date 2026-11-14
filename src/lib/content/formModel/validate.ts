@@ -1,6 +1,8 @@
 import type { z } from 'zod';
 import {
+  CREDENTIALS_MESSAGE,
   goalCreateSchema,
+  ILL_FORMED_TEXT_MESSAGE,
   goalPatchSchema,
   projectCreateSchema,
   projectPatchSchema,
@@ -36,6 +38,7 @@ const MISSING_TOP_LEVEL: Record<string, string> = {
   goal_id: 'Choose a goal',
 };
 
+const ID_PATTERN_MESSAGE = 'Use lowercase letters, numbers and hyphens only';
 const LEAD_ORG_MESSAGE = "Enter the lead organisation's name. It can be changed but not removed.";
 
 const SCHEMAS = {
@@ -61,14 +64,11 @@ function isMissing(issue: ZodIssue, path: string, body: Body): boolean {
   return issue.code === 'invalid_type' && valueAt(body, path) === undefined;
 }
 
-function missingMessage(path: string, label: string): string | null {
-  if (path.includes('.')) {
-    return `${label}: enter a value`;
-  }
-  return MISSING_TOP_LEVEL[path] ?? null;
+function missingMessage(path: string, label: string): string {
+  return MISSING_TOP_LEVEL[path] ?? `${label}: enter a value`;
 }
 
-function formatMessage(issue: ZodIssue, label: string): string | null {
+function formatMessage(issue: ZodIssue, path: string, label: string): string | null {
   if (issue.code !== 'invalid_format') {
     return null;
   }
@@ -78,17 +78,22 @@ function formatMessage(issue: ZodIssue, label: string): string | null {
   if (issue.format === 'date') {
     return `${label}: enter a real date`;
   }
-  return issue.format === 'regex' ? 'Use lowercase letters, numbers and hyphens only' : null;
+  if (issue.format !== 'regex') {
+    return null;
+  }
+  return path === 'id'
+    ? ID_PATTERN_MESSAGE
+    : `${label}: use lowercase letters, numbers and hyphens only`;
 }
 
 function customMessage(issue: ZodIssue, label: string): string | null {
   if (issue.code !== 'custom') {
     return null;
   }
-  if (issue.message === 'must not contain credentials') {
+  if (issue.message === CREDENTIALS_MESSAGE) {
     return `${label}: remove the username and password from the web address`;
   }
-  if (issue.message === 'must be well-formed text') {
+  if (issue.message === ILL_FORMED_TEXT_MESSAGE) {
     return `${label} contains a character that cannot be saved; retype it`;
   }
   return null;
@@ -111,7 +116,7 @@ function describeIssue(kind: ContentKind, issue: ZodIssue, body: Body): FieldIss
   const message =
     missing ??
     tooBigMessage(issue, label) ??
-    formatMessage(issue, label) ??
+    formatMessage(issue, path, label) ??
     customMessage(issue, label) ??
     `${label}: ${issue.message}`;
   return { path, message };

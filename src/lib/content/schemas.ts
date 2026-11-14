@@ -83,28 +83,30 @@ export function hasNoCredentials(url: string): boolean {
 }
 
 const wellFormedText = (text: string) => !hasLoneSurrogate(text);
-const ILL_FORMED = 'must be well-formed text';
+export const ILL_FORMED_TEXT_MESSAGE = 'must be well-formed text';
+export const CREDENTIALS_MESSAGE = 'must not contain credentials';
 
 const timedActionLinkSchema = z.strictObject({
-  label: nonEmptyStringSchema.max(FIELD_LIMITS.label).refine(wellFormedText, ILL_FORMED),
-  url: z
-    .string()
-    .trim()
-    .max(2048)
-    .pipe(z.httpUrl())
-    .refine(hasNoCredentials, 'must not contain credentials'),
+  label: nonEmptyStringSchema
+    .max(FIELD_LIMITS.label)
+    .refine(wellFormedText, ILL_FORMED_TEXT_MESSAGE),
+  url: z.string().trim().max(2048).pipe(z.httpUrl()).refine(hasNoCredentials, CREDENTIALS_MESSAGE),
 });
 
 const timedActionLocationSchema = z.strictObject({
-  label: nonEmptyStringSchema.max(FIELD_LIMITS.label).refine(wellFormedText, ILL_FORMED),
-  address: nonEmptyStringSchema.max(FIELD_LIMITS.address).refine(wellFormedText, ILL_FORMED),
+  label: nonEmptyStringSchema
+    .max(FIELD_LIMITS.label)
+    .refine(wellFormedText, ILL_FORMED_TEXT_MESSAGE),
+  address: nonEmptyStringSchema
+    .max(FIELD_LIMITS.address)
+    .refine(wellFormedText, ILL_FORMED_TEXT_MESSAGE),
 });
 
 export const timedActionInputSchema = z.strictObject({
   goal_id: idSchema,
   description: nonEmptyStringSchema
     .max(FIELD_LIMITS.description)
-    .refine(wellFormedText, ILL_FORMED),
+    .refine(wellFormedText, ILL_FORMED_TEXT_MESSAGE),
   link: timedActionLinkSchema.nullable(),
   location: timedActionLocationSchema.nullable(),
   expires_on: z.iso.date(),

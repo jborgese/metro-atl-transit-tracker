@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { fieldId, fieldLabel } from './labels';
 import { validatePayload, type ValidationContext } from './validate';
@@ -268,5 +269,80 @@ describe('fieldId', () => {
   it('builds control ids from paths', () => {
     expect(fieldId('project', 'sources.1.url')).toBe('project-sources-1-url');
     expect(fieldId('timed_action', 'link.url')).toBe('action-link-url');
+  });
+});
+
+describe('labels for every path the draft can produce', () => {
+  it.each([
+    ['goal', 'related_counties', 'Counties'],
+    ['goal', 'related_counties.0', 'County 1'],
+    ['project', 'modes', 'Modes'],
+    ['project', 'modes.2', 'Mode 3'],
+    ['goal', 'related_project_ids', 'Related projects'],
+    ['goal', 'related_project_ids.1', 'Related project 2'],
+    ['project', 'lead_org', 'Lead organisation'],
+    ['project', 'partners', 'Partners'],
+    ['project', 'partners.0', 'Partner 1'],
+    ['project', 'milestones', 'Milestones'],
+    ['project', 'milestones.1', 'Milestone 2'],
+    ['project', 'sources', 'Sources'],
+    ['project', 'sources.0', 'Source 1'],
+    ['goal', 'related_orgs', 'Related organisations'],
+    ['goal', 'related_orgs.2', 'Organisation 3'],
+    ['timed_action', 'link', 'Link'],
+    ['timed_action', 'location', 'Location'],
+  ] as const)('labels %s %s as %s', (kind, path, label) => {
+    expect(fieldLabel(kind, path)).toBe(label);
+  });
+
+  it('builds an id for an item path', () => {
+    expect(fieldId('goal', 'related_project_ids.0')).toBe('goal-related_project_ids-0');
+  });
+});
+
+describe('message rules added in fix round 1', () => {
+  it('words a missing value at an unmapped top-level path like a row', () => {
+    expect(validatePayload('project', 'update', { status: '', geo_scope: '' }, context)).toEqual([
+      { path: 'status', message: 'Status: enter a value' },
+      { path: 'geo_scope', message: 'Geographic scope: enter a value' },
+    ]);
+  });
+
+  it('labels the id pattern message on a path other than id', () => {
+    expect(validatePayload('goal', 'update', { related_project_ids: ['Bad Id'] }, context)).toEqual(
+      [
+        {
+          path: 'related_project_ids.0',
+          message: 'Related project 1: use lowercase letters, numbers and hyphens only',
+        },
+      ],
+    );
+  });
+
+  it('does not repeat the shared custom message literals', () => {
+    const source = readFileSync('src/lib/content/formModel/validate.ts', 'utf8');
+    expect(source).not.toContain('must not contain credentials');
+    expect(source).not.toContain('must be well-formed text');
+  });
+
+  it('reports a duplicate goal id', () => {
+    expect(validatePayload('goal', 'create', { id: 'p1', goal: 'G' }, context)).toEqual([
+      { path: 'id', message: 'A goal with this id already exists, including archived ones' },
+    ]);
+  });
+
+  it('has no duplicate-id rule for a timed action', () => {
+    expect(
+      validatePayload('timed_action', 'create', actionBody, {
+        ...context,
+        existingIds: ['g1', 'ta-aaaaaaaa'],
+      }),
+    ).toEqual([]);
+  });
+
+  it('reports a bad last day once, without the window message', () => {
+    expect(
+      validatePayload('timed_action', 'create', { ...actionBody, expires_on: 'tomorrow' }, context),
+    ).toEqual([{ path: 'expires_on', message: 'Last day: enter a real date' }]);
   });
 });

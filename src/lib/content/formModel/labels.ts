@@ -24,6 +24,16 @@ const TOP_LEVEL: Record<ContentKind, Record<string, string>> = {
 };
 
 const FIXED: Record<string, string> = {
+  related_counties: 'Counties',
+  modes: 'Modes',
+  related_project_ids: 'Related projects',
+  lead_org: 'Lead organisation',
+  partners: 'Partners',
+  milestones: 'Milestones',
+  sources: 'Sources',
+  related_orgs: 'Related organisations',
+  link: 'Link',
+  location: 'Location',
   'lead_org.name': 'Lead organisation name',
   'lead_org.url': 'Lead organisation web address',
   'link.label': 'Link button label',
@@ -45,6 +55,26 @@ const ROWS: Record<string, { noun: string; fields: Record<string, string> }> = {
   },
 };
 
+const ITEMS: Record<string, string> = {
+  related_counties: 'County',
+  modes: 'Mode',
+  related_project_ids: 'Related project',
+  partners: 'Partner',
+  milestones: 'Milestone',
+  sources: 'Source',
+  related_orgs: 'Organisation',
+};
+
+function itemLabel(path: string): string | undefined {
+  const [group, index, extra] = path.split('.');
+  const noun = group === undefined ? undefined : ITEMS[group];
+  const position = Number(index);
+  if (noun === undefined || extra !== undefined || !Number.isInteger(position)) {
+    return undefined;
+  }
+  return `${noun} ${position + 1}`;
+}
+
 function rowLabel(path: string): string | undefined {
   const [group, index, field] = path.split('.');
   const row = group === undefined ? undefined : ROWS[group];
@@ -57,7 +87,7 @@ function rowLabel(path: string): string | undefined {
 }
 
 export function fieldLabel(kind: ContentKind, path: string): string {
-  return TOP_LEVEL[kind][path] ?? FIXED[path] ?? rowLabel(path) ?? path;
+  return TOP_LEVEL[kind][path] ?? FIXED[path] ?? rowLabel(path) ?? itemLabel(path) ?? path;
 }
 
 export function fieldId(kind: ContentKind, path: string): string {

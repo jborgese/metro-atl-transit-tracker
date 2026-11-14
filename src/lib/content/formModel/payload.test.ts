@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import liveGoals from './fixtures/live-goals.json';
+import liveProjects from './fixtures/live-projects.json';
+import liveTimedActions from './fixtures/live-timed-actions.json';
+import { toFormDraft, toRecord } from './draft';
 import { toPayload } from './payload';
+import { validatePayload } from './validate';
+import type { ContentKind, ContentRecord, FormDraft } from './types';
 
 const goal = {
   id: 'g1',
@@ -124,4 +130,53 @@ describe('toPayload', () => {
     };
     expect(toPayload('project', 'update', reordered, project).changed).toBe(false);
   });
+});
+
+describe('live fixtures through the draft', () => {
+  const cases: Array<[ContentKind, ContentRecord[], string[], number]> = [
+    ['project', liveProjects, ['title'], 20],
+    ['goal', liveGoals, ['goal'], 12],
+    [
+      'timed_action',
+      liveTimedActions,
+      ['goal_id', 'description', 'link', 'location', 'expires_on'],
+      1,
+    ],
+  ];
+
+  function edited(kind: ContentKind, record: ContentRecord): ContentRecord {
+    const draft: FormDraft = toFormDraft(kind, record);
+    if (draft.kind === 'project') {
+      draft.title += ' x';
+    } else if (draft.kind === 'goal') {
+      draft.goal += ' x';
+    } else {
+      draft.description += ' x';
+    }
+    return toRecord(draft);
+  }
+
+  it.each(cases)(
+    'round-trips every %s untouched and accepts a benign edit',
+    (kind, records, keys, count) => {
+      expect(records).toHaveLength(count);
+      for (const record of records) {
+        const untouched = toPayload(kind, 'update', toRecord(toFormDraft(kind, record)), record);
+        expect(untouched.changed).toBe(false);
+        if (kind !== 'timed_action') {
+          expect(untouched).toEqual({ body: {}, changed: false, removedKeys: [] });
+        }
+        const { body, changed } = toPayload(kind, 'update', edited(kind, record), record);
+        expect(changed).toBe(true);
+        expect(Object.keys(body).sort()).toEqual([...keys].sort());
+        const context = {
+          today: '2026-11-14',
+          goals: liveGoals,
+          existingIds: [],
+          loaded: record,
+        };
+        expect(validatePayload(kind, 'update', body, context)).toEqual([]);
+      }
+    },
+  );
 });

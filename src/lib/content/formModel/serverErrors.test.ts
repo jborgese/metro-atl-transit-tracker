@@ -57,3 +57,18 @@ describe('parseServerError', () => {
     ).toBeNull();
   });
 });
+
+describe('parseServerError text sources', () => {
+  it('ignores a non-string message', () => {
+    expect(parseServerError(500, { message: 5 }, '/api/goals')).toEqual({
+      message: '/api/goals returned 500',
+      issue: null,
+    });
+  });
+
+  it('prefers message over error', () => {
+    expect(parseServerError(403, { message: 'm', error: 'e' }, '/api/goals').message).toBe(
+      '/api/goals returned 403: m',
+    );
+  });
+});
