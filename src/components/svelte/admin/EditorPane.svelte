@@ -10,12 +10,17 @@
   import { currentIssues } from '#lib/content/formModel/issues.ts';
   import { fieldId, fieldLabel } from '#lib/content/formModel/labels.ts';
   import { toPayload, type WriteMode } from '#lib/content/formModel/payload.ts';
-  import type { ContentKind, ContentRecord } from '#lib/content/formModel/types.ts';
+  import type {
+    ContentKind,
+    ContentRecord,
+    TimedActionDraft,
+  } from '#lib/content/formModel/types.ts';
   import { validatePayload, type FieldIssue } from '#lib/content/formModel/validate.ts';
   import type { Goal, Project } from '#types/content.ts';
   import { atlantaDate } from '#utils/timedActions.ts';
   import ErrorSummary from './ErrorSummary.svelte';
   import JsonView from './JsonView.svelte';
+  import TimedActionFields from './TimedActionFields.svelte';
 
   interface Props {
     kind: ContentKind;
@@ -27,6 +32,7 @@
     saving: boolean;
     loading: boolean;
     serverIssue: FieldIssue | null;
+    prefersJson?: boolean;
     meta?: Snippet;
     onsave: (request: { mode: WriteMode; body: Record<string, unknown> }) => void;
     onnochanges: () => void;
@@ -44,6 +50,7 @@
     saving,
     loading,
     serverIssue,
+    prefersJson = $bindable(false),
     meta,
     onsave,
     onnochanges,
@@ -56,8 +63,7 @@
   const stored = untrack(() => toFormDraft(kind, record ?? emptyRecord(kind)));
   let draft = $state(toFormDraft(stored.kind, stored.base));
   let jsonError = $state('');
-  let issues: FieldIssue[] = $state.raw([]);
-  let validated: ContentRecord = $state.raw({});
+  let reportedPaths: string[] = $state.raw([]);
   let sent: ContentRecord | null = $state.raw(null);
   let dismissedIssue: FieldIssue | null = $state(null);
   let errorSummary: ErrorSummary | undefined = $state();
@@ -69,6 +75,22 @@
   const dirty = $derived(payload.changed || jsonError !== '');
   const archived = $derived(loaded?.is_archived === true);
   const jsonId = $derived(fieldId(kind, 'json'));
+  const hasForm = $derived(kind === 'timed_action');
+  const showJson = $derived(!hasForm || prefersJson);
+  const today = atlantaDate(new Date());
+  const validationIssues = $derived.by(() => {
+    if (reportedPaths.length === 0) {
+      return [];
+    }
+    const attempted = toRecord(pruneBlankRows(draft));
+    const request = toPayload(kind, mode, attempted, loaded);
+    return validatePayload(kind, mode, request.body, {
+      today,
+      goals,
+      existingIds,
+      loaded,
+    }).filter((issue) => reportedPaths.includes(issue.path));
+  });
   const shownServerIssue = $derived(
     serverIssue === null ||
       serverIssue === dismissedIssue ||
@@ -76,31 +98,36 @@
       ? null
       : serverIssue,
   );
-  const summaryIssues = $derived.by(() => {
-    const href = `#${jsonId}`;
-    if (jsonError !== '') {
-      return [{ path: '', message: jsonError, href }];
-    }
-    return [
-      ...currentIssues(issues, validated, next).map((issue) => ({ ...issue, href })),
-      ...(shownServerIssue === null
-        ? []
-        : [
-            {
-              path: shownServerIssue.path,
-              message: describeServerIssue(shownServerIssue),
-              href,
-            },
-          ]),
-    ];
-  });
+  const fieldIssues: FieldIssue[] = $derived(
+    jsonError !== ''
+      ? []
+      : [
+          ...validationIssues,
+          ...(shownServerIssue === null
+            ? []
+            : [
+                {
+                  path: shownServerIssue.path,
+                  message: describeServerIssue(shownServerIssue),
+                },
+              ]),
+        ],
+  );
+  const summaryIssues = $derived(
+    jsonError !== ''
+      ? [{ path: '', message: jsonError, href: `#${jsonId}` }]
+      : fieldIssues.map((issue) => ({
+          ...issue,
+          href: `#${showJson ? jsonId : fieldId(kind, issue.path)}`,
+        })),
+  );
   const hasProblems = $derived(summaryIssues.length > 0);
 
   $effect(() => {
     if (!hasProblems) {
       return;
     }
-    const normal = document.title;
+    const normal = document.title.replace(/^Error: /, '');
     document.title = `Error: ${normal}`;
     return () => {
       document.title = normal;
@@ -142,9 +169,16 @@
     }
   }
 
+  function switchView() {
+    if (prefersJson && jsonError !== '') {
+      return;
+    }
+    prefersJson = !prefersJson;
+  }
+
   function save() {
     dismissedIssue = serverIssue;
-    issues = [];
+    reportedPaths = [];
     sent = null;
     if (jsonError !== '') {
       void focusSummary();
@@ -164,8 +198,7 @@
       loaded,
     });
     if (found.length > 0) {
-      issues = found;
-      validated = attempted;
+      reportedPaths = found.map((issue) => issue.path);
       void focusSummary();
       return;
     }
@@ -187,7 +220,25 @@
 
 {@render meta?.()}
 
-<JsonView id={jsonId} {draft} {stored} readonly={saving || loading} onedit={applyJson} />
+{#if hasForm}
+  <div class="view-switch">
+    <button type="button" onclick={switchView}>
+      {prefersJson ? 'Back to form' : 'Edit as JSON (advanced)'}
+    </button>
+  </div>
+{/if}
+
+{#if showJson}
+  <JsonView id={jsonId} {draft} {stored} readonly={saving || loading} onedit={applyJson} />
+{:else}
+  <TimedActionFields
+    bind:draft={() => draft as TimedActionDraft, (value) => (draft = value)}
+    {goals}
+    issues={fieldIssues}
+    {today}
+    readonly={saving || loading}
+  />
+{/if}
 
 {#each payload.removedKeys as key (key)}
   <p class="editor-state warning">

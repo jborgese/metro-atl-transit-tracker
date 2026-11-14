@@ -31,6 +31,11 @@ describe('FormField', () => {
     );
   });
 
+  it('shows the Error: prefix as visible text', () => {
+    renderField({ id: 'project-title', label: 'Title', error: 'Enter a title' });
+    expect(document.querySelector('#project-title-error .visually-hidden')).toBeNull();
+  });
+
   it('is not invalid without an error', () => {
     renderField({ id: 'project-title', label: 'Title' });
     expect(screen.getByLabelText('Title').hasAttribute('aria-invalid')).toBe(false);

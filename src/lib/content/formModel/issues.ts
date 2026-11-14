@@ -11,7 +11,7 @@ export function valueAt(record: ContentRecord, path: string): unknown {
     if (typeof found !== 'object' || found === null) {
       return undefined;
     }
-    found = (found as Record<string, unknown>)[segment];
+    found = Object.hasOwn(found, segment) ? (found as Record<string, unknown>)[segment] : undefined;
   }
   return found;
 }

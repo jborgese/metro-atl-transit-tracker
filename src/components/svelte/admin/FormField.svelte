@@ -53,7 +53,7 @@
     <p class="hint" id={hintId}>{hint}</p>
   {/if}
   {#if error}
-    <p class="error" id={errorId}><span class="visually-hidden">Error:</span> {error}</p>
+    <p class="error" id={errorId}>Error: {error}</p>
   {/if}
   {@render children({ describedBy, invalid: Boolean(error) })}
   {#if counter !== null}

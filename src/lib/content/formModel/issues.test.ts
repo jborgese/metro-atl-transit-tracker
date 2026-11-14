@@ -22,6 +22,11 @@ describe('valueAt', () => {
     expect(valueAt(record, 'lead_org.name')).toBeUndefined();
     expect(valueAt(record, 'title.length.x')).toBeUndefined();
   });
+
+  it('reads own properties only', () => {
+    expect(valueAt(record, 'constructor')).toBeUndefined();
+    expect(valueAt(record, '__proto__')).toBeUndefined();
+  });
 });
 
 describe('currentIssues', () => {
