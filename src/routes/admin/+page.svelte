@@ -41,6 +41,8 @@
   let saving = $state(false);
   let serverIssue: FieldIssue | null = $state(null);
   let prefersJson = $state(false);
+  let actionPreset = $state('');
+  let createdFromGoal: { actionId: string; goalId: string } | null = $state(null);
   let writing = false;
   let editorIsPlaceholder = true;
   let lastLoadedAt = $state('');
@@ -83,6 +85,16 @@
     selectedEntity === null ? null : { ...selectedEntity },
   );
   const existingIds = $derived(lists[selectedDataset].map((item) => item.id));
+  const goalActions = $derived.by(() =>
+    selectedDataset === 'goal' && selectedId
+      ? timedActions.filter((item) => item.goal_id === selectedId)
+      : [],
+  );
+  const returnToGoalId = $derived.by(() =>
+    selectedDataset === 'timed_action' && createdFromGoal?.actionId === selectedId
+      ? createdFromGoal.goalId
+      : undefined,
+  );
   const paneKey = $derived(
     [selectedDataset, selectedId, selectedEntity?.provenance?.updated_at ?? '', editorVersion].join(
       '|',
@@ -153,6 +165,8 @@
     dataset = mode;
     selectedDataset = mode;
     selectedId = '';
+    actionPreset = '';
+    createdFromGoal = null;
     openEditor();
   }
 
@@ -180,6 +194,10 @@
     dataset = kind;
     selectedDataset = kind;
     selectedId = id;
+    actionPreset = '';
+    if (kind !== 'timed_action' || createdFromGoal?.actionId !== id) {
+      createdFromGoal = null;
+    }
     openEditor();
   }
 
@@ -209,6 +227,21 @@
   async function handleNew() {
     if (await confirmLeave()) {
       startNew(dataset);
+    }
+  }
+
+  async function startNewActionForGoal(goalId: string) {
+    if (await confirmLeave()) {
+      startNew('timed_action');
+      actionPreset = goalId;
+      await focusEditorHeading();
+    }
+  }
+
+  async function returnToGoal(goalId: string) {
+    if (await confirmLeave()) {
+      selectEntity(goalId, 'goal');
+      await focusEditorHeading();
     }
   }
 
@@ -469,6 +502,7 @@
     const isCreate = mode === 'create';
     const targetDataset: EditorEntity = selectedDataset;
     const loadedAt = selectedEntity?.provenance?.updated_at;
+    const fromGoal = isCreate && targetDataset === 'timed_action' ? actionPreset : '';
 
     const base = DATASETS[targetDataset].endpoint;
     const endpoint = isCreate ? base : `${base}/${encodeURIComponent(selectedId)}`;
@@ -507,6 +541,9 @@
       const failure = await loadData({ quiet: true });
       if (savedId) {
         selectEntity(savedId, targetDataset);
+        if (fromGoal) {
+          createdFromGoal = { actionId: savedId, goalId: fromGoal };
+        }
       }
       const noun = entityNoun(targetDataset);
       const summary =
@@ -870,16 +907,21 @@
             record={selectedRecord}
             {goals}
             {projects}
+            actions={goalActions}
             {existingIds}
             {saving}
             {loading}
             {serverIssue}
             bind:prefersJson
+            presetGoalId={actionPreset}
+            {returnToGoalId}
             onsave={handleSave}
             onnochanges={() => setMessage('No changes to save.', 'info')}
             onarchive={archiveSelected}
             onrestore={restoreSelected}
             onclose={closeEditor}
+            onaddaction={startNewActionForGoal}
+            onbacktogoal={returnToGoal}
           >
             {#snippet meta()}
               {#if selectedEntity}
