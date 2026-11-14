@@ -3,6 +3,7 @@
   import Portal from './Portal.svelte';
   import type { Goal, Project } from '#types/content.ts';
   import { statusLabel, getStatusColor, getStatusTextColor } from '#utils/statusHelpers.ts';
+  import { geoScopeLabel } from '#lib/content/options.ts';
   import { getCountyName } from '#utils/countyLookup.ts';
   import { formatDate, formatTimestamp } from '#utils/dateFormat.ts';
   import { getRelatedGoals } from '#utils/projectRelations.ts';
@@ -91,22 +92,6 @@
       });
   }
 
-  function humanizeScope(scope: string | undefined): string {
-    if (!scope) return '';
-    switch (scope) {
-      case 'corridor':
-        return 'Corridor';
-      case 'regional':
-        return 'Regional';
-      case 'county':
-        return 'County';
-      case 'local':
-        return 'Local';
-      default:
-        return scope.charAt(0).toUpperCase() + scope.slice(1);
-    }
-  }
-
   const milestones = $derived(project ? normalizeMilestones(project.milestones) : []);
   const relatedGoals = $derived(project ? getRelatedGoals(project, goals) : []);
   const timelineText = $derived.by(() => {
@@ -175,7 +160,7 @@
           {#if project.geo_scope}
             <div class="fact">
               <h3>Geography</h3>
-              <p>{humanizeScope(project.geo_scope)}</p>
+              <p>{geoScopeLabel(project.geo_scope)}</p>
             </div>
           {/if}
           {#if project.modes && project.modes.length > 0}
