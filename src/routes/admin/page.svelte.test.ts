@@ -235,6 +235,10 @@ async function startNew(tabLabel: 'Projects' | 'Goals' | 'Actions') {
   await fireEvent.click(screen.getByRole('button', { name: /^\+ New / }));
 }
 
+async function asJson() {
+  await fireEvent.click(screen.getByRole('button', { name: 'Edit as JSON (advanced)' }));
+}
+
 async function typeIntoEditor(value: string) {
   await fireEvent.input(editor(), { target: { value } });
 }
@@ -273,6 +277,7 @@ describe('admin page editor target', () => {
     expect(heading().textContent?.trim()).toBe('New Action');
     expect(screen.getByRole('button', { name: 'Create Action' })).toBeTruthy();
 
+    await asJson();
     await typeIntoEditor(JSON.stringify(newAction));
     await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
 
@@ -305,6 +310,7 @@ describe('admin page editor target', () => {
   it('selects the saved record when the actions reload fails, and says so', async () => {
     failActionsReload = true;
     await startNew('Actions');
+    await asJson();
     await typeIntoEditor(JSON.stringify(newAction));
     await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
 
@@ -322,6 +328,7 @@ describe('admin page editor target', () => {
     expect(heading().textContent?.trim()).toBe('New Project');
     await fireEvent.click(tab(/^Actions/));
     expect(heading().textContent?.trim()).toBe('New Action');
+    await asJson();
     expect(editorValue()).toEqual({
       goal_id: '',
       description: '',
@@ -359,6 +366,7 @@ describe('admin page editor target', () => {
 describe('leaving a record', () => {
   it('asks before discarding changes when another record is clicked', async () => {
     await openActionsTabAndSelect('Existing action');
+    await asJson();
     await typeIntoEditor('{}');
     await fireEvent.click(screen.getByRole('tab', { name: /Goals/ }));
     await fireEvent.click(screen.getByRole('button', { name: /Regional goal/ }));
@@ -636,6 +644,7 @@ describe('saving', () => {
 
   it('replaces an action with exactly its five fields', async () => {
     await openActionsTabAndSelect('Existing action');
+    await asJson();
     await typeIntoEditor(JSON.stringify({ ...editorValue(), description: 'Changed action' }));
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(writes()).toHaveLength(1));
@@ -784,6 +793,14 @@ describe('saving', () => {
     expect(editorValue().sources).toEqual([{ label: 'Plan v2', url: 'https://example.org/plan' }]);
 
     await typeIntoEditor(JSON.stringify({ ...editorValue(), title: 'Proj Two' }));
+    expect(screen.getByText('Source 1 web address: Invalid URL')).toBeTruthy();
+
+    await typeIntoEditor(
+      JSON.stringify({
+        ...editorValue(),
+        sources: [{ label: 'Plan v2', url: 'https://example.org/plan-v2' }],
+      }),
+    );
     expect(screen.queryByText('Source 1 web address: Invalid URL')).toBeNull();
   });
 
@@ -842,6 +859,7 @@ describe('freshness check before an update', () => {
       provenance: { updated_at: '2026-11-14T10:00:00Z', updated_by: 'JT' },
     };
     await openActionsTabAndSelect('Existing action');
+    await asJson();
     await typeIntoEditor(JSON.stringify({ ...editorValue(), description: 'Changed action' }));
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() =>
@@ -875,6 +893,351 @@ describe('freshness check before an update', () => {
       method: 'PATCH',
       path: '/api/goals/g1',
       body: JSON.stringify({ actions: 'Mine' }),
+    });
+  });
+});
+
+describe('action form', () => {
+  const summary = () => screen.getByRole('alert');
+  const field = (label: string) => screen.getByLabelText(label);
+
+  it('creates an action from the form', async () => {
+    await startNew('Actions');
+    await fireEvent.change(screen.getByLabelText('Goal (required)'), { target: { value: 'g1' } });
+    await fireEvent.input(screen.getByLabelText('Description (required)'), {
+      target: { value: 'Brand new action' },
+    });
+    await fireEvent.input(screen.getByLabelText('Last day (required)'), {
+      target: { value: '2026-12-05' },
+    });
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(lastWrite()).toMatchObject({ method: 'POST', path: '/api/timed-actions' });
+    expect(JSON.parse(lastWrite().body!)).toEqual({
+      goal_id: 'g1',
+      description: 'Brand new action',
+      link: null,
+      location: null,
+      expires_on: '2026-12-05',
+    });
+  });
+
+  it('focuses the summary and clears an error once it is fixed', async () => {
+    await startNew('Actions');
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    expect(document.activeElement).toBe(screen.getByRole('alert'));
+    const description = screen.getByLabelText('Description (required)');
+    expect(description.getAttribute('aria-invalid')).toBe('true');
+    await fireEvent.input(description, { target: { value: 'Now filled' } });
+    expect(description.hasAttribute('aria-invalid')).toBe(false);
+    expect(screen.queryByText('Enter a description')).toBeNull();
+  });
+
+  it('carries edits between the form and the JSON view', async () => {
+    await startNew('Actions');
+    await fireEvent.input(screen.getByLabelText('Description (required)'), {
+      target: { value: 'From the form' },
+    });
+    await fireEvent.click(screen.getByRole('button', { name: 'Edit as JSON (advanced)' }));
+    expect(
+      JSON.parse((screen.getByLabelText('Record as JSON') as HTMLTextAreaElement).value)
+        .description,
+    ).toBe('From the form');
+    await typeIntoEditor('{');
+    await fireEvent.click(screen.getByRole('button', { name: 'Back to form' }));
+    expect(screen.getByText(/^The JSON does not parse/)).toBeTruthy();
+    expect(screen.queryByLabelText('Description (required)')).toBeNull();
+  });
+
+  it('comes back to the form with the JSON edits when the JSON parses', async () => {
+    await startNew('Actions');
+    await asJson();
+    await typeIntoEditor(JSON.stringify(newAction));
+    await fireEvent.click(screen.getByRole('button', { name: 'Back to form' }));
+    expect((field('Description (required)') as HTMLTextAreaElement).value).toBe('Brand new action');
+    expect((field('Goal (required)') as HTMLSelectElement).value).toBe('g1');
+  });
+
+  it('opens an untouched action clean, sends nothing, and stays clean across view switches', async () => {
+    await openActionsTabAndSelect('Existing action');
+    expect((field('Description (required)') as HTMLTextAreaElement).value).toBe('Existing action');
+    expect(screen.queryByText('Unsaved changes.')).toBeNull();
+    await asJson();
+    await fireEvent.click(screen.getByRole('button', { name: 'Back to form' }));
+    expect(screen.queryByText('Unsaved changes.')).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    expect(status()).toContain('No changes to save.');
+  });
+
+  it('updates an existing action from the form with its five fields', async () => {
+    await openActionsTabAndSelect('Existing action');
+    await fireEvent.input(field('Description (required)'), { target: { value: 'Edited here' } });
+    expect(screen.getByText('Unsaved changes.')).toBeTruthy();
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(lastWrite()).toMatchObject({ method: 'PATCH', path: '/api/timed-actions/ta-existing' });
+    expect(JSON.parse(lastWrite().body!)).toEqual({
+      goal_id: 'g1',
+      description: 'Edited here',
+      link: null,
+      location: null,
+      expires_on: '2026-12-01',
+    });
+  });
+
+  it('reports a half-filled link at the web address and sends nothing', async () => {
+    await openActionsTabAndSelect('Existing action');
+    await fireEvent.input(field('Link button label'), { target: { value: 'Comment' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    expect(reads('/api/timed-actions/ta-existing')).toHaveLength(0);
+    expect(field('Link web address').getAttribute('aria-invalid')).toBe('true');
+    expect(within(summary()).getAllByRole('link')).toHaveLength(1);
+    expect(within(summary()).getByRole('link').getAttribute('href')).toBe('#action-link-url');
+  });
+
+  it('sends link: null when both link fields of an action that had a link are cleared', async () => {
+    stored['/api/timed-actions'] = [
+      { ...action, link: { label: 'Comment', url: 'https://example.org/comment' } },
+    ];
+    await openActionsTabAndSelect('Existing action');
+    expect((field('Link button label') as HTMLInputElement).value).toBe('Comment');
+    await fireEvent.input(field('Link button label'), { target: { value: '' } });
+    await fireEvent.input(field('Link web address'), { target: { value: '' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(JSON.parse(lastWrite().body!)).toEqual({
+      goal_id: 'g1',
+      description: 'Existing action',
+      link: null,
+      location: null,
+      expires_on: '2026-12-01',
+    });
+  });
+
+  it('links each problem to its field, and a click focuses it', async () => {
+    await startNew('Actions');
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    const links = within(summary()).getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href')).sort()).toEqual([
+      '#action-description',
+      '#action-expires_on',
+      '#action-goal_id',
+    ]);
+    const goalLink = links.find((link) => link.getAttribute('href') === '#action-goal_id')!;
+    await fireEvent.click(goalLink);
+    expect(document.activeElement).toBe(field('Goal (required)'));
+  });
+
+  it('keeps a problem while its field is still invalid and updates the message', async () => {
+    await startNew('Actions');
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    expect(within(summary()).getAllByRole('link')).toHaveLength(3);
+
+    await fireEvent.input(field('Description (required)'), { target: { value: 'Filled' } });
+    expect(within(summary()).queryByText('Enter a description')).toBeNull();
+    expect(within(summary()).getAllByRole('link')).toHaveLength(2);
+
+    expect(within(summary()).getByText('Choose a last day')).toBeTruthy();
+    await fireEvent.input(field('Last day (required)'), { target: { value: '2020-01-01' } });
+    expect(within(summary()).getAllByRole('link')).toHaveLength(2);
+    expect(within(summary()).queryByText('Choose a last day')).toBeNull();
+    expect(within(summary()).getByText(/^Last day /)).toBeTruthy();
+    expect(field('Last day (required)').getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('stays in the JSON view after a save re-creates the pane', async () => {
+    await openActionsTabAndSelect('Existing action');
+    await asJson();
+    await typeIntoEditor(JSON.stringify({ ...editorValue(), description: 'Changed in JSON' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    await waitFor(() => expect(status()).toContain('Updated'));
+    await settle();
+    expect(screen.getByRole('button', { name: 'Back to form' })).toBeTruthy();
+    expect(editor().value).toContain('Changed in JSON');
+    expect(screen.queryByLabelText('Description (required)')).toBeNull();
+  });
+
+  it('offers the switch for actions only', async () => {
+    await selectProject('Proj One');
+    expect(screen.queryByRole('button', { name: /Edit as JSON|Back to form/ })).toBeNull();
+    expect(editor()).toBeTruthy();
+    await fireEvent.click(tab(/^Goals/));
+    await fireEvent.click(screen.getByRole('button', { name: /Regional goal/ }));
+    expect(screen.queryByRole('button', { name: /Edit as JSON|Back to form/ })).toBeNull();
+    expect(editor()).toBeTruthy();
+  });
+
+  it('still asks before leaving a form edit', async () => {
+    await openActionsTabAndSelect('Existing action');
+    await fireEvent.input(field('Description (required)'), { target: { value: 'Edited' } });
+    await fireEvent.click(tab(/^Projects/));
+    await fireEvent.click(screen.getByRole('button', { name: /Proj One/ }));
+    expect(screen.getByRole('alertdialog')).toHaveProperty('open', true);
+    expect(screen.getByText('Discard your changes to Action ta-existing?')).toBeTruthy();
+  });
+
+  it('disables the form while a save is in flight', async () => {
+    let release = () => {};
+    writeGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await openActionsTabAndSelect('Existing action');
+    const description = field('Description (required)') as HTMLTextAreaElement;
+    expect(description.disabled).toBe(false);
+    await fireEvent.input(description, { target: { value: 'Edited' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(description.matches(':disabled')).toBe(true);
+    expect(field('Goal (required)').matches(':disabled')).toBe(true);
+    release();
+    await waitFor(() => expect(status()).toContain('Updated'));
+    await settle();
+    expect((field('Description (required)') as HTMLTextAreaElement).matches(':disabled')).toBe(
+      false,
+    );
+  });
+});
+
+describe('action form after review', () => {
+  const summary = () => screen.getByRole('alert');
+  const field = (label: string) => screen.getByLabelText(label);
+
+  async function openStored(overrides: Row, goals?: Row[]) {
+    stored['/api/timed-actions'] = [{ ...action, ...overrides }];
+    if (goals) {
+      stored['/api/goals'] = goals;
+    }
+    await openActionsTabAndSelect('Existing action');
+  }
+
+  async function saveDescriptionOnly(expected: Row) {
+    await fireEvent.input(field('Description (required)'), { target: { value: 'Edited only' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(JSON.parse(lastWrite().body!)).toEqual({
+      goal_id: 'g1',
+      description: 'Edited only',
+      link: null,
+      location: null,
+      expires_on: '2026-12-01',
+      ...expected,
+    });
+  }
+
+  it('checks the last day against the date at Save, not the date the form opened', async () => {
+    vi.setSystemTime(new Date('2026-11-15T04:59:00Z'));
+    await startNew('Actions');
+    await fireEvent.change(field('Goal (required)'), { target: { value: 'g1' } });
+    await fireEvent.input(field('Description (required)'), { target: { value: 'Late' } });
+    await fireEvent.input(field('Last day (required)'), { target: { value: '2026-11-14' } });
+    expect((field('Last day (required)') as HTMLInputElement).min).toBe('2026-11-14');
+
+    vi.setSystemTime(new Date('2026-11-15T05:01:00Z'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    expect(
+      within(summary()).getByText('Last day must be between 2026-11-15 and 2027-11-16'),
+    ).toBeTruthy();
+    expect(field('Last day (required)').getAttribute('aria-invalid')).toBe('true');
+    expect((field('Last day (required)') as HTMLInputElement).min).toBe('2026-11-15');
+    expect((field('Last day (required)') as HTMLInputElement).max).toBe('2027-11-16');
+    expect(screen.getByText(/From 2026-11-15 to 2027-11-16\.$/)).toBeTruthy();
+  });
+
+  it('forgets a fixed problem until the next Save', async () => {
+    await startNew('Actions');
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    const description = field('Description (required)');
+    await fireEvent.input(description, { target: { value: 'Fixed' } });
+    expect(screen.queryByText('Enter a description')).toBeNull();
+
+    await fireEvent.input(description, { target: { value: '' } });
+    expect(screen.queryByText('Enter a description')).toBeNull();
+    expect(description.hasAttribute('aria-invalid')).toBe(false);
+    expect(within(summary()).getAllByRole('link')).toHaveLength(2);
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    expect(within(summary()).getByText('Enter a description')).toBeTruthy();
+    expect(description.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('shows a JSON error in the summary only as captured by a Save', async () => {
+    await startNew('Actions');
+    await asJson();
+    await typeIntoEditor('{');
+    expect(screen.getByText(/^The JSON does not parse/)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    const captured = within(summary()).getByText(/^The JSON does not parse/).textContent;
+    expect(document.activeElement).toBe(summary());
+
+    await typeIntoEditor('{ "a"');
+    expect(within(summary()).getByText(/^The JSON does not parse/).textContent).toBe(captured);
+
+    await typeIntoEditor(JSON.stringify(newAction));
+    expect(screen.queryByRole('alert')).toBeNull();
+    await typeIntoEditor('{ "b"');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText(/^The JSON does not parse/)).toBeTruthy();
+  });
+
+  it('keeps an archived stored goal, clean, and saves a description edit with it', async () => {
+    await openStored({ goal_id: 'g2' }, [
+      structuredClone(goal),
+      { id: 'g2', goal: 'Old goal', is_archived: true },
+    ]);
+    const select = field('Goal (required)') as HTMLSelectElement;
+    expect(select.value).toBe('g2');
+    expect(select.selectedOptions[0]!.textContent).toBe('Old goal (g2) (archived)');
+    expect(screen.queryByText('Unsaved changes.')).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    await saveDescriptionOnly({ goal_id: 'g2' });
+  });
+
+  it('keeps a stored goal that matches nothing, clean, and saves a description edit with it', async () => {
+    await openStored({ goal_id: 'zz' });
+    const select = field('Goal (required)') as HTMLSelectElement;
+    expect(select.value).toBe('zz');
+    expect(select.selectedOptions[0]!.textContent).toBe('zz (not found)');
+    expect(screen.queryByText('Unsaved changes.')).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    await saveDescriptionOnly({ goal_id: 'zz' });
+  });
+
+  it.each([['2026-11-01'], ['2028-06-01']])(
+    'keeps the stored last day %s and saves a description edit without a date problem',
+    async (date) => {
+      await openStored({ expires_on: date });
+      expect((field('Last day (required)') as HTMLInputElement).value).toBe(date);
+      await saveDescriptionOnly({ expires_on: date });
+      expect(screen.queryByRole('alert')).toBeNull();
+    },
+  );
+
+  it('sends location: null when both location fields are cleared', async () => {
+    await openStored({ location: { label: 'Map', address: '1 Main St' } });
+    expect((field('Address') as HTMLInputElement).value).toBe('1 Main St');
+    await fireEvent.input(field('Location button label'), { target: { value: '' } });
+    await fireEvent.input(field('Address'), { target: { value: '' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(JSON.parse(lastWrite().body!)).toEqual({
+      goal_id: 'g1',
+      description: 'Existing action',
+      link: null,
+      location: null,
+      expires_on: '2026-12-01',
     });
   });
 });
@@ -996,6 +1359,7 @@ describe('keeping drafts and focus', () => {
       { ...action, link: { label: 'Comment', url: 'https://example.org/comment' } },
     ];
     await openActionsTabAndSelect('Existing action');
+    await asJson();
     await typeIntoEditor(
       JSON.stringify({
         goal_id: 'g1',
@@ -1018,6 +1382,7 @@ describe('keeping drafts and focus', () => {
 
   it('reports a description deleted from an action and sends nothing', async () => {
     await openActionsTabAndSelect('Existing action');
+    await asJson();
     await typeIntoEditor(
       JSON.stringify({ goal_id: 'g1', link: null, location: null, expires_on: '2026-12-01' }),
     );
@@ -1026,5 +1391,166 @@ describe('keeping drafts and focus', () => {
     await settle();
     expect(writes()).toHaveLength(0);
     expect(reads('/api/timed-actions/ta-existing')).toHaveLength(0);
+  });
+});
+
+describe('error summary', () => {
+  const summary = () => screen.getByRole('alert');
+  const normalTitle = () => document.title.replace(/^Error: /, '');
+
+  async function failNewActionSave() {
+    await startNew('Actions');
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+  }
+
+  it('takes focus after a failed save, and again when the same save fails again', async () => {
+    await failNewActionSave();
+    await waitFor(() => expect(document.activeElement).toBe(summary()));
+
+    const button = screen.getByRole('button', { name: 'Create Action' });
+    button.focus();
+    await fireEvent.click(button);
+    await waitFor(() => expect(document.activeElement).toBe(summary()));
+  });
+
+  it('takes focus when the JSON does not parse', async () => {
+    await selectGoal('Regional goal');
+    await typeIntoEditor('{"goal": ');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(document.activeElement).toBe(summary()));
+    expect(within(summary()).getAllByRole('link')).toHaveLength(1);
+  });
+
+  it('takes focus when the server rejects a field', async () => {
+    failWritesWith(
+      json({ message: 'project validation failed - sources.0.url: Invalid URL' }, 400),
+    );
+    await selectProject('Proj One');
+    await typeIntoEditor(
+      JSON.stringify({
+        ...editorValue(),
+        sources: [{ label: 'Plan v2', url: 'https://example.org/plan' }],
+      }),
+    );
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(document.activeElement).toBe(summary()));
+  });
+
+  it('links every problem to the JSON text, and a click focuses it', async () => {
+    await failNewActionSave();
+    await asJson();
+    const links = within(summary()).getAllByRole('link');
+    expect(links).toHaveLength(3);
+    for (const link of links) {
+      expect(link.getAttribute('href')).toBe('#action-json');
+    }
+    expect(editor().id).toBe('action-json');
+    await fireEvent.click(links[0]!);
+    expect(document.activeElement).toBe(editor());
+  });
+
+  it('prefixes the page title with Error: while problems show, and restores it', async () => {
+    await startNew('Actions');
+    await asJson();
+    const before = document.title;
+    expect(before.startsWith('Error: ')).toBe(false);
+    await typeIntoEditor(JSON.stringify({ ...newAction, description: '' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await waitFor(() => expect(document.title).toBe(`Error: ${before}`));
+
+    await typeIntoEditor(JSON.stringify(newAction));
+    await waitFor(() => expect(document.title).toBe(before));
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    await settle();
+    expect(document.title).toBe(before);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('restores the title when the pane is closed', async () => {
+    await selectGoal('Regional goal');
+    const before = document.title;
+    await typeIntoEditor('{"goal": ');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(document.title).toBe(`Error: ${before}`));
+    await fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => expect(document.title).toBe(before));
+    expect(normalTitle()).toBe(before);
+  });
+
+  it('drops a problem when its value becomes valid, and keeps an invalid one with its new message', async () => {
+    await failNewActionSave();
+    expect(within(summary()).getAllByRole('link')).toHaveLength(3);
+    expect(within(summary()).getByText('Enter a description')).toBeTruthy();
+
+    await fireEvent.input(screen.getByLabelText('Description (required)'), {
+      target: { value: 'Something' },
+    });
+    expect(within(summary()).queryByText('Enter a description')).toBeNull();
+    expect(within(summary()).getAllByRole('link')).toHaveLength(2);
+    expect(within(summary()).getByText('Choose a goal')).toBeTruthy();
+
+    const lastDay = screen.getByLabelText('Last day (required)');
+    expect(within(summary()).getByText('Choose a last day')).toBeTruthy();
+    await fireEvent.input(lastDay, { target: { value: '2020-01-01' } });
+    const links = within(summary()).getAllByRole('link');
+    expect(links).toHaveLength(2);
+    expect(within(summary()).queryByText('Choose a last day')).toBeNull();
+    expect(links[1]!.textContent).toMatch(/^Last day /);
+    expect(lastDay.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('never shows a problem the last Save did not report', async () => {
+    await failNewActionSave();
+    await fireEvent.input(screen.getByLabelText('Link button label'), {
+      target: { value: 'x'.repeat(41) },
+    });
+    expect(within(summary()).getAllByRole('link')).toHaveLength(3);
+    expect(screen.getByLabelText('Link button label').hasAttribute('aria-invalid')).toBe(false);
+    expect(screen.getByLabelText('Link web address').hasAttribute('aria-invalid')).toBe(false);
+  });
+
+  it('does not restore an Error: prefix it found on the title', async () => {
+    await startNew('Actions');
+    document.title = 'Error: Stale';
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await waitFor(() => expect(document.title).toBe('Error: Stale'));
+    await fireEvent.change(screen.getByLabelText('Goal (required)'), { target: { value: 'g1' } });
+    await fireEvent.input(screen.getByLabelText('Description (required)'), {
+      target: { value: 'Filled' },
+    });
+    await fireEvent.input(screen.getByLabelText('Last day (required)'), {
+      target: { value: '2026-12-05' },
+    });
+    expect(screen.queryByRole('alert')).toBeNull();
+    await waitFor(() => expect(document.title).toBe('Stale'));
+  });
+
+  it('disables Format JSON while the text is read-only', async () => {
+    let release = () => {};
+    writeGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await selectGoal('Regional goal');
+    const format = screen.getByRole('button', { name: 'Format JSON' });
+    expect(format.hasAttribute('disabled')).toBe(false);
+    await editGoalActions('Mine');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(format.hasAttribute('disabled')).toBe(true);
+    release();
+    await waitFor(() => expect(status()).toContain('Updated goal g1.'));
+    await settle();
+    expect(screen.getByRole('button', { name: 'Format JSON' }).hasAttribute('disabled')).toBe(
+      false,
+    );
+  });
+
+  it('moves focus to the heading after Close', async () => {
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+    await waitFor(() => expect(heading().textContent).toContain('New'));
+    await waitFor(() => expect(document.activeElement).toBe(heading()));
   });
 });

@@ -4,16 +4,16 @@
   import type { FormDraft } from '#lib/content/formModel/types.ts';
 
   interface Props {
+    id: string;
     draft: FormDraft;
     stored: FormDraft;
     readonly: boolean;
     onedit: (result: JsonResult) => void;
   }
 
-  let { draft, stored, readonly, onedit }: Props = $props();
+  let { id, draft, stored, readonly, onedit }: Props = $props();
 
   const uid = $props.id();
-  const textId = `${uid}-text`;
   const noteId = `${uid}-note`;
 
   let text = $state(untrack(() => toJsonText(draft)));
@@ -34,11 +34,11 @@
 </script>
 
 <div class="json-head">
-  <label for={textId}>Record as JSON</label>
-  <button type="button" onclick={format}>Format JSON</button>
+  <label for={id}>Record as JSON</label>
+  <button type="button" onclick={format} disabled={readonly}>Format JSON</button>
 </div>
 <textarea
-  id={textId}
+  {id}
   value={text}
   spellcheck="false"
   {readonly}
@@ -80,11 +80,16 @@
     cursor: pointer;
   }
 
+  button:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
   textarea {
     min-height: 24rem;
     width: 100%;
     resize: vertical;
-    border: 1px solid var(--border-subtle);
+    border: 1px solid var(--field-border);
     border-radius: 0.5rem;
     background: var(--surface-1);
     color: inherit;
@@ -96,7 +101,7 @@
 
   button:focus-visible,
   textarea:focus-visible {
-    outline: 2px solid var(--link);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 
@@ -107,7 +112,7 @@
   }
 
   .note.error {
-    color: var(--text-on-dark);
+    color: var(--danger-text);
     border-left: 3px solid var(--atl-red);
     padding-left: 0.5rem;
   }

@@ -40,6 +40,7 @@
   let editorVersion = $state(0);
   let saving = $state(false);
   let serverIssue: FieldIssue | null = $state(null);
+  let prefersJson = $state(false);
   let writing = false;
   let editorIsPlaceholder = true;
   let lastLoadedAt = $state('');
@@ -224,6 +225,8 @@
   async function closeEditor() {
     if (await confirmLeave()) {
       startNew(dataset, true);
+      await tick();
+      pane?.focusHeading();
     }
   }
 
@@ -871,6 +874,7 @@
             {saving}
             {loading}
             {serverIssue}
+            bind:prefersJson
             onsave={handleSave}
             onnochanges={() => setMessage('No changes to save.', 'info')}
             onarchive={archiveSelected}

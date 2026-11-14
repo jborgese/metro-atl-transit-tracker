@@ -65,6 +65,18 @@ This makes the UA render scrollbars, native form controls, and autofill highligh
 | `--shadow-1`      | `0 6px 18px rgba(0, 0, 0, 0.35)`  | Cards and panels resting on the map.                |
 | `--shadow-2`      | `0 10px 30px rgba(0, 0, 0, 0.45)` | Modals and dropdowns.                               |
 
+### Forms (3)
+
+Contrast is computed with the WCAG relative-luminance formula. `--surface-1` and `--surface-2` are composited over `--atl-green` first (`#192b28` and `#152422`).
+
+| Token            | Value     | Use when                                                                                                                                                                                                                   |
+| ---------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--danger-text`  | `#f0b8b3` | Error text, the error-summary links and the over-limit counter on dark surfaces. 8.6:1 vs `--surface-1`, 9.3:1 vs `--surface-2`, 5.0:1 vs `--atl-green`; all clear WCAG AA for text.                                       |
+| `--field-border` | `#9fa7a2` | Border of text inputs, textareas and selects. Non-text contrast (WCAG 1.4.11, needs 3:1): 6.0:1 vs `--surface-1`, 6.5:1 vs `--surface-2`, 3.5:1 vs `--atl-green`.                                                          |
+| `--focus-ring`   | `#7dd3fc` | `:focus-visible` outline (2px, `outline-offset: 2px`) on form controls, buttons, the error summary and its links. 8.9:1 vs `--surface-1`, 9.6:1 vs `--surface-2`, 5.2:1 vs `--atl-green`; clears the 3:1 non-text minimum. |
+
+`.visually-hidden` in [global.css](../src/styles/global.css) hides text visually while keeping it in the accessibility tree (the `Error: ` prefix and the live character count).
+
 ### Typography (3)
 
 Inter and Merriweather are loaded via `<link rel="preconnect">` + `<link rel="stylesheet">` in [src/app.html](../src/app.html) (per Phase 4 U-10).

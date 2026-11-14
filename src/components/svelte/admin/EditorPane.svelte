@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack, type Snippet } from 'svelte';
+  import { tick, untrack, type Snippet } from 'svelte';
   import {
     emptyRecord,
     pruneBlankRows,
@@ -7,13 +7,20 @@
     toRecord,
   } from '#lib/content/formModel/draft.ts';
   import { toJsonText, type JsonResult } from '#lib/content/formModel/json.ts';
-  import { fieldLabel } from '#lib/content/formModel/labels.ts';
+  import { currentIssues } from '#lib/content/formModel/issues.ts';
+  import { fieldId, fieldLabel } from '#lib/content/formModel/labels.ts';
   import { toPayload, type WriteMode } from '#lib/content/formModel/payload.ts';
-  import type { ContentKind, ContentRecord } from '#lib/content/formModel/types.ts';
+  import type {
+    ContentKind,
+    ContentRecord,
+    TimedActionDraft,
+  } from '#lib/content/formModel/types.ts';
   import { validatePayload, type FieldIssue } from '#lib/content/formModel/validate.ts';
   import type { Goal, Project } from '#types/content.ts';
   import { atlantaDate } from '#utils/timedActions.ts';
+  import ErrorSummary from './ErrorSummary.svelte';
   import JsonView from './JsonView.svelte';
+  import TimedActionFields from './TimedActionFields.svelte';
 
   interface Props {
     kind: ContentKind;
@@ -25,6 +32,7 @@
     saving: boolean;
     loading: boolean;
     serverIssue: FieldIssue | null;
+    prefersJson?: boolean;
     meta?: Snippet;
     onsave: (request: { mode: WriteMode; body: Record<string, unknown> }) => void;
     onnochanges: () => void;
@@ -42,6 +50,7 @@
     saving,
     loading,
     serverIssue,
+    prefersJson = $bindable(false),
     meta,
     onsave,
     onnochanges,
@@ -54,8 +63,12 @@
   const stored = untrack(() => toFormDraft(kind, record ?? emptyRecord(kind)));
   let draft = $state(toFormDraft(stored.kind, stored.base));
   let jsonError = $state('');
-  let issues: FieldIssue[] = $state([]);
+  let reportedPaths: string[] = $state.raw([]);
+  let capturedJsonError = $state('');
+  let today = $state(atlantaDate(new Date()));
+  let sent: ContentRecord | null = $state.raw(null);
   let dismissedIssue: FieldIssue | null = $state(null);
+  let errorSummary: ErrorSummary | undefined = $state();
   let heading: HTMLHeadingElement | undefined = $state();
 
   const mode: WriteMode = $derived(loaded === null ? 'create' : 'update');
@@ -63,13 +76,82 @@
   const payload = $derived(toPayload(kind, mode, next, loaded ?? emptyRecord(kind)));
   const dirty = $derived(payload.changed || jsonError !== '');
   const archived = $derived(loaded?.is_archived === true);
-  const shownServerIssue = $derived(serverIssue === dismissedIssue ? null : serverIssue);
-  const summary = $derived([
-    ...issues.map((issue) => ({ key: `issue:${issue.path}`, message: issue.message })),
-    ...(shownServerIssue === null
+  const jsonId = $derived(fieldId(kind, 'json'));
+  const hasForm = $derived(kind === 'timed_action');
+  const showJson = $derived(!hasForm || prefersJson);
+  const liveIssues = $derived.by(() => {
+    if (reportedPaths.length === 0) {
+      return [];
+    }
+    const attempted = toRecord(pruneBlankRows(draft));
+    const request = toPayload(kind, mode, attempted, loaded);
+    return validatePayload(kind, mode, request.body, {
+      today,
+      goals,
+      existingIds,
+      loaded,
+    });
+  });
+  const validationIssues = $derived(
+    liveIssues.filter((issue) => reportedPaths.includes(issue.path)),
+  );
+  const shownServerIssue = $derived(
+    serverIssue === null ||
+      serverIssue === dismissedIssue ||
+      currentIssues([serverIssue], sent ?? next, next).length === 0
+      ? null
+      : serverIssue,
+  );
+  const fieldIssues: FieldIssue[] = $derived(
+    jsonError !== ''
       ? []
-      : [{ key: 'server', message: describeServerIssue(shownServerIssue) }]),
-  ]);
+      : [
+          ...validationIssues,
+          ...(shownServerIssue === null
+            ? []
+            : [
+                {
+                  path: shownServerIssue.path,
+                  message: describeServerIssue(shownServerIssue),
+                },
+              ]),
+        ],
+  );
+  const summaryIssues = $derived(
+    capturedJsonError !== ''
+      ? [{ path: '', message: capturedJsonError, href: `#${jsonId}` }]
+      : fieldIssues.map((issue) => ({
+          ...issue,
+          href: `#${showJson ? jsonId : fieldId(kind, issue.path)}`,
+        })),
+  );
+  const hasProblems = $derived(summaryIssues.length > 0);
+
+  $effect(() => {
+    const live = new Set(liveIssues.map((issue) => issue.path));
+    const remembered = untrack(() => reportedPaths);
+    const kept = remembered.filter((path) => live.has(path));
+    if (kept.length !== remembered.length) {
+      reportedPaths = kept;
+    }
+  });
+
+  $effect(() => {
+    if (!hasProblems) {
+      return;
+    }
+    const normal = document.title.replace(/^Error: /, '');
+    document.title = `Error: ${normal}`;
+    return () => {
+      document.title = normal;
+    };
+  });
+
+  $effect(() => {
+    if (serverIssue !== null && serverIssue !== untrack(() => dismissedIssue)) {
+      void focusSummary();
+    }
+  });
 
   export function isDirty(): boolean {
     return dirty;
@@ -83,42 +165,61 @@
     heading?.focus();
   }
 
+  async function focusSummary() {
+    await tick();
+    errorSummary?.focus();
+  }
+
   function describeServerIssue(issue: FieldIssue): string {
     const label = fieldLabel(kind, issue.path);
     return label === issue.path ? issue.message : `${label}: ${issue.message}`;
   }
 
   function applyJson(result: JsonResult) {
-    dismissedIssue = serverIssue;
     jsonError = result.ok ? '' : result.error;
     if (result.ok) {
+      capturedJsonError = '';
       draft = result.draft;
     }
   }
 
+  function switchView() {
+    if (prefersJson && jsonError !== '') {
+      return;
+    }
+    prefersJson = !prefersJson;
+  }
+
   function save() {
     dismissedIssue = serverIssue;
-    issues = [];
+    reportedPaths = [];
+    capturedJsonError = '';
+    sent = null;
+    today = atlantaDate(new Date());
     if (jsonError !== '') {
-      issues = [{ path: '', message: jsonError }];
+      capturedJsonError = jsonError;
+      void focusSummary();
       return;
     }
     draft = pruneBlankRows(draft);
-    const request = toPayload(kind, mode, toRecord(draft), loaded);
+    const attempted = toRecord(draft);
+    const request = toPayload(kind, mode, attempted, loaded);
     if (!request.changed) {
       onnochanges();
       return;
     }
     const found = validatePayload(kind, mode, request.body, {
-      today: atlantaDate(new Date()),
+      today,
       goals,
       existingIds,
       loaded,
     });
     if (found.length > 0) {
-      issues = found;
+      reportedPaths = found.map((issue) => issue.path);
+      void focusSummary();
       return;
     }
+    sent = attempted;
     onsave({ mode, body: request.body });
   }
 </script>
@@ -136,7 +237,25 @@
 
 {@render meta?.()}
 
-<JsonView {draft} {stored} readonly={saving || loading} onedit={applyJson} />
+{#if hasForm}
+  <div class="view-switch">
+    <button type="button" onclick={switchView}>
+      {prefersJson ? 'Back to form' : 'Edit as JSON (advanced)'}
+    </button>
+  </div>
+{/if}
+
+{#if showJson}
+  <JsonView id={jsonId} {draft} {stored} readonly={saving || loading} onedit={applyJson} />
+{:else}
+  <TimedActionFields
+    bind:draft={() => draft as TimedActionDraft, (value) => (draft = value)}
+    {goals}
+    issues={fieldIssues}
+    {today}
+    readonly={saving || loading}
+  />
+{/if}
 
 {#each payload.removedKeys as key (key)}
   <p class="editor-state warning">
@@ -152,16 +271,7 @@
   {/if}
 {/if}
 
-{#if summary.length > 0}
-  <div class="summary" role="alert">
-    <h3>There is a problem</h3>
-    <ul>
-      {#each summary as item (item.key)}
-        <li>{item.message}</li>
-      {/each}
-    </ul>
-  </div>
-{/if}
+<ErrorSummary bind:this={errorSummary} issues={summaryIssues} />
 
 <div class="editor-actions">
   <button class="primary" onclick={save}>
@@ -201,7 +311,7 @@
   }
 
   button:focus-visible {
-    outline: 2px solid var(--link);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 
@@ -224,25 +334,6 @@
 
   .editor-state.warning {
     color: var(--action-accent);
-  }
-
-  .summary {
-    padding: 0.65rem 0.8rem;
-    border: 1px solid var(--border-strong);
-    border-left: 4px solid var(--atl-red);
-    border-radius: 0.5rem;
-    background: var(--surface-1);
-  }
-
-  .summary h3 {
-    margin: 0 0 0.4rem;
-    font-size: 0.95rem;
-  }
-
-  .summary ul {
-    margin: 0;
-    padding-left: 1.1rem;
-    font-size: 0.86rem;
   }
 
   .editor-actions {

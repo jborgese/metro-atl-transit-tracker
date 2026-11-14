@@ -32,6 +32,7 @@
   --text-muted: #c6cbc6;
   --text-dim: #9fa7a2;
   --text-on-light: #1f1f1f;
+  --danger-text: #f0b8b3;
 
   /* Surfaces */
   --surface-0: var(--atl-green);
@@ -41,6 +42,8 @@
   /* Borders & shadows */
   --border-subtle: rgba(126, 110, 79, 0.3);
   --border-strong: rgba(126, 110, 79, 0.55);
+  --field-border: #9fa7a2;
+  --focus-ring: #7dd3fc;
 
   --shadow-1: 0 6px 18px rgba(0, 0, 0, 0.35);
   --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.45);
@@ -63,6 +66,18 @@
   --z-debug: 99999;
   --z-county-panel: 100000;
   --z-modal: 200000;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Base document defaults */
