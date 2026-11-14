@@ -61,6 +61,14 @@ export function emptyRecord(kind: ContentKind): ContentRecord {
   return { goal_id: '', description: '', link: null, location: null, expires_on: '' };
 }
 
+function copy<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function same(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 function str(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
@@ -102,84 +110,99 @@ function writeList(out: Plain, base: Plain, key: string, value: unknown[]): void
 
 function buildRow(
   original: Plain,
-  required: Record<string, string>,
-  optional: Record<string, string>,
+  current: Record<string, string>,
+  derived: Record<string, string>,
+  optional: string[],
 ): Plain | null {
-  const all = [...Object.values(required), ...Object.values(optional)];
-  if (all.every(isBlank) && Object.keys(original).length === 0) return null;
-  const row: Plain = { ...original, ...required };
-  for (const [name, value] of Object.entries(optional)) {
-    if (!isBlank(value)) row[name] = value;
-    else if (original[name] === '') row[name] = '';
-    else delete row[name];
+  if (Object.values(current).every(isBlank) && Object.keys(original).length === 0) return null;
+  const row: Plain = copy(original);
+  for (const [name, value] of Object.entries(current)) {
+    if (value === derived[name]) continue;
+    if (optional.includes(name) && isBlank(value)) delete row[name];
+    else row[name] = value;
   }
   return row;
 }
 
-function buildRows<T>(rows: T[], build: (row: T) => Plain | null): Plain[] {
-  return rows.map(build).filter((row): row is Plain => row !== null);
+function rowSignature(row: object): string {
+  return JSON.stringify(Object.entries(row).filter(([name]) => name !== 'key'));
 }
 
-function orgRows(value: unknown): OrgRow[] {
-  return items(value).map((original) => ({
-    key: newRowKey(),
-    original,
-    name: str(original.name),
-    url: str(original.url),
-  }));
+function sameRows(rows: object[], pristine: object[]): boolean {
+  return (
+    rows.length === pristine.length &&
+    rows.every((row, i) => rowSignature(row) === rowSignature(pristine[i] ?? {}))
+  );
 }
 
-function relatedOrgRows(value: unknown): RelatedOrgRow[] {
-  return items(value).map((original) => ({
-    key: newRowKey(),
-    original,
-    name: str(original.name),
-    url: str(original.url),
-    contact_info: str(original.contact_info),
-  }));
+function writeRows<T extends object>(
+  out: Plain,
+  base: Plain,
+  key: string,
+  rows: T[],
+  pristine: T[],
+  build: (row: T) => Plain | null,
+): void {
+  if (sameRows(rows, pristine)) return;
+  const built = rows.map(build).filter((row): row is Plain => row !== null);
+  if (built.length === 0 && !Array.isArray(base[key])) return;
+  out[key] = built;
 }
 
-function milestoneRows(value: unknown): MilestoneRow[] {
-  return items(value).map((original) => ({
-    key: newRowKey(),
-    original,
-    title: str(original.title),
-    date: str(original.date),
-  }));
+function orgRow(original: Plain): OrgRow {
+  return { key: newRowKey(), original, name: str(original.name), url: str(original.url) };
 }
 
-function sourceRows(value: unknown): SourceRow[] {
-  return items(value).map((original) => ({
+function relatedOrgRow(original: Plain): RelatedOrgRow {
+  return { ...orgRow(original), contact_info: str(original.contact_info) };
+}
+
+function milestoneRow(original: Plain): MilestoneRow {
+  return { key: newRowKey(), original, title: str(original.title), date: str(original.date) };
+}
+
+function sourceRow(original: Plain): SourceRow {
+  return {
     key: newRowKey(),
     original,
     label: str(original.label),
     url: str(original.url),
     last_verified: str(original.last_verified),
-  }));
+  };
 }
 
 function orgRecord(row: OrgRow): Plain | null {
-  return buildRow(row.original, { name: row.name }, { url: row.url });
+  const fields = (r: OrgRow) => ({ name: r.name, url: r.url });
+  return buildRow(row.original, fields(row), fields(orgRow(row.original)), ['url']);
 }
 
 function relatedOrgRecord(row: RelatedOrgRow): Plain | null {
-  return buildRow(
-    row.original,
-    { name: row.name },
-    { url: row.url, contact_info: row.contact_info },
-  );
+  const fields = (r: RelatedOrgRow) => ({
+    name: r.name,
+    url: r.url,
+    contact_info: r.contact_info,
+  });
+  return buildRow(row.original, fields(row), fields(relatedOrgRow(row.original)), [
+    'url',
+    'contact_info',
+  ]);
 }
 
 function milestoneRecord(row: MilestoneRow): Plain | null {
-  return buildRow(row.original, { title: row.title, date: row.date }, {});
+  const fields = (r: MilestoneRow) => ({ title: r.title, date: r.date });
+  return buildRow(row.original, fields(row), fields(milestoneRow(row.original)), []);
 }
 
 function sourceRecord(row: SourceRow): Plain | null {
-  return buildRow(
-    row.original,
-    { label: row.label },
-    { url: row.url, last_verified: row.last_verified },
-  );
+  const fields = (r: SourceRow) => ({
+    label: r.label,
+    url: r.url,
+    last_verified: r.last_verified,
+  });
+  return buildRow(row.original, fields(row), fields(sourceRow(row.original)), [
+    'url',
+    'last_verified',
+  ]);
 }
 
 function projectDraft(base: Plain): ProjectDraft {
@@ -197,9 +220,9 @@ function projectDraft(base: Plain): ProjectDraft {
     modes: strings(base.modes),
     related_counties: strings(base.related_counties),
     lead_org: { name: str(lead.name), url: str(lead.url), original: lead },
-    partners: orgRows(base.partners),
-    milestones: milestoneRows(base.milestones),
-    sources: sourceRows(base.sources),
+    partners: items(base.partners).map(orgRow),
+    milestones: items(base.milestones).map(milestoneRow),
+    sources: items(base.sources).map(sourceRow),
   };
 }
 
@@ -213,7 +236,7 @@ function goalDraft(base: Plain): GoalDraft {
     actions: str(base.actions),
     related_counties: strings(base.related_counties),
     related_project_ids: strings(base.related_project_ids),
-    related_orgs: relatedOrgRows(base.related_orgs),
+    related_orgs: items(base.related_orgs).map(relatedOrgRow),
   };
 }
 
@@ -232,71 +255,91 @@ function timedActionDraft(base: Plain): TimedActionDraft {
 }
 
 export function toFormDraft(kind: ContentKind, record: ContentRecord): FormDraft {
-  const base = structuredClone(record);
+  const base = copy(record);
   if (kind === 'project') return projectDraft(base);
   if (kind === 'goal') return goalDraft(base);
   return timedActionDraft(base);
 }
 
-function writeLeadOrg(out: Plain, draft: ProjectDraft): void {
+function writeLeadOrg(out: Plain, draft: ProjectDraft, pristine: ProjectDraft): void {
   const { name, url, original } = draft.lead_org;
-  if (!('lead_org' in draft.base) && isBlank(name) && isBlank(url)) return;
-  const lead: Plain = { ...original, name };
-  if (!isBlank(url)) lead.url = url;
-  else delete lead.url;
+  const was = pristine.lead_org;
+  if (name === was.name && url === was.url) return;
+  const lead: Plain = copy(original);
+  if (name !== was.name) lead.name = name;
+  if (url !== was.url) {
+    if (isBlank(url)) delete lead.url;
+    else lead.url = url;
+  }
   out.lead_org = lead;
 }
 
-function projectRecord(draft: ProjectDraft): ContentRecord {
-  const { base } = draft;
-  const out: Plain = { ...base };
-  writeText(out, base, 'id', draft.id);
-  writeText(out, base, 'title', draft.title);
-  writeText(out, base, 'summary', draft.summary);
-  writeNonBlank(out, 'status', draft.status);
-  writeNonBlank(out, 'geo_scope', draft.geo_scope);
-  writeDate(out, base, 'start_date', draft.start_date);
-  writeDate(out, base, 'end_date', draft.end_date);
-  writeList(out, base, 'modes', draft.modes);
-  writeList(out, base, 'related_counties', draft.related_counties);
-  writeLeadOrg(out, draft);
-  writeList(out, base, 'partners', buildRows(draft.partners, orgRecord));
-  writeList(out, base, 'milestones', buildRows(draft.milestones, milestoneRecord));
-  writeList(out, base, 'sources', buildRows(draft.sources, sourceRecord));
+function projectRecord(d: ProjectDraft): ContentRecord {
+  const p = projectDraft(d.base);
+  const out: Plain = { ...d.base };
+  if (d.id !== p.id) writeText(out, d.base, 'id', d.id);
+  if (d.title !== p.title) writeText(out, d.base, 'title', d.title);
+  if (d.summary !== p.summary) writeText(out, d.base, 'summary', d.summary);
+  if (d.status !== p.status) writeNonBlank(out, 'status', d.status);
+  if (d.geo_scope !== p.geo_scope) writeNonBlank(out, 'geo_scope', d.geo_scope);
+  if (d.start_date !== p.start_date) writeDate(out, d.base, 'start_date', d.start_date);
+  if (d.end_date !== p.end_date) writeDate(out, d.base, 'end_date', d.end_date);
+  if (!same(d.modes, p.modes)) writeList(out, d.base, 'modes', d.modes);
+  if (!same(d.related_counties, p.related_counties)) {
+    writeList(out, d.base, 'related_counties', d.related_counties);
+  }
+  writeLeadOrg(out, d, p);
+  writeRows(out, d.base, 'partners', d.partners, p.partners, orgRecord);
+  writeRows(out, d.base, 'milestones', d.milestones, p.milestones, milestoneRecord);
+  writeRows(out, d.base, 'sources', d.sources, p.sources, sourceRecord);
   return out;
 }
 
-function goalRecord(draft: GoalDraft): ContentRecord {
-  const { base } = draft;
-  const out: Plain = { ...base };
-  writeText(out, base, 'id', draft.id);
-  writeText(out, base, 'goal', draft.goal);
-  writeText(out, base, 'status_related_projects', draft.status_related_projects);
-  writeText(out, base, 'actions', draft.actions);
-  writeList(out, base, 'related_counties', draft.related_counties);
-  writeList(out, base, 'related_project_ids', draft.related_project_ids);
-  writeList(out, base, 'related_orgs', buildRows(draft.related_orgs, relatedOrgRecord));
+function goalRecord(d: GoalDraft): ContentRecord {
+  const p = goalDraft(d.base);
+  const out: Plain = { ...d.base };
+  if (d.id !== p.id) writeText(out, d.base, 'id', d.id);
+  if (d.goal !== p.goal) writeText(out, d.base, 'goal', d.goal);
+  if (d.status_related_projects !== p.status_related_projects) {
+    writeText(out, d.base, 'status_related_projects', d.status_related_projects);
+  }
+  if (d.actions !== p.actions) writeText(out, d.base, 'actions', d.actions);
+  if (!same(d.related_counties, p.related_counties)) {
+    writeList(out, d.base, 'related_counties', d.related_counties);
+  }
+  if (!same(d.related_project_ids, p.related_project_ids)) {
+    writeList(out, d.base, 'related_project_ids', d.related_project_ids);
+  }
+  writeRows(out, d.base, 'related_orgs', d.related_orgs, p.related_orgs, relatedOrgRecord);
   return out;
 }
 
-function writePair(out: Plain, base: Plain, key: string, pair: Record<string, string>): void {
+function writePair(
+  out: Plain,
+  base: Plain,
+  key: string,
+  pair: Record<string, string>,
+  pristine: Record<string, string>,
+): void {
+  if (same(pair, pristine)) return;
   if (!Object.values(pair).every(isBlank)) out[key] = { ...pair };
   else if (key in base) out[key] = null;
 }
 
-function timedActionRecord(draft: TimedActionDraft): ContentRecord {
-  const { base } = draft;
-  const out: Plain = { ...base };
-  writeText(out, base, 'goal_id', draft.goal_id);
-  writeText(out, base, 'description', draft.description);
-  writePair(out, base, 'link', draft.link);
-  writePair(out, base, 'location', draft.location);
-  writeText(out, base, 'expires_on', draft.expires_on);
+function timedActionRecord(d: TimedActionDraft): ContentRecord {
+  const p = timedActionDraft(d.base);
+  const out: Plain = { ...d.base };
+  if (d.goal_id !== p.goal_id) writeText(out, d.base, 'goal_id', d.goal_id);
+  if (d.description !== p.description) writeText(out, d.base, 'description', d.description);
+  writePair(out, d.base, 'link', d.link, p.link);
+  writePair(out, d.base, 'location', d.location, p.location);
+  if (d.expires_on !== p.expires_on) writeText(out, d.base, 'expires_on', d.expires_on);
   return out;
 }
 
 export function toRecord(draft: FormDraft): ContentRecord {
-  if (draft.kind === 'project') return projectRecord(draft);
-  if (draft.kind === 'goal') return goalRecord(draft);
-  return timedActionRecord(draft);
+  const d = copy(draft);
+  if (d.kind === 'project') return projectRecord(d);
+  if (d.kind === 'goal') return goalRecord(d);
+  return timedActionRecord(d);
 }
