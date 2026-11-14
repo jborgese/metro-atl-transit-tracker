@@ -27,6 +27,19 @@ describe('buildOpenApiDocument', () => {
     }
   });
 
+  it('publishes organisation and source links as uri strings', () => {
+    const uri = { type: 'string', format: 'uri' };
+    const schemas = doc.components?.schemas ?? {};
+    for (const name of ['Project', 'ProjectPatch']) {
+      expect(schemas[name]).toHaveProperty('properties.lead_org.properties.url', uri);
+      expect(schemas[name]).toHaveProperty('properties.partners.items.properties.url', uri);
+      expect(schemas[name]).toHaveProperty('properties.sources.items.properties.url', uri);
+    }
+    for (const name of ['Goal', 'GoalPatch']) {
+      expect(schemas[name]).toHaveProperty('properties.related_orgs.items.properties.url', uri);
+    }
+  });
+
   it('registers every timed-action path and its schema', () => {
     expect(Object.keys(doc.paths ?? {})).toEqual(
       expect.arrayContaining([
