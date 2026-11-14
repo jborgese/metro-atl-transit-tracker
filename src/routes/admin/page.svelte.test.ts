@@ -50,6 +50,7 @@ let freshnessFailure: Response | Error | null = null;
 let failActionsReload = false;
 let actionsGetCount = 0;
 let version = 0;
+let writeGate: Promise<void> | null = null;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status });
@@ -151,6 +152,7 @@ function stubFetch() {
   calls.length = 0;
   actionsGetCount = 0;
   version = 0;
+  writeGate = null;
   writeFailure = null;
   freshnessFailure = null;
   for (const key of Object.keys(serverCopyOf)) {
@@ -167,6 +169,9 @@ function stubFetch() {
       const method = init?.method ?? 'GET';
       const body = typeof init?.body === 'string' ? init.body : undefined;
       calls.push({ method, path: input, body });
+      if (method !== 'GET' && writeGate) {
+        await writeGate;
+      }
       return respond(method, input, body);
     }),
   );
@@ -691,6 +696,22 @@ describe('saving', () => {
     ).toBeTruthy();
     await settle();
     expect(writes()).toHaveLength(0);
+  });
+
+  it('reads Saving… while a save is in flight and stays enabled', async () => {
+    let release = () => {};
+    writeGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await selectGoal('Regional goal');
+    await editGoalActions('Mine');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    const button = screen.getByRole('button', { name: 'Saving…' });
+    expect(button.hasAttribute('disabled')).toBe(false);
+    release();
+    await waitFor(() => expect(status()).toContain('Updated goal g1.'));
+    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeTruthy();
   });
 
   it('is clean after a successful save', async () => {
