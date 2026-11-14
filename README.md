@@ -17,7 +17,7 @@ Public, data-driven transit advocacy map and content hub for Metro Atlanta.
 - Public goals table grouped by county, plus regional goals
 - Nested related projects under goals with source links/status badges
 - Public history page at `/history` (create/update/archive/restore events)
-- Admin JSON editor at `/admin` for projects, goals, and actions (create, update, archive, restore)
+- Admin form editor at `/admin` for projects, goals, and actions (create, update, archive, restore), with an advanced JSON view of each record
 - Soft-delete archive model with immutable D1-backed content history
 - Server-side payload validation for writes (Zod)
 - Per-identity display name overrides (`user_profiles`) shown on `/history` and admin views
@@ -29,7 +29,7 @@ Public, data-driven transit advocacy map and content hub for Metro Atlanta.
 
 - `/` public map + goals view
 - `/history` public change log
-- `/admin` admin JSON editor
+- `/admin` admin form editor (with an advanced JSON view)
 - `Methodology` is exposed from the site header as a modal UI
 
 ## Content + Seed Files
@@ -48,6 +48,8 @@ Fallback seed sources (used if canonical seed arrays are empty):
 Important behavior:
 
 - Admin edits at `/admin` write to D1 immediately and do not automatically write back to `data/content/*.json`.
+- Saving sends only the fields that changed for projects and goals, so two editors working on different fields of the same record do not overwrite each other.
+- The page asks before overwriting a record that someone else saved after it was opened, and before discarding unsaved changes.
 - This can create intentional drift between live D1 content and repository seed files until you export/sync data manually.
 
 Policies/runbooks:

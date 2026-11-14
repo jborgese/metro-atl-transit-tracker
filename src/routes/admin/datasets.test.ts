@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { emptyRecord } from '../../lib/content/formModel/draft';
 import { DATASETS, isEditorEntity } from './datasets';
 
 describe('DATASETS', () => {
@@ -13,11 +14,37 @@ describe('DATASETS', () => {
     expect(DATASETS.timed_action.title).toBe('Action');
     expect(DATASETS.timed_action.requiresClientId).toBe(false);
     expect(DATASETS.project.requiresClientId).toBe(true);
-    expect(DATASETS.timed_action.template).toEqual({
+  });
+
+  it('has no template property', () => {
+    for (const config of Object.values(DATASETS)) {
+      expect(config).not.toHaveProperty('template');
+    }
+  });
+
+  it('starts each kind from emptyRecord', () => {
+    expect(emptyRecord('project')).toEqual({
+      id: '',
+      title: '',
+      summary: '',
+      status: 'planning',
+      modes: [],
+      related_counties: [],
+      sources: [],
+    });
+    expect(emptyRecord('goal')).toEqual({
+      id: '',
+      goal: '',
+      actions: '',
+      related_project_ids: [],
+      related_counties: [],
+      related_orgs: [],
+    });
+    expect(emptyRecord('timed_action')).toEqual({
       goal_id: '',
       description: '',
-      link: { label: '', url: '' },
-      location: { label: '', address: '' },
+      link: null,
+      location: null,
       expires_on: '',
     });
   });
