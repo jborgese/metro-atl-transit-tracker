@@ -7,7 +7,7 @@
     toFormDraft,
     toRecord,
   } from '#lib/content/formModel/draft.ts';
-  import { toJsonText, type JsonResult } from '#lib/content/formModel/json.ts';
+  import type { JsonResult } from '#lib/content/formModel/json.ts';
   import { currentIssues } from '#lib/content/formModel/issues.ts';
   import { fieldId, fieldLabel } from '#lib/content/formModel/labels.ts';
   import { toPayload, type WriteMode } from '#lib/content/formModel/payload.ts';
@@ -189,10 +189,6 @@
 
   export function isDirty(): boolean {
     return dirty;
-  }
-
-  export function draftText(): string {
-    return toJsonText(draft);
   }
 
   export function focusHeading() {

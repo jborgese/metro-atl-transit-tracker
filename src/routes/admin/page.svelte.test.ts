@@ -2327,6 +2327,11 @@ describe('project form', () => {
       { milestones: [{ ...m1, date: '2024-11-01' }, m2] },
     ],
     [
+      'a milestone date cleared',
+      () => editIn(group('Milestone 1'), 'Date', ''),
+      { milestones: [{ title: m1.title }, m2] },
+    ],
+    [
       'a milestone removed',
       () => fireEvent.click(screen.getByRole('button', { name: 'Remove milestone 2' })),
       { milestones: [m1] },

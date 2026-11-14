@@ -12,8 +12,12 @@ describe('DATASETS', () => {
   it('describes the Actions tab', () => {
     expect(DATASETS.timed_action.tabLabel).toBe('Actions');
     expect(DATASETS.timed_action.title).toBe('Action');
-    expect(DATASETS.timed_action.requiresClientId).toBe(false);
-    expect(DATASETS.project.requiresClientId).toBe(true);
+  });
+
+  it('describes each dataset by its title, tab label and endpoint only', () => {
+    for (const config of Object.values(DATASETS)) {
+      expect(Object.keys(config).sort()).toEqual(['endpoint', 'tabLabel', 'title']);
+    }
   });
 
   it('has no template property', () => {

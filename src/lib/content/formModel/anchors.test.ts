@@ -198,14 +198,39 @@ describe('keepRowKeys', () => {
     related_orgs: names.map((name) => ({ name })),
   });
 
-  it('gives each row the key of the row at the same index', () => {
-    const previous = toFormDraft('goal', record(['A', 'B'])) as GoalDraft;
+  it('gives an edited row the key of the row at the same index when the count is the same', () => {
+    const previous = toFormDraft('goal', record(['A', 'B', 'C'])) as GoalDraft;
     const next = toFormDraft('goal', record(['A', 'B2', 'C'])) as GoalDraft;
     const kept = keepRowKeys(previous, next) as GoalDraft;
-    expect(keys(kept).slice(0, 2)).toEqual(keys(previous));
-    expect(keys(kept)[2]).toBe(keys(next)[2]);
+    expect(keys(kept)).toEqual(keys(previous));
     expect(kept.related_orgs.map((row) => row.name)).toEqual(['A', 'B2', 'C']);
-    expect(new Set(keys(kept)).size).toBe(3);
+  });
+
+  it('gives an edited row a fresh key when rows were added or removed', () => {
+    const previous = toFormDraft('goal', record(['A', 'B'])) as GoalDraft;
+    const next = toFormDraft('goal', record(['A', 'B2', 'C'])) as GoalDraft;
+    const kept = keys(keepRowKeys(previous, next) as GoalDraft);
+    expect(kept).toEqual([keys(previous)[0], keys(next)[1], keys(next)[2]]);
+    expect(new Set(kept).size).toBe(3);
+  });
+
+  it('does not move the key of a removed row to the row edited in the same JSON edit', () => {
+    const previous = toFormDraft('goal', record(['', 'B', ''])) as GoalDraft;
+    previous.related_orgs[0]!.url = 'https://a.example';
+    previous.related_orgs[2]!.url = 'https://c.example';
+    const [a, , c] = keys(previous);
+    const anchors = ['related_orgs.0.name', 'related_orgs.2.name'].map((path) =>
+      anchorOf(previous, path),
+    );
+    const next = toFormDraft('goal', {
+      ...record([]),
+      related_orgs: [{ name: 'B changed' }, { name: '', url: 'https://c.example' }],
+    }) as GoalDraft;
+    const kept = keepRowKeys(previous, next) as GoalDraft;
+    expect(keys(kept)[0]).not.toBe(a);
+    expect(keys(kept)[0]).toBe(keys(next)[0]);
+    expect(keys(kept)[1]).toBe(c);
+    expect(anchors.map((anchor) => pathOf(kept, anchor))).toEqual([null, 'related_orgs.1.name']);
   });
 
   it('gives a row the key of the old row with the same content when rows before it are gone', () => {
@@ -250,11 +275,10 @@ describe('keepRowKeys', () => {
   });
 
   it('falls back to the row at the same index only when it is not taken', () => {
-    const previous = toFormDraft('goal', record(['A', 'B'])) as GoalDraft;
+    const previous = toFormDraft('goal', record(['A', 'B', 'C'])) as GoalDraft;
     const next = toFormDraft('goal', record(['B', 'Z', 'Y'])) as GoalDraft;
     const kept = keys(keepRowKeys(previous, next) as GoalDraft);
-    expect(kept.slice(0, 2)).toEqual([keys(previous)[1], keys(next)[1]]);
-    expect(kept[2]).toBe(keys(next)[2]);
+    expect(kept).toEqual([keys(previous)[1], keys(next)[1], keys(previous)[2]]);
     expect(new Set(kept).size).toBe(3);
   });
 

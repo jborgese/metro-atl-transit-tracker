@@ -48,7 +48,7 @@ Fallback seed sources (used if canonical seed arrays are empty):
 Important behavior:
 
 - Admin edits at `/admin` write to D1 immediately and do not automatically write back to `data/content/*.json`.
-- Saving sends only the fields that changed for projects and goals, so two editors working on different fields of the same record do not overwrite each other.
+- Saving a project or goal sends only the top-level fields that changed; a list such as sources, or the lead organisation, is sent whole. So two editors changing different fields of a record do not overwrite each other, while two editors changing the same list do, after the page has warned the second one that the record changed.
 - The page asks before overwriting a record that someone else saved after it was opened, and before discarding unsaved changes.
 - This can create intentional drift between live D1 content and repository seed files until you export/sync data manually.
 

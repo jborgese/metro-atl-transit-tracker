@@ -225,6 +225,34 @@ it('edits one milestone and leaves an odd one as stored', () => {
   ]);
 });
 
+describe('milestone dates', () => {
+  const projectWith = (milestones: object[]) =>
+    toFormDraft('project', { id: 'p', title: 'T', milestones }) as ProjectDraft;
+
+  it('drops the date key when a stored date is cleared', () => {
+    const draft = projectWith([{ title: 'm', date: '2026-01-01' }]);
+    draft.milestones[0]!.date = '';
+    expect(JSON.stringify(toRecord(draft).milestones)).toBe(JSON.stringify([{ title: 'm' }]));
+  });
+
+  it('keeps a stored blank date while the title is edited', () => {
+    const draft = projectWith([{ title: 'm', date: '' }]);
+    draft.milestones[0]!.title = 'x';
+    expect(JSON.stringify(toRecord(draft).milestones)).toBe(
+      JSON.stringify([{ title: 'x', date: '' }]),
+    );
+  });
+
+  it('keeps an untouched row with a null date byte for byte while another row changes', () => {
+    const odd = { title: 'm', date: null, note: 1 };
+    const draft = projectWith([odd, { title: 'n', date: '2026-02-01' }]);
+    draft.milestones[1]!.title = 'n2';
+    expect(JSON.stringify(toRecord(draft).milestones)).toBe(
+      JSON.stringify([odd, { title: 'n2', date: '2026-02-01' }]),
+    );
+  });
+});
+
 it('keeps other rows verbatim when a row is removed or a blank row is added', () => {
   const record = {
     id: 'p',

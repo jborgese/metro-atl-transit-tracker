@@ -63,12 +63,13 @@ function carryKeys<T extends { key: string }>(
 ): T[] {
   const matches = sameContentIndexes(previous, next, write);
   const taken = new Set(matches.filter((match) => match !== -1));
+  const sameCount = previous.length === next.length;
   return next.map((row, index) => {
     const match = matches[index] ?? -1;
     if (match !== -1) {
       return { ...row, key: previous[match]?.key ?? row.key };
     }
-    const sameIndex = taken.has(index) ? undefined : previous[index];
+    const sameIndex = sameCount && !taken.has(index) ? previous[index] : undefined;
     return { ...row, key: sameIndex?.key ?? row.key };
   });
 }

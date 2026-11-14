@@ -194,7 +194,7 @@ export function relatedOrgRecord(row: RelatedOrgRow): Plain | null {
 
 export function milestoneRecord(row: MilestoneRow): Plain | null {
   const fields = (r: MilestoneRow) => ({ title: r.title, date: r.date });
-  return buildRow(row.original, fields(row), fields(milestoneRow(row.original)), []);
+  return buildRow(row.original, fields(row), fields(milestoneRow(row.original)), ['date']);
 }
 
 export function sourceRecord(row: SourceRow): Plain | null {
