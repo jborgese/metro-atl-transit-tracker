@@ -16,15 +16,63 @@ describe('toTimedActionCreate', () => {
     expect(toTimedActionCreate(valid, today)).toEqual(valid);
   });
 
+  it('nulls an omitted link and location', () => {
+    const { link: _link, location: _location, ...body } = valid;
+    expect(toTimedActionCreate(body, today)).toEqual({ ...body, link: null, location: null });
+  });
+
+  it('accepts and discards provenance', () => {
+    const result = toTimedActionCreate({ ...valid, provenance: { updated_by: 'Jared B.' } }, today);
+    expect(result).toEqual(valid);
+    expect(result).not.toHaveProperty('provenance');
+    expect(Object.keys(result).sort()).toEqual([
+      'description',
+      'expires_on',
+      'goal_id',
+      'link',
+      'location',
+    ]);
+  });
+
   it.each([
-    ['unknown key', { ...valid, locaton: null }],
+    ['unknown key', { ...valid, locaton: null }, 'locaton'],
+    ['javascript url', { ...valid, link: { label: 'x', url: 'javascript:alert(1)' } }, 'link.url'],
+    ['past date', { ...valid, expires_on: '2026-11-12' }, 'expires_on'],
+    [
+      'overlong url',
+      { ...valid, link: { label: 'x', url: `https://a.example/${'x'.repeat(2031)}` } },
+      'link.url',
+    ],
+    [
+      'url with credentials',
+      { ...valid, link: { label: 'x', url: 'https://user:pw@example.com/' } },
+      'link.url',
+    ],
+  ])('rejects %s with a 400 naming the field', (_name, input, field) => {
+    expect.assertions(3);
+    try {
+      toTimedActionCreate(input, today);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ContentStoreError);
+      expect((err as ContentStoreError).status).toBe(400);
+      expect((err as ContentStoreError).message).toContain(field);
+    }
+  });
+
+  it('trims the link url', () => {
+    const result = toTimedActionCreate(
+      { ...valid, link: { label: 'x', url: '  https://a.example/x  ' } },
+      today,
+    );
+    expect(result.link?.url).toBe('https://a.example/x');
+  });
+
+  it.each([
     ['client id', { ...valid, id: 'ta-abcdefgh' }],
-    ['javascript url', { ...valid, link: { label: 'x', url: 'javascript:alert(1)' } }],
     ['link without url', { ...valid, link: { label: 'x' } }],
     ['blank label', { ...valid, link: { label: '   ', url: 'https://a.example' } }],
     ['empty location', { ...valid, location: {} }],
     ['impossible date', { ...valid, expires_on: '2026-02-30' }],
-    ['past date', { ...valid, expires_on: '2026-11-12' }],
     ['too far out', { ...valid, expires_on: '2027-11-15' }],
     ['description too long', { ...valid, description: 'x'.repeat(301) }],
     ['label too long', { ...valid, link: { label: 'x'.repeat(41), url: 'https://a.example' } }],

@@ -54,6 +54,9 @@ describe('buildOpenApiDocument', () => {
     expect(doc.paths?.['/api/timed-actions/{id}']?.patch?.requestBody).toMatchObject(
       bodySchema('TimedActionReplace'),
     );
+    expect(doc.components?.schemas?.TimedActionCreate).toMatchObject({
+      required: ['goal_id', 'description', 'expires_on'],
+    });
     expect(doc.components?.schemas?.TimedActionReplace).toMatchObject({
       required: ['goal_id', 'description', 'expires_on'],
     });

@@ -9,6 +9,7 @@ import {
   goalPatchSchema,
   projectCreateSchema,
   projectPatchSchema,
+  timedActionCreateSchema,
   timedActionInputSchema,
   timedActionReplaceSchema,
 } from '#lib/server/content/validators.ts';
@@ -90,7 +91,7 @@ export function buildOpenApiDocument(serverUrl = '/') {
   const timedActionSchema = registry.register('TimedAction', timedActionResponse);
   const timedActionCreate = registry.register(
     'TimedActionCreate',
-    withOpenApi(timedActionInputSchema),
+    withOpenApi(timedActionCreateSchema),
   );
   const timedActionReplace = registry.register(
     'TimedActionReplace',

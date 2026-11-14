@@ -124,13 +124,18 @@ WHERE id = ?4
 export const INSERT_TIMED_ACTION_ARCHIVE_EVENT_SQL = `
 INSERT INTO content_history (id, entity_type, entity_id, action, actor, timestamp, before_json, after_json)
 SELECT ?1, 'timed_action', ?2, 'archive', ?3, ?4, ?5, ?6
-WHERE EXISTS (SELECT 1 FROM timed_actions WHERE id = ?2 AND is_archived = 0)
+WHERE EXISTS (
+  SELECT 1 FROM timed_actions
+  WHERE id = ?2 AND is_archived = 0
+    AND (?7 IS NULL OR json_extract(payload_json, '$.expires_on') < ?7)
+)
 `;
 
 export const ARCHIVE_TIMED_ACTION_SQL = `
 UPDATE timed_actions
 SET payload_json = ?1, is_archived = 1, archived_at = ?2, archived_by = ?3, updated_at = ?4, updated_by = ?5
 WHERE id = ?6 AND is_archived = 0
+  AND (?7 IS NULL OR json_extract(payload_json, '$.expires_on') < ?7)
 `;
 
 export const SELECT_LIVE_TIMED_ACTIONS_SQL = `

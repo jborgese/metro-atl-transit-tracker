@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -101,6 +102,29 @@ async function runLocalSqlFile(name, sql, args = []) {
   }
 }
 
+function newExpiredActionId() {
+  return `ta-${randomBytes(4).toString('hex')}`;
+}
+
+async function insertExpiredAction(id, goalId, ts) {
+  const payload = JSON.stringify({
+    id,
+    goal_id: goalId,
+    description: 'expired',
+    link: null,
+    location: null,
+    expires_on: '2020-01-01',
+    is_archived: false,
+    archived_at: null,
+    archived_by: null,
+    provenance: { created_at: ts, created_by: 'it', updated_at: ts, updated_by: 'it' },
+  });
+  await runLocalSqlFile(
+    id,
+    `INSERT INTO timed_actions (id, payload_json, is_archived, created_at, created_by, updated_at, updated_by) VALUES ('${id}', '${payload}', 0, '${ts}', 'it', '${ts}', 'it');`,
+  );
+}
+
 async function readStoredArchiveFlag(id) {
   const result = await runLocalSqlFile(
     `${id}-select`,
@@ -158,7 +182,10 @@ async function runTimedActionChecks(suffix) {
   assert.equal(fetched.status, 200, `GET /api/timed-actions/:id failed: ${fetched.text}`);
   assert.equal(fetched.data?.data?.id, actionId, 'Fetched timed action id mismatch');
 
-  const { link: _link, ...withoutLink } = editableFields(fetched.data.data);
+  const { link: _link, ...withoutLink } = {
+    ...editableFields(fetched.data.data),
+    expires_on: atlantaDatePlus(0),
+  };
   await expectMutationHistory('timed_action', actionId, 'update', async () => {
     const response = await sendEditorRequest(
       'PATCH',
@@ -168,6 +195,10 @@ async function runTimedActionChecks(suffix) {
     assert.equal(response.status, 200, `Timed action replace failed: ${response.text}`);
     assert.equal(response.data?.data?.link, null, 'An omitted link should be stored as null');
   });
+  assert.ok(
+    (await listTimedActionIds()).includes(actionId),
+    'An action should stay in the default list through its last day',
+  );
 
   const partial = await sendEditorRequest('PATCH', `/api/timed-actions/${actionId}`, {
     expires_on: nextWeek,
@@ -233,23 +264,8 @@ async function runTimedActionChecks(suffix) {
   );
 
   console.log('[integration] Checking the expiry sweep...');
-  const expiredId = `ta-exp${String(Date.now()).slice(-5)}`;
-  const payload = JSON.stringify({
-    id: expiredId,
-    goal_id: goalId,
-    description: 'expired',
-    link: null,
-    location: null,
-    expires_on: '2020-01-01',
-    is_archived: false,
-    archived_at: null,
-    archived_by: null,
-    provenance: { created_at: ts, created_by: 'it', updated_at: ts, updated_by: 'it' },
-  });
-  await runLocalSqlFile(
-    expiredId,
-    `INSERT INTO timed_actions (id, payload_json, is_archived, created_at, created_by, updated_at, updated_by) VALUES ('${expiredId}', '${payload}', 0, '${ts}', 'it', '${ts}', 'it');`,
-  );
+  const expiredId = newExpiredActionId();
+  await insertExpiredAction(expiredId, goalId, ts);
 
   assert.ok(
     !(await listTimedActionIds()).includes(expiredId),
@@ -277,6 +293,23 @@ async function runTimedActionChecks(suffix) {
   const expiredRead = await requestJson(`${baseUrl}/api/timed-actions/${expiredId}`);
   assert.equal(expiredRead.status, 200, `GET expired action failed: ${expiredRead.text}`);
   assert.equal(expiredRead.data?.data?.is_archived, true, 'The sweep should archive the row');
+
+  const byIdTriggerId = newExpiredActionId();
+  await insertExpiredAction(byIdTriggerId, goalId, ts);
+  const byIdRead = await requestJson(`${baseUrl}/api/timed-actions/${byIdTriggerId}`);
+  assert.equal(byIdRead.status, 200, `GET by id of an expired action failed: ${byIdRead.text}`);
+  assert.equal(byIdRead.data?.data?.is_archived, true, 'GET by id should sweep the row');
+
+  const includeArchivedTriggerId = newExpiredActionId();
+  await insertExpiredAction(includeArchivedTriggerId, goalId, ts);
+  const allRead = await requestJson(`${baseUrl}/api/timed-actions?includeArchived=true`);
+  assert.equal(allRead.status, 200, `GET includeArchived failed: ${allRead.text}`);
+  assert.equal(
+    (allRead.data?.data ?? []).find((action) => action.id === includeArchivedTriggerId)
+      ?.is_archived,
+    true,
+    'includeArchived=true should sweep the row',
+  );
 
   const expiredRestore = await sendEditorRequest('POST', `/api/timed-actions/${expiredId}/restore`);
   assert.equal(expiredRestore.status, 409, `Restore of an expired action: ${expiredRestore.text}`);

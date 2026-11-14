@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { D1Database } from './repository';
-import { SYSTEM_ACTOR, sweepExpiredTimedActions } from './timedActions';
+import { ContentStoreError } from './errors';
+import {
+  ARCHIVE_TIMED_ACTION_SQL,
+  INSERT_TIMED_ACTION_ARCHIVE_EVENT_SQL,
+  type D1Database,
+} from './repository';
+import { SYSTEM_ACTOR, isMissingTimedActionsTable, sweepExpiredTimedActions } from './timedActions';
 
 function expiredRow(id: string) {
   return {
@@ -23,7 +28,15 @@ function expiredRow(id: string) {
   };
 }
 
-const changedBatch = [{ meta: { changes: 1 } }, { meta: { changes: 1 } }];
+function manyRows(count: number) {
+  return Array.from({ length: count }, (_, index) =>
+    expiredRow(`ta-${String(index).padStart(8, '0')}`),
+  );
+}
+
+function echoBatch() {
+  return vi.fn(async (statements: unknown[]) => statements.map(() => ({ meta: { changes: 1 } })));
+}
 
 function fakeDb(rows: Array<ReturnType<typeof expiredRow>>, batch: ReturnType<typeof vi.fn>) {
   const bound: Array<{ sql: string; values: unknown[] }> = [];
@@ -31,7 +44,7 @@ function fakeDb(rows: Array<ReturnType<typeof expiredRow>>, batch: ReturnType<ty
     prepare: (sql: string) => ({
       bind: (...values: unknown[]) => {
         bound.push({ sql, values });
-        return { all: async () => ({ results: rows }) };
+        return { sql, values, all: async () => ({ results: rows }) };
       },
     }),
     batch,
@@ -64,8 +77,12 @@ describe('sweepExpiredTimedActions', () => {
       [expiredRow('ta-aaaaaaaa'), expiredRow('ta-bbbbbbbb')],
       vi
         .fn()
-        .mockResolvedValueOnce(changedBatch)
-        .mockResolvedValueOnce([{ meta: { changes: 0 } }, { meta: { changes: 0 } }]),
+        .mockResolvedValueOnce([
+          { meta: { changes: 1 } },
+          { meta: { changes: 1 } },
+          { meta: { changes: 0 } },
+          { meta: { changes: 0 } },
+        ]),
     );
 
     const archived = await sweepExpiredTimedActions(db, new Date('2026-11-14T03:00:00Z'));
@@ -82,27 +99,76 @@ describe('sweepExpiredTimedActions', () => {
     ]);
   });
 
-  it('waits for every batch when one rejects, logs it, and counts the others', async () => {
+  it('binds the expiry guard to the Atlanta date in both statements of every pair', async () => {
+    const { db, bound } = fakeDb([expiredRow('ta-aaaaaaaa')], echoBatch());
+
+    await sweepExpiredTimedActions(db, new Date('2026-11-14T03:00:00Z'));
+
+    const guarded = bound.slice(1);
+    expect(guarded).toHaveLength(2);
+    expect(guarded.map(({ values }) => values.at(-1))).toEqual(['2026-11-13', '2026-11-13']);
+    expect(guarded[0]?.sql).toBe(INSERT_TIMED_ACTION_ARCHIVE_EVENT_SQL);
+    expect(guarded[1]?.sql).toBe(ARCHIVE_TIMED_ACTION_SQL);
+  });
+
+  it('carries an optional expiry guard in the archive statements', () => {
+    for (const sql of [INSERT_TIMED_ACTION_ARCHIVE_EVENT_SQL, ARCHIVE_TIMED_ACTION_SQL]) {
+      expect(sql).toContain("(?7 IS NULL OR json_extract(payload_json, '$.expires_on') < ?7)");
+      expect(sql).toContain('is_archived = 0');
+    }
+  });
+
+  it('groups sixty expired rows into three batches of at most fifty statements', async () => {
+    const batch = echoBatch();
+    const { db } = fakeDb(manyRows(60), batch);
+
+    await expect(sweepExpiredTimedActions(db)).resolves.toBe(60);
+
+    expect(batch).toHaveBeenCalledTimes(3);
+    expect(batch.mock.calls.map(([statements]) => (statements as unknown[]).length)).toEqual([
+      50, 50, 20,
+    ]);
+  });
+
+  it('waits for every chunk when one rejects, logs its ids, and counts the others', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     let lateBatchSettled = false;
+    const echo = echoBatch();
     const { db } = fakeDb(
-      [expiredRow('ta-aaaaaaaa'), expiredRow('ta-bbbbbbbb'), expiredRow('ta-cccccccc')],
+      manyRows(60),
       vi
         .fn()
-        .mockResolvedValueOnce(changedBatch)
+        .mockImplementationOnce(echo)
         .mockRejectedValueOnce(new Error('batch failed'))
-        .mockImplementationOnce(async () => {
+        .mockImplementationOnce(async (statements: unknown[]) => {
           await new Promise((resolve) => setTimeout(resolve, 20));
           lateBatchSettled = true;
-          return changedBatch;
+          return echo(statements);
         }),
     );
 
-    await expect(sweepExpiredTimedActions(db)).resolves.toBe(2);
+    await expect(sweepExpiredTimedActions(db)).resolves.toBe(35);
     expect(lateBatchSettled).toBe(true);
     expect(consoleError).toHaveBeenCalledWith(
-      expect.stringContaining('ta-bbbbbbbb'),
+      expect.stringContaining('ta-00000025'),
       expect.any(Error),
     );
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining('ta-00000049'),
+      expect.any(Error),
+    );
+  });
+});
+
+describe('isMissingTimedActionsTable', () => {
+  it('matches a plain missing-table error but never a ContentStoreError', () => {
+    expect(
+      isMissingTimedActionsTable(new Error('D1_ERROR: no such table: timed_actions: SQLITE_ERROR')),
+    ).toBe(true);
+    expect(
+      isMissingTimedActionsTable(
+        new ContentStoreError(404, 'timed action no such table: timed_actions not found'),
+      ),
+    ).toBe(false);
   });
 });

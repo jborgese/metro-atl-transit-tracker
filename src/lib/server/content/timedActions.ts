@@ -43,6 +43,7 @@ import {
 } from './validators';
 
 export const SYSTEM_ACTOR = 'system';
+const SWEEP_CHUNK_SIZE = 25;
 
 const log = createLogger('TimedActions');
 
@@ -57,8 +58,12 @@ type TimedActionWrite = {
   writeRow: (stored: StoredEntityWrite) => D1PreparedStatement;
 };
 
-function isMissingTimedActionsTable(err: unknown): boolean {
-  return err instanceof Error && /no such table: timed_actions/i.test(err.message);
+export function isMissingTimedActionsTable(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    !(err instanceof ContentStoreError) &&
+    /no such table: timed_actions/i.test(err.message)
+  );
 }
 
 function notFound(id: string): ContentStoreError {
@@ -113,12 +118,19 @@ async function requireTimedAction(db: D1Database, id: string): Promise<TimedActi
   return rowToTimedAction(row);
 }
 
-async function writeArchive(
+function chunk<T>(items: T[], size: number): T[][] {
+  return Array.from({ length: Math.ceil(items.length / size) }, (_, index) =>
+    items.slice(index * size, (index + 1) * size),
+  );
+}
+
+function archiveStatements(
   db: D1Database,
   previous: TimedAction,
   actor: string,
   timestamp: string,
-): Promise<TimedAction | null> {
+  expiredBefore: string | null,
+) {
   const stored = normalizeEntityForStorage(
     {
       ...previous,
@@ -141,7 +153,7 @@ async function writeArchive(
     after: cloneRecord(stored.entity),
   });
 
-  const results = await db.batch([
+  const statements = [
     db
       .prepare(INSERT_TIMED_ACTION_ARCHIVE_EVENT_SQL)
       .bind(
@@ -151,6 +163,7 @@ async function writeArchive(
         timestamp,
         toHistoryJson(history.before),
         toHistoryJson(history.after),
+        expiredBefore,
       ),
     db
       .prepare(ARCHIVE_TIMED_ACTION_SQL)
@@ -161,10 +174,36 @@ async function writeArchive(
         stored.updatedAt,
         stored.updatedBy,
         previous.id,
+        expiredBefore,
       ),
-  ]);
+  ];
+  return { statements, archived: stored.entity as unknown as TimedAction };
+}
 
-  return extractRunChanges(results[1]) === 1 ? (stored.entity as unknown as TimedAction) : null;
+async function writeArchive(
+  db: D1Database,
+  previous: TimedAction,
+  actor: string,
+  timestamp: string,
+): Promise<TimedAction | null> {
+  const { statements, archived } = archiveStatements(db, previous, actor, timestamp, null);
+  const results = await db.batch(statements);
+  return extractRunChanges(results[1]) === 1 ? archived : null;
+}
+
+async function archiveExpiredChunk(
+  db: D1Database,
+  actions: TimedAction[],
+  timestamp: string,
+  today: string,
+): Promise<number> {
+  const results = await db.batch(
+    actions.flatMap(
+      (action) => archiveStatements(db, action, SYSTEM_ACTOR, timestamp, today).statements,
+    ),
+  );
+  return results.filter((result, index) => index % 2 === 1 && extractRunChanges(result) === 1)
+    .length;
 }
 
 async function writeTimedAction(db: D1Database, change: TimedActionWrite): Promise<TimedAction> {
@@ -280,22 +319,25 @@ export async function sweepExpiredTimedActions(
   now: Date = new Date(),
 ): Promise<number> {
   try {
+    const today = atlantaDate(now);
     const rows = await db
       .prepare(SELECT_EXPIRED_TIMED_ACTIONS_SQL)
-      .bind(atlantaDate(now))
+      .bind(today)
       .all<StoredEntityRow>();
     const expired = rows.results.map(rowToTimedAction);
     const timestamp = now.toISOString();
+    const chunks = chunk(expired, SWEEP_CHUNK_SIZE);
     const results = await Promise.allSettled(
-      expired.map((action) => writeArchive(db, action, SYSTEM_ACTOR, timestamp)),
+      chunks.map((actions) => archiveExpiredChunk(db, actions, timestamp, today)),
     );
-    results.forEach((result, index) => {
+    return results.reduce((total, result, index) => {
       if (result.status === 'rejected') {
-        log.error(`timed action sweep could not archive ${expired[index]?.id}`, result.reason);
+        const ids = (chunks[index] ?? []).map((action) => action.id).join(', ');
+        log.error(`timed action sweep could not archive ${ids}`, result.reason);
+        return total;
       }
-    });
-    return results.filter((result) => result.status === 'fulfilled' && result.value !== null)
-      .length;
+      return total + result.value;
+    }, 0);
   } catch (err) {
     log.error('timed action sweep failed', err);
     return 0;
