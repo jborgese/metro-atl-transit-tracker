@@ -38,26 +38,25 @@
   const id = (path: string) => fieldId('goal', path);
   const errorAt = (path: string) => issues.find((issue) => issue.path === path)?.message;
   const byTitle = (a: Project, b: Project) => a.title.localeCompare(b.title);
-  const projectOptions = (archivedOnes: boolean, suffix: string) =>
+  const projectOptions = (archivedOnes: boolean) =>
     projects
       .filter((project) => (project.is_archived === true) === archivedOnes)
       .sort(byTitle)
-      .map((project) => ({ value: project.id, label: `${project.title}${suffix}` }));
+      .map((project) => ({ value: project.id, label: project.title }));
 
-  const relatedProjectOptions = $derived([
-    ...projectOptions(false, ''),
-    ...projectOptions(true, ' (archived)'),
-  ]);
+  const activeProjectOptions = $derived(projectOptions(false));
+  const archivedProjectOptions = $derived(projectOptions(true));
   const hidden = $derived(hiddenKeys(draft));
   const hiddenNotice = $derived(
     `This goal has ${hidden.length} ${hidden.length === 1 ? 'field' : 'fields'} the form does not show: ${hidden.join(', ')}. Use Edit as JSON to change them.`,
   );
-  const actionLines = $derived(
-    actions.map((action) => ({
-      id: action.id,
-      text: `${action.description} — ${action.expires_on}${action.is_archived === true ? ' (archived)' : ''}`,
-    })),
-  );
+  const actionLines = (archivedOnes: boolean) =>
+    actions
+      .filter((action) => (action.is_archived === true) === archivedOnes)
+      .map((action) => ({ id: action.id, text: `${action.description} — ${action.expires_on}` }));
+
+  const activeActionLines = $derived(actionLines(false));
+  const archivedActionLines = $derived(actionLines(true));
   const actionsHeadingId = `${uid}-actions-heading`;
 </script>
 
@@ -156,7 +155,9 @@
         id={id('related_project_ids')}
         legend="Related projects"
         error={errorAt('related_project_ids')}
-        options={relatedProjectOptions}
+        options={activeProjectOptions}
+        archivedOptions={archivedProjectOptions}
+        archivedLabel="Archived projects"
         bind:selected={draft.related_project_ids}
       />
 
@@ -219,14 +220,26 @@
 
       <div class="group">
         <h4 id={actionsHeadingId}>Actions for this goal</h4>
-        {#if actionLines.length === 0}
+        {#if actions.length === 0}
           <p class="empty">No actions yet.</p>
+        {:else if activeActionLines.length === 0}
+          <p class="empty">No active actions.</p>
         {:else}
           <ul aria-labelledby={actionsHeadingId}>
-            {#each actionLines as line (line.id)}
+            {#each activeActionLines as line (line.id)}
               <li>{line.text}</li>
             {/each}
           </ul>
+        {/if}
+        {#if archivedActionLines.length > 0}
+          <details>
+            <summary>Archived actions ({archivedActionLines.length})</summary>
+            <ul>
+              {#each archivedActionLines as line (line.id)}
+                <li>{line.text}</li>
+              {/each}
+            </ul>
+          </details>
         {/if}
         {#if isNew}
           <p class="hint">Save this goal before adding an action.</p>
@@ -316,6 +329,24 @@
     padding-left: 1.1rem;
     font-size: 0.86rem;
     word-break: break-word;
+  }
+
+  summary {
+    width: fit-content;
+    min-height: 2rem;
+    padding: 0.3rem 0.25rem;
+    font-size: 0.86rem;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  summary:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  details ul {
+    padding-top: 0.25rem;
   }
 
   textarea,

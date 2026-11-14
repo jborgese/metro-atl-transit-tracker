@@ -227,6 +227,18 @@ describe('GoalFields choices', () => {
     ]);
   });
 
+  it('keeps archived projects in a closed disclosure apart from active ones', () => {
+    renderFields();
+    const group = screen.getByRole('group', { name: 'Related projects' });
+    const disclosure = group.querySelector('details') as HTMLDetailsElement;
+    expect(disclosure.open).toBe(false);
+    expect(disclosure.querySelector('summary')!.textContent).toBe('Archived projects (2)');
+    expect(disclosure.contains(box('Bus plan (archived)'))).toBe(true);
+    expect(disclosure.contains(box('Old plan (archived)'))).toBe(true);
+    expect(disclosure.contains(box('Airport loop'))).toBe(false);
+    expect(disclosure.contains(box('Zebra line'))).toBe(false);
+  });
+
   it('checks the stored county and project', () => {
     renderFields({ initial: stored });
     expect(box('Fulton').checked).toBe(true);
@@ -361,12 +373,13 @@ describe('GoalFields errors', () => {
 });
 
 describe('GoalFields actions for this goal', () => {
-  it('lists the goal actions with their last day, marking archived ones', () => {
+  it('lists active actions and keeps archived ones in a closed disclosure', () => {
     renderFields({
       initial: stored,
       actions: [
         action('ta-1', 'Ask the mayor', '2026-12-01'),
         action('ta-2', 'Old ask', '2026-10-01', true),
+        action('ta-3', 'Older ask', '2026-09-01', true),
       ],
     });
     const list = screen.getByRole('list', { name: 'Actions for this goal' });
@@ -374,8 +387,31 @@ describe('GoalFields actions for this goal', () => {
       within(list)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['Ask the mayor — 2026-12-01', 'Old ask — 2026-10-01 (archived)']);
+    ).toEqual(['Ask the mayor — 2026-12-01']);
+    const disclosure = screen.getByText('Archived actions (2)').closest('details')!;
+    expect(disclosure.open).toBe(false);
+    expect([...disclosure.querySelectorAll('li')].map((item) => item.textContent)).toEqual([
+      'Old ask — 2026-10-01',
+      'Older ask — 2026-09-01',
+    ]);
     expect(screen.queryByText('No actions yet.')).toBeNull();
+    expect(screen.queryByText('No active actions.')).toBeNull();
+  });
+
+  it('says when every action is archived and still lists them in the disclosure', () => {
+    renderFields({
+      initial: stored,
+      actions: [action('ta-2', 'Old ask', '2026-10-01', true)],
+    });
+    expect(screen.getByText('No active actions.')).toBeTruthy();
+    expect(screen.queryByRole('list', { name: 'Actions for this goal' })).toBeNull();
+    expect(screen.getByText('Archived actions (1)').closest('details')!.open).toBe(false);
+    expect(screen.getByText('Old ask — 2026-10-01')).toBeTruthy();
+  });
+
+  it('shows no archived disclosure when no action is archived', () => {
+    renderFields({ initial: stored, actions: [action('ta-1', 'Ask the mayor', '2026-12-01')] });
+    expect(screen.queryByText(/^Archived actions/)).toBeNull();
   });
 
   it('says when the goal has no actions', () => {
