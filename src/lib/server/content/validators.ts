@@ -22,14 +22,14 @@ const genericRecordSchema = z.record(z.string(), z.unknown());
 const organizationRefSchema = z
   .object({
     name: nonEmptyStringSchema.max(160),
-    url: z.string().trim().url().optional(),
+    url: z.string().trim().pipe(z.httpUrl()).optional(),
   })
   .passthrough();
 
 const relatedOrgSchema = z
   .object({
     name: nonEmptyStringSchema.max(160),
-    url: z.string().trim().url().optional(),
+    url: z.string().trim().pipe(z.httpUrl()).optional(),
     contact_info: z.string().max(600).optional(),
   })
   .passthrough();
@@ -37,7 +37,7 @@ const relatedOrgSchema = z
 const contentSourceSchema = z
   .object({
     label: nonEmptyStringSchema.max(200),
-    url: z.string().trim().url(),
+    url: z.string().trim().pipe(z.httpUrl()),
     last_verified: nonEmptyStringSchema.max(120).optional(),
   })
   .passthrough();
