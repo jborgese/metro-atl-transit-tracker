@@ -20,6 +20,7 @@
   --atl-magenta: #a32f65;
   --atl-blue: #4280c4;
   --atl-lavender: #8a62b0;
+  --action-accent: #f0b429;
 
   /* Link text on dark surfaces. --atl-blue is too dark on --atl-green
      (2.1:1, fails WCAG AA); --link clears AA at ~5.2:1. */

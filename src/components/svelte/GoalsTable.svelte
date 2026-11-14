@@ -1,11 +1,14 @@
 <script lang="ts">
-  import type { Goal, Project } from './types';
+  import type { Goal, Project, TimedAction } from './types';
   import { statusLabel, getStatusColor, getStatusTextColor } from '#utils/statusHelpers.ts';
+  import { atlantaDate, expiryTag, isTimedActionLive, mapsSearchUrl } from '#utils/timedActions.ts';
   import { countyOrder, getCountyName as lookupCountyName } from '#utils/countyLookup.ts';
 
   let {
     goals = [],
     projects = [],
+    timedActions = [],
+    now = new Date(),
     selectedCounty = null,
     countyNames = {},
     onclearCounty,
@@ -13,6 +16,8 @@
   }: {
     goals?: Goal[];
     projects?: Project[];
+    timedActions?: TimedAction[];
+    now?: Date;
     selectedCounty?: string | null;
     countyNames?: Record<string, string>;
     onclearCounty?: () => void;
@@ -80,6 +85,12 @@
   function getRelatedProjects(goal: Goal): Project[] {
     if (!goal.related_project_ids || goal.related_project_ids.length === 0) return [];
     return projects.filter((p) => goal.related_project_ids!.includes(p.id));
+  }
+
+  function getLiveActions(goal: Goal): TimedAction[] {
+    return timedActions
+      .filter((action) => action.goal_id === goal.id && isTimedActionLive(action, true, now))
+      .sort((a, b) => a.expires_on.localeCompare(b.expires_on));
   }
 
   type StatusContentPart =
@@ -177,7 +188,7 @@
               <tr>
                 <th>Goal</th>
                 <th>Status</th>
-                <th>Actions</th>
+                <th>Ongoing actions</th>
                 <th>Orgs</th>
               </tr>
             </thead>
@@ -209,7 +220,7 @@
                 <tr>
                   <th>Goal</th>
                   <th>Status/Related Projects</th>
-                  <th>Actions to take in support of the Goal</th>
+                  <th>Ongoing actions</th>
                   <th>Related Orgs</th>
                 </tr>
               </thead>
@@ -241,7 +252,7 @@
               <tr>
                 <th>Goal</th>
                 <th>Status</th>
-                <th>Actions</th>
+                <th>Ongoing actions</th>
                 <th>Orgs</th>
               </tr>
             </thead>
@@ -272,7 +283,7 @@
               <tr>
                 <th>Goal</th>
                 <th>Status</th>
-                <th>Actions</th>
+                <th>Ongoing actions</th>
                 <th>Orgs</th>
               </tr>
             </thead>
@@ -301,7 +312,7 @@
         {/each}
       {/if}
     </td>
-    <td data-label="Actions">{goal.actions || ''}</td>
+    <td data-label="Ongoing actions">{goal.actions || ''}</td>
     <td data-label="Orgs">
       {#if goal.related_orgs && goal.related_orgs.length > 0}
         {#each goal.related_orgs as org}
@@ -319,8 +330,48 @@
       {/if}
     </td>
   </tr>
+  {#each getLiveActions(goal) as action (action.id)}
+    <tr class="timed-action-row">
+      <td class="nested-cell" colspan="4">
+        <div class="timed-action">
+          <span class="timed-action-label">Act now</span>
+          <div class="timed-action-content">
+            <div class="timed-action-body">{action.description}</div>
+            {#if action.link}
+              <a
+                class="timed-action-button"
+                href={action.link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {action.link.label}
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
+              </a>
+            {/if}
+            {#if action.location}
+              <a
+                class="timed-action-button"
+                href={mapsSearchUrl(action.location.address)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
+                  <circle cx="12" cy="10" r="2.5" />
+                </svg>
+                {action.location.label}
+              </a>
+            {/if}
+            <span class="timed-action-tag" class:is-today={action.expires_on === atlantaDate(now)}
+              >{expiryTag(action.expires_on, now)}</span
+            >
+          </div>
+        </div>
+      </td>
+    </tr>
+  {/each}
   <!-- Nested project rows -->
-  {#each getRelatedProjects(goal) as project}
+  {#each getRelatedProjects(goal) as project (project.id)}
     <tr class="project-row">
       <td class="nested-cell" colspan="4">
         <div
@@ -484,6 +535,92 @@
   .project-row td {
     border-top: none;
     padding: 0;
+  }
+  .timed-action-row {
+    background: transparent;
+  }
+  .timed-action-row td {
+    border-top: none;
+    padding: 0;
+  }
+  .timed-action {
+    display: flex;
+    align-items: stretch;
+    margin-left: 1rem;
+    border: 1px solid color-mix(in srgb, var(--action-accent) 55%, transparent);
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.22);
+  }
+  .timed-action-label {
+    flex: none;
+    padding: 0.5rem 0.35rem;
+    background: var(--action-accent);
+    color: var(--text-on-light);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+  .timed-action-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    padding: 0.7rem 0.9rem;
+  }
+  .timed-action-body {
+    flex: 1 1 16rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  td a.timed-action-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    max-width: 100%;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--link);
+    border-radius: 6px;
+    color: var(--link);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  td a.timed-action-button:hover,
+  td a.timed-action-button:focus-visible {
+    background: color-mix(in srgb, var(--link) 15%, transparent);
+    color: var(--link);
+    text-decoration: none;
+  }
+  .timed-action-button svg {
+    flex: none;
+    width: 0.85rem;
+    height: 0.85rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .timed-action-tag {
+    padding: 0.15rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--action-accent) 60%, transparent);
+    border-radius: 999px;
+    color: var(--action-accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .timed-action-tag.is-today {
+    background: var(--action-accent);
+    color: var(--text-on-light);
   }
   .nested-cell {
     padding-left: 1.5rem !important;
@@ -681,8 +818,10 @@
     .goals-data-table tbody,
     .goals-data-table .goal-row,
     .goals-data-table .project-row,
+    .goals-data-table .timed-action-row,
     .goals-data-table .goal-row td,
-    .goals-data-table .project-row td {
+    .goals-data-table .project-row td,
+    .goals-data-table .timed-action-row td {
       display: block;
       width: 100%;
     }
@@ -722,7 +861,8 @@
       line-height: 1.35;
     }
 
-    .goals-data-table .project-row td {
+    .goals-data-table .project-row td,
+    .goals-data-table .timed-action-row td {
       border: 0;
       padding: 0;
     }
@@ -733,7 +873,8 @@
       padding-bottom: 0 !important;
     }
 
-    .project-card {
+    .project-card,
+    .timed-action {
       margin-left: 0;
     }
 

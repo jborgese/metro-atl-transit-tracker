@@ -1,7 +1,8 @@
-import { fireEvent, render } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import GoalsTable from './GoalsTable.svelte';
-import type { Goal, Project } from './types';
+import type { Goal, Project, TimedAction } from './types';
+import { mapsSearchUrl } from '#utils/timedActions.ts';
 
 const projects = [
   { id: 'p1', title: 'Proj One', summary: 's', status: 'planning' },
@@ -70,5 +71,94 @@ describe('GoalsTable', () => {
       n.textContent?.trim(),
     );
     expect(infos).toEqual(['(call first)', '(call first)']);
+  });
+
+  describe('timed actions', () => {
+    const now = new Date('2026-11-30T15:00:00Z');
+    const base: TimedAction = {
+      id: 'ta-aaaaaaaa',
+      goal_id: 'g1',
+      description: 'Comment on the study.',
+      link: null,
+      location: null,
+      expires_on: '2026-11-30',
+    };
+
+    it('shows link and location buttons and the last-day tag', () => {
+      const action = {
+        ...base,
+        link: { label: 'Submit a comment', url: 'https://beltline.org/x' },
+        location: { label: 'Murphy Crossing site', address: '1050 Murphy Ave SW, Atlanta, GA' },
+      };
+      render(GoalsTable, { props: { goals, projects, timedActions: [action], now } });
+      expect(screen.getByText('Act now')).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Submit a comment' }).getAttribute('href')).toBe(
+        'https://beltline.org/x',
+      );
+      const pin = screen.getByRole('link', { name: 'Murphy Crossing site' });
+      expect(pin.getAttribute('href')).toBe(mapsSearchUrl('1050 Murphy Ave SW, Atlanta, GA'));
+      expect(pin.getAttribute('target')).toBe('_blank');
+      expect(pin.getAttribute('rel')).toBe('noopener noreferrer');
+      expect(screen.getByText('Expires today')).toBeTruthy();
+    });
+
+    it('renders text only when there is no link or location', () => {
+      const { container } = render(GoalsTable, {
+        props: { goals, projects, timedActions: [base], now },
+      });
+      expect(container.querySelectorAll('.timed-action a')).toHaveLength(0);
+    });
+
+    it('hides expired, archived and goal-less actions', () => {
+      const actions = [
+        { ...base, id: 'ta-expired1', expires_on: '2026-11-29' },
+        { ...base, id: 'ta-archived', is_archived: true },
+        { ...base, id: 'ta-orphan01', goal_id: 'no-such-goal' },
+      ];
+      const { container } = render(GoalsTable, {
+        props: { goals, projects, timedActions: actions, now },
+      });
+      expect(container.querySelectorAll('.timed-action')).toHaveLength(0);
+    });
+
+    it('orders several actions soonest first, above project cards', () => {
+      const actions = [
+        { ...base, id: 'ta-later000', description: 'Later', expires_on: '2026-12-10' },
+        { ...base, id: 'ta-sooner00', description: 'Sooner', expires_on: '2026-12-01' },
+      ];
+      const { container } = render(GoalsTable, {
+        props: { goals, projects, timedActions: actions, now },
+      });
+      const rows = [...container.querySelectorAll('tbody')[0]!.children].map(
+        (r) => r.className.split(' ')[0],
+      );
+      expect(rows).toEqual(['goal-row', 'timed-action-row', 'timed-action-row', 'project-row']);
+      const texts = [...container.querySelectorAll('.timed-action-body')].map((n) => n.textContent);
+      expect(texts[0]).toContain('Sooner');
+    });
+
+    it('renders editor text literally', () => {
+      render(GoalsTable, {
+        props: {
+          goals,
+          projects,
+          timedActions: [{ ...base, description: '<b>Bold</b> & more' }],
+          now,
+        },
+      });
+      expect(screen.getByText('<b>Bold</b> & more')).toBeTruthy();
+    });
+  });
+
+  it('labels the third column Ongoing actions', () => {
+    const { container } = render(GoalsTable, { props: { goals, projects } });
+    const third = [...container.querySelectorAll('thead tr')].map(
+      (tr) => tr.children[2]?.textContent,
+    );
+    expect(new Set(third)).toEqual(new Set(['Ongoing actions']));
+    expect(container.querySelectorAll('td[data-label="Ongoing actions"]').length).toBeGreaterThan(
+      0,
+    );
+    expect(container.querySelectorAll('td[data-label="Actions"]')).toHaveLength(0);
   });
 });

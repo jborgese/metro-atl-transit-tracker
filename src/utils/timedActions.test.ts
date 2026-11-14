@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { atlantaDate, isTimedActionLive } from './timedActions';
+import { atlantaDate, expiryTag, isTimedActionLive, mapsSearchUrl } from './timedActions';
 
 describe('atlantaDate', () => {
   it.each([
@@ -28,5 +28,25 @@ describe('isTimedActionLive', () => {
     const now = new Date('2026-11-20T12:00:00Z');
     expect(isTimedActionLive({ ...action, is_archived: true }, true, now)).toBe(false);
     expect(isTimedActionLive(action, false, now)).toBe(false);
+  });
+});
+
+describe('expiryTag', () => {
+  it('tags the last day and earlier days', () => {
+    expect(expiryTag('2026-11-30', new Date('2026-11-30T15:00:00Z'))).toBe('Expires today');
+    expect(expiryTag('2026-11-30', new Date('2026-11-20T15:00:00Z'))).toBe('Closes Nov. 30');
+    expect(expiryTag('2026-05-04', new Date('2026-04-20T15:00:00Z'))).toBe('Closes May 4');
+    expect(expiryTag('2027-01-15', new Date('2026-12-20T15:00:00Z'))).toBe('Closes Jan. 15, 2027');
+  });
+});
+
+describe('mapsSearchUrl', () => {
+  it('builds a Google Maps search link', () => {
+    expect(mapsSearchUrl('1050 Murphy Ave SW, Atlanta, GA')).toBe(
+      'https://www.google.com/maps/search/?api=1&query=1050%20Murphy%20Ave%20SW%2C%20Atlanta%2C%20GA',
+    );
+    expect(mapsSearchUrl('5th & Main #2, Décatur')).toBe(
+      'https://www.google.com/maps/search/?api=1&query=5th%20%26%20Main%20%232%2C%20D%C3%A9catur',
+    );
   });
 });
