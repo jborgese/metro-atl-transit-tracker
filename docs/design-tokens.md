@@ -20,16 +20,17 @@ This makes the UA render scrollbars, native form controls, and autofill highligh
 
 ## Tokens
 
-### Brand (6)
+### Brand (7)
 
-| Token            | Value     | Use when                                                                                                                                                                                        |
-| ---------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--atl-green`    | `#33514D` | Primary surface base (aliased by `--surface-0`); body background.                                                                                                                               |
-| `--atl-bronze`   | `#7E6E4F` | Source for the alpha-derived border tokens; accent strokes.                                                                                                                                     |
-| `--atl-red`      | `#a73a32` | "Ongoing" status; destructive/alert accents.                                                                                                                                                    |
-| `--atl-magenta`  | `#a32f65` | "Funding application" status; secondary accent.                                                                                                                                                 |
-| `--atl-blue`     | `#4280c4` | "Planning" status fill; non-text accent strokes (focus rings, milestone borders, list markers). **Not for link text** — only 2.1:1 vs `--atl-green`, fails WCAG AA. Use `--link` for link copy. |
-| `--atl-lavender` | `#8a62b0` | "Public outreach" status; tertiary accent.                                                                                                                                                      |
+| Token             | Value     | Use when                                                                                                                                                                                        |
+| ----------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--atl-green`     | `#33514D` | Primary surface base (aliased by `--surface-0`); body background.                                                                                                                               |
+| `--atl-bronze`    | `#7E6E4F` | Source for the alpha-derived border tokens; accent strokes.                                                                                                                                     |
+| `--atl-red`       | `#a73a32` | "Ongoing" status; destructive/alert accents.                                                                                                                                                    |
+| `--atl-magenta`   | `#a32f65` | "Funding application" status; secondary accent.                                                                                                                                                 |
+| `--atl-blue`      | `#4280c4` | "Planning" status fill; non-text accent strokes (focus rings, milestone borders, list markers). **Not for link text** — only 2.1:1 vs `--atl-green`, fails WCAG AA. Use `--link` for link copy. |
+| `--atl-lavender`  | `#8a62b0` | "Public outreach" status; tertiary accent.                                                                                                                                                      |
+| `--action-accent` | `#f0b429` | Timed-action banner label, border and last-day tag; pair with `--text-on-light`.                                                                                                                |
 
 ### Link (2)
 

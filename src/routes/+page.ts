@@ -1,7 +1,7 @@
 import projectsFallback from '../data/geo/projects-metadata.json';
 import goalsFallback from '../data/geo/goals-metadata.json';
 import type { PageLoad } from './$types';
-import type { ApiListResponse, Goal, Project } from '#types/content.ts';
+import type { ApiListResponse, Goal, Project, TimedAction } from '#types/content.ts';
 
 type LoadFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -32,14 +32,16 @@ async function loadCollection<T>(
 }
 
 export const load: PageLoad = async ({ fetch }) => {
-  const [projects, goals] = await Promise.all([
+  const [projects, goals, timedActions] = await Promise.all([
     loadCollection<Project>(fetch, '/api/projects', projectsFallback as Project[]),
     loadCollection<Goal>(fetch, '/api/goals', goalsFallback as Goal[]),
+    loadCollection<TimedAction>(fetch, '/api/timed-actions', []),
   ]);
 
   return {
     projects: projects.data,
     goals: goals.data,
+    timedActions: timedActions.data,
     usingFallback: projects.usedFallback || goals.usedFallback,
   };
 };

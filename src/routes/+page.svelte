@@ -11,6 +11,7 @@
 
   const projects = $derived(data?.projects ?? []);
   const goals = $derived(data?.goals ?? []);
+  const timedActions = $derived(data?.timedActions ?? []);
 
   let selectedCounty: string | null = $state(null);
   let mapRef: MetroMap | undefined = $state();
@@ -93,6 +94,7 @@
     <GoalsTable
       {goals}
       {projects}
+      {timedActions}
       {selectedCounty}
       onclearCounty={handleClearCounty}
       onselectProject={handleSelectProject}

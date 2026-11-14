@@ -62,7 +62,7 @@ npm run dev
 - `src/data/`: static geo metadata (fallback seed) and the generated `src/data/static/orgLogos.ts`
 - `src/layouts/`: `BaseLayout.svelte`, which pages import directly (there is no `+layout.svelte`)
 - `src/lib/map/`: MapLibre setup and layer helpers, plain TypeScript called from components
-- `src/lib/server/`: server-only code: `auth/` (Cloudflare Access JWT, `requireEditorActor`), `content/` (projects, goals, history, profiles), `feedback/`, `openapi/`
+- `src/lib/server/`: server-only code: `auth/` (Cloudflare Access JWT, `requireEditorActor`), `content/` (projects, goals, timed actions, history, profiles), `feedback/`, `openapi/`
 - `src/routes/`: pages (`/`, `/history`, `/admin`) and JSON API endpoints under `src/routes/api/`
 - `src/styles/global.css`: design tokens (CSS custom properties) and shared base styles; `src/styles/preflight.css` is the CSS reset it imports (copied from Tailwind CSS)
 - `src/types/`: shared, type-only declarations with a barrel at `src/types/index.ts`
@@ -73,9 +73,10 @@ npm run dev
 
 - **Project**: a transit project (status, county, sources), stored in the D1 `projects` table.
 - **Goal**: an advocacy goal, grouped by county or regional, with related projects nested under it (`goals` table).
+- **Timed action**: a deadline ask attached to one goal (`timed_actions` table), shown as an "Act now" banner until the end of its last day in Atlanta; called "Action" in the admin.
 - **Status**: a project stage: `planning`, `public-outreach`, `funding-application`, `implementation`, `completed`, `ongoing`. Colors live in `src/utils/statusHelpers.ts`.
 - **Content history**: the append-only `content_history` event log. Every write adds an event; D1 triggers block updates and deletes.
-- **Archive / restore**: soft delete through the `is_archived`, `archived_at`, and `archived_by` fields. These fields change only through the dedicated archive and restore endpoints.
+- **Archive / restore**: soft delete through the `is_archived`, `archived_at`, and `archived_by` fields. These fields change only through the dedicated archive and restore endpoints. Expired timed actions are also archived automatically by a sweep credited to `system`.
 - **Editor / actor**: an authenticated Cloudflare Access identity. Permissions are `content:edit` and `content:archive`, granted through the optional `CF_ACCESS_RBAC_*` allowlists.
 - **Seed content**: `data/content/*.json` (falling back to `src/data/geo/*-metadata.json`), loaded only into an empty database. Live content is D1.
 
@@ -84,6 +85,7 @@ npm run dev
 - New API resource? Add `src/routes/api/<resource>/+server.ts`. Wire it to a domain module in `src/lib/server/<domain>/`, the way `api/projects` wires `makeCollectionHandlers` from `src/lib/server/content/handlers.ts`. Validate input with Zod in that domain's `validators.ts`. Register the schema in `src/lib/server/openapi/spec.ts`.
 - New component? `src/components/svelte/`, following `.claude/rules/svelte.md`.
 - Schema change? Add the next-numbered file in `migrations/d1/`, and extend `scripts/check-d1-schema.mjs` when it adds a required table, index, or trigger.
+- New content type? Also add an entry in `src/routes/admin/datasets.ts` and a label in `src/utils/entityLabels.ts`.
 - New shared type? `src/types/<domain>.ts`, exported through the barrel (`CONTRIBUTING.md` → "Type declaration placement").
 - New color, surface, or spacing value? Reuse or add a token per [`docs/design-tokens.md`](docs/design-tokens.md).
 
