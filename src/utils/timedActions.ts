@@ -37,8 +37,20 @@ export function expiryTag(expiresOn: string, now: Date): string {
   return `Closes ${tagMonths[Number(month) - 1]} ${Number(day)}${yearSuffix}`;
 }
 
+function isSurrogateUnit(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return char.length === 1 && code >= 0xd800 && code <= 0xdfff;
+}
+
+export function hasLoneSurrogate(text: string): boolean {
+  return Array.from(text).some(isSurrogateUnit);
+}
+
 export function mapsSearchUrl(address: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+  const wellFormed = Array.from(address)
+    .filter((char) => !isSurrogateUnit(char))
+    .join('');
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(wellFormed)}`;
 }
 
 export function isTimedActionLive(

@@ -7,7 +7,7 @@ Public, data-driven transit advocacy map and content hub for Metro Atlanta.
 - SvelteKit + Svelte 5
 - MapLibre GL
 - Scoped Svelte styles + CSS custom-property tokens (`src/styles/global.css`)
-- Cloudflare Workers + D1 (`projects`, `goals`, `content_history`, `user_profiles`)
+- Cloudflare Workers + D1 (`projects`, `goals`, `timed_actions`, `content_history`, `user_profiles`)
 - Cloudflare Access (editor auth)
 - Cloudflare native rate-limit binding for write protection
 
@@ -17,7 +17,7 @@ Public, data-driven transit advocacy map and content hub for Metro Atlanta.
 - Public goals table grouped by county, plus regional goals
 - Nested related projects under goals with source links/status badges
 - Public history page at `/history` (create/update/archive/restore events)
-- Admin JSON editor at `/admin` for projects/goals (create, update, archive, restore)
+- Admin JSON editor at `/admin` for projects, goals, and actions (create, update, archive, restore)
 - Soft-delete archive model with immutable D1-backed content history
 - Server-side payload validation for writes (Zod)
 - Per-identity display name overrides (`user_profiles`) shown on `/history` and admin views
@@ -64,7 +64,9 @@ Read routes (public):
 - `GET /api/projects/:id?includeArchived=true|false` (defaults to `true` when omitted)
 - `GET /api/goals?includeArchived=true|false`
 - `GET /api/goals/:id?includeArchived=true|false` (defaults to `true` when omitted)
-- `GET /api/history?entityType=project|goal&entityId=<id>&limit=<n>`
+- `GET /api/timed-actions?includeArchived=true|false`
+- `GET /api/timed-actions/:id?includeArchived=true|false` (defaults to `true` when omitted)
+- `GET /api/history?entityType=project|goal|timed_action&entityId=<id>&limit=<n>`
 - `GET /api/openapi.json` (OpenAPI 3.1 spec, cached for 5 min)
 
 Authenticated routes (no special scope, any authenticated identity):
@@ -82,6 +84,10 @@ Write routes (auth required):
 - `PATCH /api/goals/:id` (`content:edit`)
 - `DELETE /api/goals/:id` (`content:archive`, archive/soft-delete)
 - `POST /api/goals/:id/restore` (`content:archive`)
+- `POST /api/timed-actions` (`content:edit`; the server generates the id)
+- `PATCH /api/timed-actions/:id` (`content:edit`; replaces the whole record)
+- `DELETE /api/timed-actions/:id` (`content:archive`, archive/soft-delete)
+- `POST /api/timed-actions/:id/restore` (`content:archive`)
 
 Notes:
 

@@ -24,6 +24,7 @@
   let message = $state('');
   let messageKind: MessageKind = $state('info');
   let dirty = $state(false);
+  let editorIsPlaceholder = false;
   let editorError = $state('');
   let lastLoadedAt = $state('');
   let now = $state(Date.now());
@@ -125,7 +126,8 @@
     validateEditorJson();
   }
 
-  function startNew(mode: EditorEntity) {
+  function startNew(mode: EditorEntity, placeholder = false) {
+    editorIsPlaceholder = placeholder;
     dataset = mode;
     selectedDataset = mode;
     selectedId = '';
@@ -140,6 +142,9 @@
     }
     dataset = kind;
     searchQuery = '';
+    if (!selectedId && !dirty && editorIsPlaceholder) {
+      startNew(kind, true);
+    }
   }
 
   function selectEntity(id: string, kind: EditorEntity) {
@@ -158,7 +163,7 @@
     if (dirty && !window.confirm('Discard unsaved changes?')) {
       return;
     }
-    startNew(dataset);
+    startNew(dataset, true);
   }
 
   function entityNoun(kind: EditorEntity) {
@@ -248,28 +253,79 @@
     editorError = '';
   }
 
-  async function loadData(options: { quiet?: boolean } = {}) {
+  interface LoadFailure {
+    label: string;
+    reason: string;
+  }
+
+  function describeLoadFailure(failure: LoadFailure | null) {
+    return failure ? `${failure.label} could not be reloaded: ${failure.reason}` : '';
+  }
+
+  function replaceById<T extends EntityItem>(list: T[], record: T): T[] {
+    return list.some((item) => item.id === record.id)
+      ? list.map((item) => (item.id === record.id ? record : item))
+      : [...list, record];
+  }
+
+  const upsertInto: Record<EditorEntity, (record: EntityItem) => void> = {
+    project: (record) => {
+      projects = replaceById(projects, record as Project);
+    },
+    goal: (record) => {
+      goals = replaceById(goals, record as Goal);
+    },
+    timed_action: (record) => {
+      timedActions = replaceById(timedActions, record as TimedAction);
+    },
+  };
+
+  async function readReturnedRecord(res: Response): Promise<EntityItem | null> {
+    try {
+      const payload = (await res.json()) as Record<string, unknown>;
+      return isRecord(payload.data) && typeof payload.data.id === 'string'
+        ? (payload.data as unknown as EntityItem)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function finishWrite(summary: string, failure: LoadFailure | null) {
+    dirty = false;
+    if (failure) {
+      setMessage(`${summary} Saved, but ${describeLoadFailure(failure)}`, 'error');
+    } else {
+      setMessage(summary, 'success');
+    }
+  }
+
+  async function loadData(options: { quiet?: boolean } = {}): Promise<LoadFailure | null> {
     loading = true;
     const previousSelection = selectedId;
     const previousSelectedDataset = selectedDataset;
-    let actionsLoadError = '';
+    let failure: LoadFailure | null = null;
 
     try {
       const [projectData, goalData, timedActionData, historyData] = await Promise.all([
         fetchCollection<Project>(`${DATASETS.project.endpoint}?includeArchived=true`),
         fetchCollection<Goal>(`${DATASETS.goal.endpoint}?includeArchived=true`),
-        fetchCollection<TimedAction>(
-          `${DATASETS.timed_action.endpoint}?includeArchived=true`,
-        ).catch((err: unknown) => {
-          actionsLoadError = err instanceof Error ? err.message : 'Failed to load actions.';
-          return [] as TimedAction[];
-        }),
+        fetchCollection<TimedAction>(`${DATASETS.timed_action.endpoint}?includeArchived=true`)
+          .then((data) => ({ data, error: '' }))
+          .catch((err: unknown) => ({
+            data: null,
+            error: err instanceof Error ? err.message : 'Failed to load actions.',
+          })),
         fetchCollection<ContentHistoryEvent>('/api/history?limit=100'),
       ]);
 
       projects = projectData;
       goals = goalData;
-      timedActions = timedActionData;
+      if (timedActionData.data) {
+        timedActions = timedActionData.data;
+      } else {
+        failure = { label: 'the actions list', reason: timedActionData.error };
+      }
       history = historyData;
       lastLoadedAt = new Date().toISOString();
       now = Date.now();
@@ -279,22 +335,25 @@
         if (exists) {
           selectEntity(previousSelection, previousSelectedDataset);
         } else {
-          startNew(selectedDataset);
+          startNew(selectedDataset, true);
         }
       } else if (!selectedId && editorJson === '') {
-        startNew(dataset);
+        startNew(dataset, true);
       }
 
-      if (actionsLoadError) {
-        setMessage(`Could not load the actions list. ${actionsLoadError}`, 'error');
+      if (timedActionData.error) {
+        setMessage(`Could not load the actions list. ${timedActionData.error}`, 'error');
       } else if (!options.quiet) {
         setMessage('Loaded latest content.', 'success');
       }
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Failed to load content.', 'error');
+      const reason = err instanceof Error ? err.message : 'Failed to load content.';
+      setMessage(reason, 'error');
+      failure = { label: 'content', reason };
     } finally {
       loading = false;
     }
+    return failure;
   }
 
   async function saveEntity() {
@@ -336,24 +395,24 @@
         throw new Error(await toResponseErrorMessage(endpoint, res));
       }
 
-      const payload = (await res.json()) as Record<string, unknown>;
-      const data = isRecord(payload.data) ? payload.data : null;
-      const savedId = typeof data?.id === 'string' ? data.id : selectedId;
+      const record = await readReturnedRecord(res);
+      const savedId = record?.id ?? selectedId;
+      if (record) {
+        upsertInto[targetDataset](record);
+      }
 
-      await loadData({ quiet: true });
+      const failure = await loadData({ quiet: true });
       if (savedId) {
         selectEntity(savedId, targetDataset);
       }
-      dirty = false;
-      if (targetDataset === 'timed_action' && selectedArchived) {
-        setMessage('Saved. This action is still archived; restore it to publish.', 'success');
-      } else {
-        const noun = entityNoun(targetDataset);
-        setMessage(
-          isCreate ? `Created ${noun} ${savedId}.` : `Updated ${noun} ${savedId}.`,
-          'success',
-        );
-      }
+      const noun = entityNoun(targetDataset);
+      const summary =
+        targetDataset === 'timed_action' && selectedArchived
+          ? 'Saved. This action is still archived; restore it to publish.'
+          : isCreate
+            ? `Created ${noun} ${savedId}.`
+            : `Updated ${noun} ${savedId}.`;
+      finishWrite(summary, failure);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Save failed.', 'error');
     } finally {
@@ -392,10 +451,13 @@
       if (!res.ok) {
         throw new Error(await toResponseErrorMessage(endpoint, res));
       }
-      await loadData({ quiet: true });
+      const record = await readReturnedRecord(res);
+      if (record) {
+        upsertInto[targetDataset](record);
+      }
+      const failure = await loadData({ quiet: true });
       selectEntity(targetId, targetDataset);
-      dirty = false;
-      setMessage(`Archived ${entityNoun(targetDataset)} ${targetId}.`, 'success');
+      finishWrite(`Archived ${entityNoun(targetDataset)} ${targetId}.`, failure);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Archive failed.', 'error');
     } finally {
@@ -427,10 +489,13 @@
       if (!res.ok) {
         throw new Error(await toResponseErrorMessage(endpoint, res));
       }
-      await loadData({ quiet: true });
+      const record = await readReturnedRecord(res);
+      if (record) {
+        upsertInto[targetDataset](record);
+      }
+      const failure = await loadData({ quiet: true });
       selectEntity(targetId, targetDataset);
-      dirty = false;
-      setMessage(`Restored ${entityNoun(targetDataset)} ${targetId}.`, 'success');
+      finishWrite(`Restored ${entityNoun(targetDataset)} ${targetId}.`, failure);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Restore failed.', 'error');
     } finally {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { atlantaDate, expiryTag, isTimedActionLive, mapsSearchUrl } from './timedActions';
+import {
+  atlantaDate,
+  expiryTag,
+  hasLoneSurrogate,
+  isTimedActionLive,
+  mapsSearchUrl,
+} from './timedActions';
 
 describe('atlantaDate', () => {
   it.each([
@@ -48,5 +54,20 @@ describe('mapsSearchUrl', () => {
     expect(mapsSearchUrl('5th & Main #2, Décatur')).toBe(
       'https://www.google.com/maps/search/?api=1&query=5th%20%26%20Main%20%232%2C%20D%C3%A9catur',
     );
+  });
+
+  it('drops lone surrogates instead of throwing and keeps paired emoji', () => {
+    expect(mapsSearchUrl('A\ud83dB')).toBe(mapsSearchUrl('AB'));
+    expect(mapsSearchUrl('A\ude00B')).toBe(mapsSearchUrl('AB'));
+    expect(mapsSearchUrl('A\u{1F600}B')).toContain('%F0%9F%98%80');
+  });
+});
+
+describe('hasLoneSurrogate', () => {
+  it('detects ill-formed text only', () => {
+    expect(hasLoneSurrogate('A\ud83dB')).toBe(true);
+    expect(hasLoneSurrogate('\ude00')).toBe(true);
+    expect(hasLoneSurrogate('A\u{1F600}B')).toBe(false);
+    expect(hasLoneSurrogate('plain')).toBe(false);
   });
 });

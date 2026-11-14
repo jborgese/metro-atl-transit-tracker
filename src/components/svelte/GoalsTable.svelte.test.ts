@@ -95,12 +95,36 @@ describe('GoalsTable', () => {
       expect(screen.getByRole('link', { name: 'Submit a comment' }).getAttribute('href')).toBe(
         'https://beltline.org/x',
       );
-      const pin = screen.getByRole('link', { name: 'Murphy Crossing site' });
+      const pin = screen.getByRole('link', { name: 'Map: Murphy Crossing site' });
       expect(pin.getAttribute('href')).toBe(mapsSearchUrl('1050 Murphy Ave SW, Atlanta, GA'));
       expect(pin.getAttribute('target')).toBe('_blank');
       expect(pin.getAttribute('rel')).toContain('noopener');
       expect(pin.getAttribute('rel')).toContain('noreferrer');
       expect(screen.getByText('Expires today')).toBeTruthy();
+    });
+
+    it('renders only the link button when there is no location', () => {
+      const action = {
+        ...base,
+        link: { label: 'Submit a comment', url: 'https://beltline.org/x' },
+      };
+      render(GoalsTable, { props: { goals, projects, timedActions: [action], now } });
+      const links = document.querySelectorAll('.timed-action a');
+      expect(links).toHaveLength(1);
+      expect(screen.getByRole('link', { name: 'Submit a comment' })).toBeTruthy();
+      expect(screen.queryByRole('link', { name: /^Map:/ })).toBeNull();
+    });
+
+    it('renders only the map button when there is no link', () => {
+      const action = {
+        ...base,
+        location: { label: 'Murphy Crossing site', address: '1050 Murphy Ave SW, Atlanta, GA' },
+      };
+      render(GoalsTable, { props: { goals, projects, timedActions: [action], now } });
+      expect(document.querySelectorAll('.timed-action a')).toHaveLength(1);
+      expect(
+        screen.getByRole('link', { name: 'Map: Murphy Crossing site' }).getAttribute('href'),
+      ).toBe(mapsSearchUrl('1050 Murphy Ave SW, Atlanta, GA'));
     });
 
     it('renders text only when there is no link or location', () => {

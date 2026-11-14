@@ -166,3 +166,40 @@ describe('malformed input is rejected with a 400, never another error', () => {
     }
   });
 });
+
+describe('ill-formed text', () => {
+  const bad = 'A\ud83dB';
+  const cases: [string, unknown, string][] = [
+    ['description', { ...valid, description: bad }, 'description'],
+    ['link label', { ...valid, link: { label: bad, url: 'https://a.example' } }, 'link.label'],
+    ['location label', { ...valid, location: { label: bad, address: 'x' } }, 'location.label'],
+    ['location address', { ...valid, location: { label: 'x', address: bad } }, 'location.address'],
+  ];
+
+  it.each(cases)('create rejects a lone surrogate in %s', (_name, input, field) => {
+    expect.assertions(3);
+    try {
+      toTimedActionCreate(input, today);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ContentStoreError);
+      expect((err as ContentStoreError).status).toBe(400);
+      expect((err as ContentStoreError).message).toContain(field);
+    }
+  });
+
+  it.each(cases)('replace rejects a lone surrogate in %s', (_name, input, field) => {
+    expect.assertions(3);
+    try {
+      toTimedActionReplace(input, 'ta-abcdefgh', '2026-11-30', today);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ContentStoreError);
+      expect((err as ContentStoreError).status).toBe(400);
+      expect((err as ContentStoreError).message).toContain(field);
+    }
+  });
+
+  it('accepts a correctly paired emoji', () => {
+    const input = { ...valid, description: 'Show up \u{1F600}' };
+    expect(toTimedActionCreate(input, today).description).toBe('Show up \u{1F600}');
+  });
+});

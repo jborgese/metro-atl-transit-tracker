@@ -352,6 +352,7 @@
               <a
                 class="timed-action-button"
                 href={mapsSearchUrl(action.location.address)}
+                aria-label={`Map: ${action.location.label}`}
                 target="_blank"
                 rel="noopener noreferrer external"
               >
@@ -602,6 +603,12 @@
     background: color-mix(in srgb, var(--link) 15%, transparent);
     color: var(--link);
     text-decoration: none;
+  }
+  @media (pointer: coarse) {
+    td a.timed-action-button {
+      min-height: 44px;
+      justify-content: center;
+    }
   }
   .timed-action-button svg {
     flex: none;

@@ -4,6 +4,7 @@ import contentGoalsSeed from '../../../../data/content/goals.json';
 import legacyProjectsSeed from '../../../data/geo/projects-metadata.json';
 import legacyGoalsSeed from '../../../data/geo/goals-metadata.json';
 import type { Goal, Project, TimedActionLink, TimedActionLocation } from '#types/content.ts';
+import { hasLoneSurrogate } from '#utils/timedActions.ts';
 import { ContentStoreError } from './errors';
 
 export const SEED_ACTOR = 'seed';
@@ -95,8 +96,11 @@ function hasNoCredentials(url: string): boolean {
   return parsed.username === '' && parsed.password === '';
 }
 
+const wellFormedText = (text: string) => !hasLoneSurrogate(text);
+const ILL_FORMED = 'must be well-formed text';
+
 const timedActionLinkSchema = z.strictObject({
-  label: nonEmptyStringSchema.max(40),
+  label: nonEmptyStringSchema.max(40).refine(wellFormedText, ILL_FORMED),
   url: z
     .string()
     .trim()
@@ -106,13 +110,13 @@ const timedActionLinkSchema = z.strictObject({
 });
 
 const timedActionLocationSchema = z.strictObject({
-  label: nonEmptyStringSchema.max(40),
-  address: nonEmptyStringSchema.max(200),
+  label: nonEmptyStringSchema.max(40).refine(wellFormedText, ILL_FORMED),
+  address: nonEmptyStringSchema.max(200).refine(wellFormedText, ILL_FORMED),
 });
 
 export const timedActionInputSchema = z.strictObject({
   goal_id: idSchema,
-  description: nonEmptyStringSchema.max(300),
+  description: nonEmptyStringSchema.max(300).refine(wellFormedText, ILL_FORMED),
   link: timedActionLinkSchema.nullable(),
   location: timedActionLocationSchema.nullable(),
   expires_on: z.iso.date(),
