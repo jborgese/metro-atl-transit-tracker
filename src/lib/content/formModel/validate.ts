@@ -57,7 +57,18 @@ function valueAt(body: unknown, path: string): unknown {
     .reduce<unknown>((value, key) => (isObject(value) ? value[key] : undefined), body);
 }
 
+function isBlankTopLevel(path: string, body: Body): boolean {
+  if (!(path in MISSING_TOP_LEVEL)) {
+    return false;
+  }
+  const value = body[path];
+  return value === undefined || (typeof value === 'string' && value.trim() === '');
+}
+
 function isMissing(issue: ZodIssue, path: string, body: Body): boolean {
+  if (isBlankTopLevel(path, body)) {
+    return true;
+  }
   if (issue.code === 'too_small') {
     return issue.origin === 'string' && Number(issue.minimum) === 1;
   }

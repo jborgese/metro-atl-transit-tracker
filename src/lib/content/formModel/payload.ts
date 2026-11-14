@@ -1,3 +1,4 @@
+import { copy, sameValue } from './draft';
 import type { ContentKind, ContentRecord } from './types';
 
 export type WriteMode = 'create' | 'update';
@@ -8,18 +9,15 @@ export interface Payload {
   removedKeys: string[];
 }
 
-const SERVER_MANAGED = ['provenance', 'is_archived', 'archived_at', 'archived_by'];
+export const SERVER_MANAGED_KEYS = [
+  'provenance',
+  'is_archived',
+  'archived_at',
+  'archived_by',
+] as const;
 const ACTION_FIELDS = ['goal_id', 'description', 'link', 'location', 'expires_on'];
 
-function copy(record: ContentRecord): ContentRecord {
-  return JSON.parse(JSON.stringify(record)) as ContentRecord;
-}
-
-function sameValue(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
-
-function withoutKeys(record: ContentRecord, keys: string[]): ContentRecord {
+function withoutKeys(record: ContentRecord, keys: readonly string[]): ContentRecord {
   return Object.fromEntries(Object.entries(copy(record)).filter(([key]) => !keys.includes(key)));
 }
 
@@ -39,13 +37,23 @@ function actionPayload(next: ContentRecord, loaded: ContentRecord | null): Paylo
   return { body, changed, removedKeys: [] };
 }
 
-function createPayload(next: ContentRecord): Payload {
-  return { body: withoutKeys(next, SERVER_MANAGED), changed: true, removedKeys: [] };
+function sameRecord(a: ContentRecord, b: ContentRecord): boolean {
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every((key) => key in b && sameValue(a[key], b[key]))
+  );
+}
+
+function createPayload(next: ContentRecord, loaded: ContentRecord | null): Payload {
+  const body = withoutKeys(next, SERVER_MANAGED_KEYS);
+  const changed = loaded === null || !sameRecord(body, withoutKeys(loaded, SERVER_MANAGED_KEYS));
+  return { body, changed, removedKeys: [] };
 }
 
 function updatePayload(next: ContentRecord, loaded: ContentRecord): Payload {
-  const sent = withoutKeys(next, SERVER_MANAGED);
-  const stored = withoutKeys(loaded, SERVER_MANAGED);
+  const sent = withoutKeys(next, SERVER_MANAGED_KEYS);
+  const stored = withoutKeys(loaded, SERVER_MANAGED_KEYS);
   const keys = differingKeys(sent, stored).filter((key) => key !== 'id');
   return {
     body: Object.fromEntries(keys.map((key) => [key, sent[key]])),
@@ -64,7 +72,7 @@ export function toPayload(
     return actionPayload(next, loaded);
   }
   if (mode === 'create' || loaded === null) {
-    return createPayload(next);
+    return createPayload(next, loaded);
   }
   return updatePayload(next, loaded);
 }

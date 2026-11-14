@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import liveProjects from './fixtures/live-projects.json';
 import liveGoals from './fixtures/live-goals.json';
 import liveTimedActions from './fixtures/live-timed-actions.json';
-import { emptyRecord, emptySourceRow, toFormDraft, toRecord } from './draft';
+import { emptyRecord, emptySourceRow, KNOWN_FIELDS, toFormDraft, toRecord } from './draft';
 import type { ContentRecord, GoalDraft, ProjectDraft, TimedActionDraft } from './types';
 
 const projects: ContentRecord[] = liveProjects;
@@ -274,4 +274,38 @@ it('works on deeply proxied records and drafts', () => {
   expect(toRecord(proxied)).toEqual(firstProject);
   expect(toRecord(deepProxy(plainDraft))).toEqual(toRecord(plainDraft));
   expect(toRecord(deepProxy(plainDraft))).toEqual(firstProject);
+});
+
+const typeOf = (value: unknown): string => {
+  if (value === null) return 'null';
+  return Array.isArray(value) ? 'array' : typeof value;
+};
+
+const ALLOWED: Record<string, string[]> = {
+  text: ['string'],
+  'text or null': ['string', 'null'],
+  list: ['array'],
+  object: ['object'],
+  'object or null': ['object', 'null'],
+};
+
+describe('KNOWN_FIELDS', () => {
+  it.each([
+    ['project', projects],
+    ['goal', goals],
+    ['timed_action', timedActions],
+  ] as const)('matches the %s draft and the live data', (kind, records) => {
+    const draft = toFormDraft(kind, emptyRecord(kind));
+    const fields = Object.keys(draft)
+      .filter((key) => key !== 'kind' && key !== 'base')
+      .sort();
+    expect(Object.keys(KNOWN_FIELDS[kind]).sort()).toEqual(fields);
+    expect(records.length).toBeGreaterThan(0);
+    for (const record of records) {
+      for (const [key, value] of Object.entries(record)) {
+        const type = KNOWN_FIELDS[kind][key];
+        if (type) expect(ALLOWED[type]).toContain(typeOf(value));
+      }
+    }
+  });
 });

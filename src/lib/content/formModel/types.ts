@@ -1,4 +1,6 @@
-export type ContentKind = 'project' | 'goal' | 'timed_action';
+import type { ContentEntityType } from '#types/content.ts';
+
+export type ContentKind = ContentEntityType;
 export type ContentRecord = Record<string, unknown>;
 
 interface Row {

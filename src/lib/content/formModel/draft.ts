@@ -61,12 +61,16 @@ export function emptyRecord(kind: ContentKind): ContentRecord {
   return { goal_id: '', description: '', link: null, location: null, expires_on: '' };
 }
 
-function copy<T>(value: T): T {
+export function copy<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function same(a: unknown, b: unknown): boolean {
+export function sameValue(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function sameMembers(a: string[], b: string[]): boolean {
+  return a.length === b.length && sameValue([...a].sort(), [...b].sort());
 }
 
 function str(value: unknown): string {
@@ -284,8 +288,8 @@ function projectRecord(d: ProjectDraft): ContentRecord {
   if (d.geo_scope !== p.geo_scope) writeNonBlank(out, 'geo_scope', d.geo_scope);
   if (d.start_date !== p.start_date) writeDate(out, d.base, 'start_date', d.start_date);
   if (d.end_date !== p.end_date) writeDate(out, d.base, 'end_date', d.end_date);
-  if (!same(d.modes, p.modes)) writeList(out, d.base, 'modes', d.modes);
-  if (!same(d.related_counties, p.related_counties)) {
+  if (!sameMembers(d.modes, p.modes)) writeList(out, d.base, 'modes', d.modes);
+  if (!sameMembers(d.related_counties, p.related_counties)) {
     writeList(out, d.base, 'related_counties', d.related_counties);
   }
   writeLeadOrg(out, d, p);
@@ -304,10 +308,10 @@ function goalRecord(d: GoalDraft): ContentRecord {
     writeText(out, d.base, 'status_related_projects', d.status_related_projects);
   }
   if (d.actions !== p.actions) writeText(out, d.base, 'actions', d.actions);
-  if (!same(d.related_counties, p.related_counties)) {
+  if (!sameMembers(d.related_counties, p.related_counties)) {
     writeList(out, d.base, 'related_counties', d.related_counties);
   }
-  if (!same(d.related_project_ids, p.related_project_ids)) {
+  if (!sameMembers(d.related_project_ids, p.related_project_ids)) {
     writeList(out, d.base, 'related_project_ids', d.related_project_ids);
   }
   writeRows(out, d.base, 'related_orgs', d.related_orgs, p.related_orgs, relatedOrgRecord);
@@ -321,7 +325,7 @@ function writePair(
   pair: Record<string, string>,
   pristine: Record<string, string>,
 ): void {
-  if (same(pair, pristine)) return;
+  if (sameValue(pair, pristine)) return;
   if (!Object.values(pair).every(isBlank)) out[key] = { ...pair };
   else if (key in base) out[key] = null;
 }
@@ -335,6 +339,76 @@ function timedActionRecord(d: TimedActionDraft): ContentRecord {
   writePair(out, d.base, 'location', d.location, p.location);
   if (d.expires_on !== p.expires_on) writeText(out, d.base, 'expires_on', d.expires_on);
   return out;
+}
+
+export type FieldType = 'text' | 'text or null' | 'list' | 'object' | 'object or null';
+
+export const KNOWN_FIELDS: Record<ContentKind, Record<string, FieldType>> = {
+  project: {
+    id: 'text',
+    title: 'text',
+    summary: 'text',
+    status: 'text',
+    geo_scope: 'text',
+    start_date: 'text or null',
+    end_date: 'text or null',
+    modes: 'list',
+    related_counties: 'list',
+    lead_org: 'object',
+    partners: 'list',
+    milestones: 'list',
+    sources: 'list',
+  },
+  goal: {
+    id: 'text',
+    goal: 'text',
+    status_related_projects: 'text',
+    actions: 'text',
+    related_counties: 'list',
+    related_project_ids: 'list',
+    related_orgs: 'list',
+  },
+  timed_action: {
+    goal_id: 'text',
+    description: 'text',
+    expires_on: 'text',
+    link: 'object or null',
+    location: 'object or null',
+  },
+};
+
+function isDroppable(row: object & { original: Plain }): boolean {
+  return (
+    Object.keys(row.original).length === 0 &&
+    Object.entries(row).every(
+      ([name, value]) =>
+        name === 'key' || name === 'original' || (typeof value === 'string' && isBlank(value)),
+    )
+  );
+}
+
+function prunedRows<R extends object & { original: Plain }>(rows: R[], pristine: R[]): R[] {
+  return sameRows(rows, pristine) ? rows : rows.filter((row) => !isDroppable(row));
+}
+
+function pruneDraft(d: FormDraft): FormDraft {
+  if (d.kind === 'project') {
+    const p = projectDraft(d.base);
+    return {
+      ...d,
+      partners: prunedRows(d.partners, p.partners),
+      milestones: prunedRows(d.milestones, p.milestones),
+      sources: prunedRows(d.sources, p.sources),
+    };
+  }
+  if (d.kind === 'goal') {
+    return { ...d, related_orgs: prunedRows(d.related_orgs, goalDraft(d.base).related_orgs) };
+  }
+  return d;
+}
+
+export function pruneBlankRows<T extends FormDraft>(draft: T): T {
+  return pruneDraft(copy(draft)) as T;
 }
 
 export function toRecord(draft: FormDraft): ContentRecord {

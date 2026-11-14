@@ -346,3 +346,28 @@ describe('message rules added in fix round 1', () => {
     ).toEqual([{ path: 'expires_on', message: 'Last day: enter a real date' }]);
   });
 });
+
+describe('blank top-level values', () => {
+  it('reads a blank last day as missing, not as a bad date', () => {
+    expect(
+      validatePayload('timed_action', 'create', { ...actionBody, expires_on: '' }, context),
+    ).toEqual(only('expires_on', 'Choose a last day'));
+  });
+
+  it('still calls an impossible date a bad date', () => {
+    expect(
+      validatePayload(
+        'timed_action',
+        'create',
+        { ...actionBody, expires_on: '2026-02-30' },
+        context,
+      ),
+    ).toEqual(only('expires_on', 'Last day: enter a real date'));
+  });
+
+  it('reads a whitespace-only id as missing', () => {
+    expect(validatePayload('project', 'create', { id: '  ', title: 'T' }, context)).toEqual(
+      only('id', 'Enter an id'),
+    );
+  });
+});
