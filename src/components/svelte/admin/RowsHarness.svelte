@@ -11,10 +11,19 @@
     initial?: string[];
     reorder?: boolean;
     hint?: string;
+    itemName?: string;
+    locked?: 'first' | 'all';
     registry?: { rows?: Row[] };
   }
 
-  let { initial = [], reorder = false, hint, registry = {} }: Props = $props();
+  let {
+    initial = [],
+    reorder = false,
+    hint,
+    itemName = 'source',
+    locked,
+    registry = {},
+  }: Props = $props();
 
   let counter = 0;
   const makeRow = (label = ''): Row => ({ key: `row-${counter++}`, label });
@@ -29,13 +38,16 @@
 <RepeatableRows
   id="sources"
   legend="Sources"
-  itemName="source"
+  {itemName}
   {hint}
   {reorder}
   bind:rows
   makeRow={() => makeRow()}
 >
   {#snippet row(item)}
-    <label>Label <input bind:value={item.label} /></label>
+    {#if locked !== undefined}
+      <label>Locked <input disabled /></label>
+    {/if}
+    <label>Label <input bind:value={item.label} disabled={locked === 'all'} /></label>
   {/snippet}
 </RepeatableRows>

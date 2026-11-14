@@ -40,7 +40,7 @@
     <p class="error" id={errorId}>Error: {error}</p>
   {/if}
   <div class="options">
-    {#each entries as entry, index (entry.value)}
+    {#each entries as entry, index (index)}
       <div class="option">
         <input
           type="checkbox"

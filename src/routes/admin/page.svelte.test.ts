@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import liveGoals from '../../lib/content/formModel/fixtures/live-goals.json';
 import AdminPage from './+page.svelte';
 
 type Row = Record<string, unknown>;
@@ -203,7 +204,8 @@ const tab = (name: RegExp) => screen.getByRole('tab', { name });
 const heading = () => screen.getByRole('heading', { level: 2, name: /^(New|Editing) / });
 const editor = () => screen.getByLabelText('Record as JSON') as HTMLTextAreaElement;
 const editorValue = () => JSON.parse(editor().value) as Row;
-const status = () => screen.getByRole('status').textContent ?? '';
+const status = () =>
+  screen.getAllByRole('status').find((node) => node.closest('form') === null)?.textContent ?? '';
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 async function renderLoaded() {
@@ -243,9 +245,31 @@ async function typeIntoEditor(value: string) {
   await fireEvent.input(editor(), { target: { value } });
 }
 
+async function editLabelled(label: string, value: string) {
+  await fireEvent.input(screen.getByLabelText(label), { target: { value } });
+}
+
 async function editGoalActions(text: string) {
+  await editLabelled('Ongoing actions', text);
+}
+
+async function editJsonActions(text: string) {
   await typeIntoEditor(JSON.stringify({ ...editorValue(), actions: text }));
 }
+
+async function save() {
+  const before = writes().length;
+  await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+  await waitFor(() => expect(writes()).toHaveLength(before + 1));
+}
+
+async function fillAction({ description, lastDay }: { description: string; lastDay: string }) {
+  await editLabelled('Description (required)', description);
+  await editLabelled('Last day (required)', lastDay);
+}
+
+const ongoingActions = () =>
+  (screen.getByLabelText('Ongoing actions') as HTMLTextAreaElement).value;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -399,6 +423,8 @@ describe('leaving a record', () => {
     await editGoalActions('Mine');
     await fireEvent.click(screen.getByRole('button', { name: /Regional goal/ }));
     await fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+    expect(ongoingActions()).toBe('');
+    await asJson();
     expect(editorValue()).toEqual({ goal: 'Regional goal', related_project_ids: [] });
     await fireEvent.click(tab(/^Projects/));
     await fireEvent.click(screen.getByRole('button', { name: /Proj One/ }));
@@ -412,14 +438,15 @@ describe('leaving a record', () => {
     expect(screen.getByText('Discard your changes to Goal g1?')).toBeTruthy();
     await fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
     await waitFor(() => expect(listReloads()).toHaveLength(2));
-    await waitFor(() =>
-      expect(editorValue()).toEqual({ goal: 'Regional goal', related_project_ids: [] }),
-    );
+    await waitFor(() => expect(ongoingActions()).toBe(''));
+    await asJson();
+    expect(editorValue()).toEqual({ goal: 'Regional goal', related_project_ids: [] });
     expect(heading().textContent?.trim()).toBe('Editing Goal g1');
   });
 
   it('asks before leaving text that does not parse, and refuses to save it', async () => {
     await selectGoal('Regional goal');
+    await asJson();
     await typeIntoEditor('{"goal": ');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     const summary = screen.getByRole('alert');
@@ -509,7 +536,7 @@ describe('archive and restore', () => {
     await fireEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
     await settle();
     expect(writes()).toEqual([{ method: 'DELETE', path: '/api/goals/g1' }]);
-    expect(editorValue().actions).toBe('Mine');
+    expect(ongoingActions()).toBe('Mine');
 
     await fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
     await fireEvent.click(within(dialog).getByRole('button', { name: 'Discard changes' }));
@@ -563,10 +590,11 @@ describe('saving', () => {
     await settle();
     expect(writes()).toHaveLength(0);
     expect(reads('/api/goals/g1')).toHaveLength(0);
-    expect(screen.getByRole('status').textContent).toContain('No changes to save.');
+    expect(status()).toContain('No changes to save.');
   });
   it('sends only the changed key of a goal', async () => {
     await selectGoal('Regional goal');
+    await asJson();
     await typeIntoEditor(
       JSON.stringify({ goal: 'Regional goal', related_project_ids: [], actions: 'Write in' }),
     );
@@ -622,24 +650,16 @@ describe('saving', () => {
     await editGoalActions('Mine');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() =>
-      expect(screen.getByRole('status').textContent).toContain(
-        'Could not reach the server. Your sign-in may have expired.',
-      ),
+      expect(status()).toContain('Could not reach the server. Your sign-in may have expired.'),
     );
-    expect(
-      JSON.parse((screen.getByLabelText('Record as JSON') as HTMLTextAreaElement).value).actions,
-    ).toBe('Mine');
+    expect(ongoingActions()).toBe('Mine');
   });
   it('shows the message from a rate-limit response', async () => {
     failWritesWith(json({ error: 'Too many writes' }, 429));
     await selectGoal('Regional goal');
     await editGoalActions('Mine');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
-    await waitFor(() =>
-      expect(screen.getByRole('status').textContent).toContain(
-        '/api/goals/g1 returned 429: Too many writes',
-      ),
-    );
+    await waitFor(() => expect(status()).toContain('/api/goals/g1 returned 429: Too many writes'));
   });
 
   it('replaces an action with exactly its five fields', async () => {
@@ -713,6 +733,7 @@ describe('saving', () => {
 
   it('says a key the form does not know will be stored for good', async () => {
     await selectGoal('Regional goal');
+    await asJson();
     await typeIntoEditor(JSON.stringify({ ...editorValue(), notes: 'x', extra: 1 }));
     expect(
       screen.getByText(
@@ -758,7 +779,7 @@ describe('saving', () => {
     await editGoalActions('Mine');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(status()).toContain('Updated goal g1.'));
-    expect(editorValue().actions).toBe('Mine');
+    expect(ongoingActions()).toBe('Mine');
 
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await settle();
@@ -806,11 +827,31 @@ describe('saving', () => {
 
   it('reformats the text without changing the record', async () => {
     await selectGoal('Regional goal');
+    await asJson();
     await typeIntoEditor('{"goal":"Regional goal","related_project_ids":[]}');
     await fireEvent.click(screen.getByRole('button', { name: 'Format JSON' }));
     expect(editor().value).toBe('{\n  "goal": "Regional goal",\n  "related_project_ids": []\n}\n');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     expect(status()).toContain('No changes to save.');
+  });
+
+  it('keeps a row problem while other JSON text is edited, until the row is fixed', async () => {
+    await selectProject('Proj One');
+    const broken = [{ label: 'Plan', url: 'not a web address' }];
+    await typeIntoEditor(JSON.stringify({ ...editorValue(), sources: broken }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    const problem = 'Source 1 web address: enter a full web address starting with https://';
+    expect(within(screen.getByRole('alert')).getByText(problem)).toBeTruthy();
+
+    await typeIntoEditor(JSON.stringify({ ...editorValue(), title: 'Proj Two' }));
+    expect(within(screen.getByRole('alert')).getByText(problem)).toBeTruthy();
+
+    await typeIntoEditor(
+      JSON.stringify({ ...editorValue(), sources: [{ label: 'Plan', url: 'https://ok.example' }] }),
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
@@ -834,7 +875,8 @@ describe('freshness check before an update', () => {
       provenance: { updated_at: '2026-11-14T10:00:00Z', updated_by: 'JT' },
     };
     await selectGoal('Regional goal');
-    await editGoalActions('Mine');
+    await asJson();
+    await editJsonActions('Mine');
     const text = editor().value;
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() =>
@@ -880,7 +922,7 @@ describe('freshness check before an update', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(status()).toContain(UNREACHABLE));
     expect(writes()).toHaveLength(0);
-    expect(editorValue().actions).toBe('Mine');
+    expect(ongoingActions()).toBe('Mine');
   });
 
   it('lets the write report its own error when the check gets an error response', async () => {
@@ -1062,14 +1104,15 @@ describe('action form', () => {
     expect(screen.queryByLabelText('Description (required)')).toBeNull();
   });
 
-  it('offers the switch for actions only', async () => {
+  it('offers the switch for actions and goals, and not for projects', async () => {
     await selectProject('Proj One');
     expect(screen.queryByRole('button', { name: /Edit as JSON|Back to form/ })).toBeNull();
     expect(editor()).toBeTruthy();
     await fireEvent.click(tab(/^Goals/));
     await fireEvent.click(screen.getByRole('button', { name: /Regional goal/ }));
-    expect(screen.queryByRole('button', { name: /Edit as JSON|Back to form/ })).toBeNull();
-    expect(editor()).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Edit as JSON (advanced)' })).toBeTruthy();
+    expect(screen.queryByLabelText('Record as JSON')).toBeNull();
+    expect((field('Goal (required)') as HTMLTextAreaElement).value).toBe('Regional goal');
   });
 
   it('still asks before leaving a form edit', async () => {
@@ -1249,8 +1292,9 @@ describe('keeping drafts and focus', () => {
       release = resolve;
     });
     await selectGoal('Regional goal');
+    await asJson();
     expect(editor().hasAttribute('readonly')).toBe(false);
-    await editGoalActions('Mine');
+    await editJsonActions('Mine');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(writes()).toHaveLength(1));
     expect(editor().hasAttribute('readonly')).toBe(true);
@@ -1314,7 +1358,7 @@ describe('keeping drafts and focus', () => {
       body: JSON.stringify({ display_name: 'Ed' }),
     });
     expect(listReloads()).toHaveLength(reloadsBefore);
-    expect(editorValue().actions).toBe('Mine');
+    expect(ongoingActions()).toBe('Mine');
     expect(document.querySelector('dialog')?.open).toBe(false);
   });
 
@@ -1415,6 +1459,7 @@ describe('error summary', () => {
 
   it('takes focus when the JSON does not parse', async () => {
     await selectGoal('Regional goal');
+    await asJson();
     await typeIntoEditor('{"goal": ');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(document.activeElement).toBe(summary()));
@@ -1469,6 +1514,7 @@ describe('error summary', () => {
 
   it('restores the title when the pane is closed', async () => {
     await selectGoal('Regional goal');
+    await asJson();
     const before = document.title;
     await typeIntoEditor('{"goal": ');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
@@ -1533,9 +1579,10 @@ describe('error summary', () => {
       release = resolve;
     });
     await selectGoal('Regional goal');
+    await asJson();
     const format = screen.getByRole('button', { name: 'Format JSON' });
     expect(format.hasAttribute('disabled')).toBe(false);
-    await editGoalActions('Mine');
+    await editJsonActions('Mine');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(writes()).toHaveLength(1));
     expect(format.hasAttribute('disabled')).toBe(true);
@@ -1552,5 +1599,406 @@ describe('error summary', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
     await waitFor(() => expect(heading().textContent).toContain('New'));
     await waitFor(() => expect(document.activeElement).toBe(heading()));
+  });
+});
+
+describe('goal form', () => {
+  const summary = () => screen.getByRole('alert');
+  const summaryLinks = () =>
+    within(summary())
+      .getAllByRole('link')
+      .map((link) => [link.textContent, link.getAttribute('href')]);
+  const group = (name: string) => screen.getByRole('group', { name });
+  const orgField = (row: number, label: string) =>
+    within(group(`Organisation ${row}`)).getByLabelText(label);
+  const dialogOpen = () => document.querySelector('dialog')?.open === true;
+
+  function serveGoal(overrides: Row) {
+    stored['/api/goals'] = [{ ...structuredClone(goal), ...overrides }];
+  }
+
+  async function addOrganisation(url: string) {
+    const name = screen.queryByRole('button', { name: 'Add an organisation' })
+      ? 'Add an organisation'
+      : 'Add another organisation';
+    await fireEvent.click(screen.getByRole('button', { name }));
+    const rows = screen.getAllByRole('group', { name: /^Organisation \d+$/ });
+    await fireEvent.input(within(rows.at(-1)!).getByLabelText('Web address'), {
+      target: { value: url },
+    });
+  }
+
+  it('saves a county tick and a new organisation as two changed keys', async () => {
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByLabelText('Fulton'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an organisation' }));
+    await fireEvent.input(screen.getByLabelText('Name (required)'), {
+      target: { value: 'Beltline Rail Now' },
+    });
+    await fireEvent.input(screen.getByLabelText('Web address'), {
+      target: { value: 'https://beltlinerailnow.com/' },
+    });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(lastWrite()).toMatchObject({ method: 'PATCH', path: '/api/goals/g1' });
+    expect(JSON.parse(lastWrite().body!)).toEqual({
+      related_counties: ['13121'],
+      related_orgs: [{ name: 'Beltline Rail Now', url: 'https://beltlinerailnow.com/' }],
+    });
+  });
+
+  it('starts an action from its goal', async () => {
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an action for this goal' }));
+    expect(screen.getByRole('heading', { name: 'New Action' })).toBeTruthy();
+    expect((screen.getByLabelText('Goal (required)') as HTMLSelectElement).value).toBe('g1');
+    expect(tab(/^Actions/).getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByRole('button', { name: 'Back to goal' })).toBeNull();
+  });
+
+  it('offers a way back to the goal after the action is created', async () => {
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an action for this goal' }));
+    await fillAction({ description: 'Brand new action', lastDay: '2026-12-05' });
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Editing Action ta-newrecord' })).toBeTruthy(),
+    );
+    await fireEvent.click(screen.getByRole('button', { name: 'Back to goal' }));
+    expect(screen.getByRole('heading', { name: 'Editing Goal g1' })).toBeTruthy();
+    expect(tab(/^Goals/).getAttribute('aria-selected')).toBe('true');
+    expect(
+      within(screen.getByRole('list', { name: 'Actions for this goal' })).getByText(
+        'Brand new action — 2026-12-05',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('moves focus to the heading after adding an action and after going back', async () => {
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an action for this goal' }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'New Action' })),
+    );
+    await fillAction({ description: 'Brand new action', lastDay: '2026-12-05' });
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await fireEvent.click(await screen.findByRole('button', { name: 'Back to goal' }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Editing Goal g1' })),
+    );
+  });
+
+  it('explains why an archived goal cannot take an action', async () => {
+    serveGoal({ is_archived: true });
+    await selectGoal('Regional goal');
+    expect(screen.queryByRole('button', { name: 'Add an action for this goal' })).toBeNull();
+    expect(screen.getByText('Restore this goal before adding an action.')).toBeTruthy();
+  });
+
+  it('names fields the form does not show and keeps them', async () => {
+    serveGoal({ 'Extra Key': ['x'] });
+    await selectGoal('Regional goal');
+    expect(
+      screen.getByText(
+        'This goal has 1 field the form does not show: Extra Key. Use Edit as JSON to change them.',
+      ),
+    ).toBeTruthy();
+    await editLabelled('Ongoing actions', 'New advice');
+    await save();
+    expect(JSON.parse(lastWrite().body!)).toEqual({ actions: 'New advice' });
+  });
+
+  it('keeps a related project id that matches no project', async () => {
+    serveGoal({ related_project_ids: ['gone'] });
+    await selectGoal('Regional goal');
+    expect((screen.getByLabelText('gone (not in the list)') as HTMLInputElement).checked).toBe(
+      true,
+    );
+    await editLabelled('Ongoing actions', 'New advice');
+    await save();
+    expect(JSON.parse(lastWrite().body!)).toEqual({ actions: 'New advice' });
+  });
+
+  it('creates a goal from the form with the typed id and no server-managed keys', async () => {
+    await startNew('Goals');
+    expect(screen.getByText('Save this goal before adding an action.')).toBeTruthy();
+    await editLabelled('Id (required)', 'new-goal');
+    await editLabelled('Goal (required)', 'A new goal');
+    await fireEvent.click(screen.getByLabelText('DeKalb'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Goal' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(lastWrite()).toMatchObject({ method: 'POST', path: '/api/goals' });
+    expect(JSON.parse(lastWrite().body!)).toEqual({
+      id: 'new-goal',
+      goal: 'A new goal',
+      actions: '',
+      related_project_ids: [],
+      related_counties: ['13089'],
+      related_orgs: [],
+    });
+    await waitFor(() => expect(heading().textContent?.trim()).toBe('Editing Goal new-goal'));
+    expect(screen.getByText('Id: new-goal')).toBeTruthy();
+    expect(screen.queryByLabelText('Id (required)')).toBeNull();
+  });
+
+  it('reports an id that is already used at Id (required)', async () => {
+    await startNew('Goals');
+    await editLabelled('Id (required)', 'g1');
+    await editLabelled('Goal (required)', 'Copy');
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Goal' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    expect(summaryLinks()).toEqual([
+      ['A goal with this id already exists, including archived ones', '#goal-id'],
+    ]);
+    expect(screen.getByLabelText('Id (required)').getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(summary());
+  });
+
+  it('stays clean when a county is unticked and ticked again', async () => {
+    serveGoal({ related_counties: ['13121', '13089'] });
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByLabelText('Fulton'));
+    expect(screen.getByText('Unsaved changes.')).toBeTruthy();
+    await fireEvent.click(screen.getByLabelText('Fulton'));
+    expect(screen.queryByText('Unsaved changes.')).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
+    expect(status()).toContain('No changes to save.');
+    expect(writes()).toHaveLength(0);
+  });
+
+  it('sends only related_orgs, the other organisation unchanged, after one name changes', async () => {
+    const first = {
+      name: 'First org',
+      url: 'https://first.example',
+      contact_info: '',
+      role: 'lead',
+    };
+    const second = { name: 'Second org', notes: { kept: [1, 2] }, contact_info: 'Call' };
+    serveGoal({ related_orgs: [first, second] });
+    await selectGoal('Regional goal');
+    await fireEvent.input(orgField(2, 'Name (required)'), { target: { value: 'Renamed org' } });
+    await save();
+    expect(lastWrite()).toMatchObject({ method: 'PATCH', path: '/api/goals/g1' });
+    expect(lastWrite().body).toBe(
+      JSON.stringify({ related_orgs: [first, { ...second, name: 'Renamed org' }] }),
+    );
+  });
+
+  it('sends the remaining organisations after one is removed', async () => {
+    const first = { name: 'First org', url: 'https://first.example' };
+    const second = { name: 'Second org', notes: 'kept', contact_info: '' };
+    serveGoal({ related_orgs: [first, second] });
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByRole('button', { name: 'Remove organisation 1' }));
+    await save();
+    expect(lastWrite().body).toBe(JSON.stringify({ related_orgs: [second] }));
+  });
+
+  it('opens a new action from its goal clean, and saves it with that goal', async () => {
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an action for this goal' }));
+    expect(screen.queryByText('Unsaved changes.')).toBeNull();
+    await fireEvent.click(tab(/^Projects/));
+    await fireEvent.click(screen.getByRole('button', { name: /Proj One/ }));
+    expect(dialogOpen()).toBe(false);
+    expect(heading().textContent?.trim()).toBe('Editing Project p1');
+
+    await fireEvent.click(tab(/^Goals/));
+    await fireEvent.click(screen.getByRole('button', { name: /Regional goal/ }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an action for this goal' }));
+    await fillAction({ description: 'Brand new action', lastDay: '2026-12-05' });
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(lastWrite()).toMatchObject({ method: 'POST', path: '/api/timed-actions' });
+    expect(JSON.parse(lastWrite().body!)).toEqual(newAction);
+  });
+
+  it('makes a preset action dirty once its goal is changed', async () => {
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an action for this goal' }));
+    await fireEvent.change(screen.getByLabelText('Goal (required)'), { target: { value: '' } });
+    expect(screen.getByText('Unsaved changes.')).toBeTruthy();
+    await fireEvent.click(tab(/^Projects/));
+    await fireEvent.click(screen.getByRole('button', { name: /Proj One/ }));
+    expect(dialogOpen()).toBe(true);
+    expect(screen.getByText('Discard your changes to this new action?')).toBeTruthy();
+  });
+
+  it('asks before leaving a dirty goal for a new action', async () => {
+    await selectGoal('Regional goal');
+    await editGoalActions('Mine');
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an action for this goal' }));
+    expect(dialogOpen()).toBe(true);
+    expect(screen.getByText('Discard your changes to Goal g1?')).toBeTruthy();
+    await fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    await settle();
+    expect(heading().textContent?.trim()).toBe('Editing Goal g1');
+    expect(ongoingActions()).toBe('Mine');
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an action for this goal' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => expect(heading().textContent?.trim()).toBe('New Action'));
+    expect((screen.getByLabelText('Goal (required)') as HTMLSelectElement).value).toBe('g1');
+    expect(writes()).toHaveLength(0);
+  });
+
+  it('offers Back to goal only for the action created from the goal', async () => {
+    await openActionsTabAndSelect('Existing action');
+    expect(screen.queryByRole('button', { name: 'Back to goal' })).toBeNull();
+
+    await fireEvent.click(tab(/^Goals/));
+    await fireEvent.click(screen.getByRole('button', { name: /Regional goal/ }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an action for this goal' }));
+    await fillAction({ description: 'Brand new action', lastDay: '2026-12-05' });
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Back to goal' })).toBeTruthy());
+
+    await fireEvent.click(screen.getByRole('button', { name: /Existing action/ }));
+    expect(heading().textContent?.trim()).toBe('Editing Action ta-existing');
+    expect(screen.queryByRole('button', { name: 'Back to goal' })).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: /Brand new action/ }));
+    expect(heading().textContent?.trim()).toBe('Editing Action ta-newrecord');
+    expect(screen.queryByRole('button', { name: 'Back to goal' })).toBeNull();
+  });
+
+  it('forgets Back to goal when the editor is closed', async () => {
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an action for this goal' }));
+    await fillAction({ description: 'Brand new action', lastDay: '2026-12-05' });
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Back to goal' })).toBeTruthy());
+    await fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+    await waitFor(() => expect(heading().textContent?.trim()).toBe('New Action'));
+    await fireEvent.click(screen.getByRole('button', { name: /Brand new action/ }));
+    expect(heading().textContent?.trim()).toBe('Editing Action ta-newrecord');
+    expect(screen.queryByRole('button', { name: 'Back to goal' })).toBeNull();
+  });
+
+  it('keeps organisation errors on their rows as rows are added and removed', async () => {
+    await selectGoal('Regional goal');
+    await addOrganisation('https://first.example');
+    await addOrganisation('https://second.example');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    const both = [
+      ['Organisation 1 name: enter a value', '#goal-related_orgs-0-name'],
+      ['Organisation 2 name: enter a value', '#goal-related_orgs-1-name'],
+    ];
+    expect(summaryLinks()).toEqual(both);
+    expect(orgField(1, 'Name (required)').getAttribute('aria-invalid')).toBe('true');
+    expect(orgField(2, 'Name (required)').getAttribute('aria-invalid')).toBe('true');
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Add another organisation' }));
+    expect(summaryLinks()).toEqual(both);
+    expect(orgField(3, 'Name (required)').hasAttribute('aria-invalid')).toBe(false);
+    await fireEvent.input(orgField(3, 'Web address'), {
+      target: { value: 'https://third.example' },
+    });
+    expect(summaryLinks()).toEqual(both);
+    expect(orgField(3, 'Name (required)').hasAttribute('aria-invalid')).toBe(false);
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Remove organisation 1' }));
+    expect(summaryLinks()).toEqual([
+      ['Organisation 1 name: enter a value', '#goal-related_orgs-0-name'],
+    ]);
+    expect((orgField(1, 'Web address') as HTMLInputElement).value).toBe('https://second.example');
+    expect(orgField(1, 'Name (required)').getAttribute('aria-invalid')).toBe('true');
+    expect(orgField(2, 'Name (required)').hasAttribute('aria-invalid')).toBe(false);
+
+    await fireEvent.input(orgField(1, 'Name (required)'), { target: { value: 'Second org' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(document.querySelector('[aria-invalid="true"]')).toBeNull();
+  });
+
+  it('keeps row errors on their rows across a JSON edit and back', async () => {
+    await selectGoal('Regional goal');
+    await addOrganisation('https://first.example');
+    await addOrganisation('https://second.example');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await asJson();
+    await typeIntoEditor(JSON.stringify({ ...editorValue(), goal: 'Edited in JSON' }));
+    expect(within(summary()).getAllByRole('link')).toHaveLength(2);
+    await fireEvent.click(screen.getByRole('button', { name: 'Back to form' }));
+    expect(summaryLinks()).toEqual([
+      ['Organisation 1 name: enter a value', '#goal-related_orgs-0-name'],
+      ['Organisation 2 name: enter a value', '#goal-related_orgs-1-name'],
+    ]);
+    expect(orgField(2, 'Name (required)').getAttribute('aria-invalid')).toBe('true');
+    expect((screen.getByLabelText('Goal (required)') as HTMLTextAreaElement).value).toBe(
+      'Edited in JSON',
+    );
+  });
+
+  it('renames a row error when a blank row before it is dropped', async () => {
+    await selectGoal('Regional goal');
+    await addOrganisation('https://first.example');
+    await addOrganisation('https://second.example');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await fireEvent.input(orgField(1, 'Web address'), { target: { value: '' } });
+    expect(summaryLinks()).toEqual([
+      ['Organisation 2 name: enter a value', '#goal-related_orgs-1-name'],
+    ]);
+    expect(orgField(1, 'Name (required)').hasAttribute('aria-invalid')).toBe(false);
+    expect(
+      within(group('Organisation 2')).getByText('Error: Organisation 2 name: enter a value'),
+    ).toBeTruthy();
+  });
+
+  it('shows invalid related project ids as one problem on the group', async () => {
+    serveGoal({ related_project_ids: ['Bad Id', 'Also Bad'] });
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByLabelText('Proj One'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    const message = 'Related projects: use lowercase letters, numbers and hyphens only';
+    expect(summaryLinks()).toEqual([[message, '#goal-related_project_ids']]);
+    expect(within(group('Related projects')).getByText(`Error: ${message}`)).toBeTruthy();
+    await fireEvent.click(within(summary()).getByRole('link'));
+    expect(document.activeElement).toBe(screen.getByLabelText('Proj One'));
+  });
+
+  it('disables the goal form while a save is in flight', async () => {
+    let release = () => {};
+    writeGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await selectGoal('Regional goal');
+    await editGoalActions('Mine');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(screen.getByLabelText('Ongoing actions').matches(':disabled')).toBe(true);
+    expect(screen.getByLabelText('Fulton').matches(':disabled')).toBe(true);
+    release();
+    await waitFor(() => expect(status()).toContain('Updated goal g1.'));
+    await settle();
+    expect(screen.getByLabelText('Ongoing actions').matches(':disabled')).toBe(false);
+  });
+
+  it('opens every live goal clean, in the form and across the views', async () => {
+    stored['/api/goals'] = structuredClone(liveGoals);
+    await renderLoaded();
+    await fireEvent.click(tab(/^Goals/));
+    for (const live of liveGoals) {
+      await fireEvent.click(screen.getByTitle(live.id));
+      expect(dialogOpen()).toBe(false);
+      expect(heading().textContent?.trim()).toBe(`Editing Goal ${live.id}`);
+      expect((screen.getByLabelText('Goal (required)') as HTMLTextAreaElement).value).toBe(
+        live.goal,
+      );
+      expect(screen.queryByText('Unsaved changes.')).toBeNull();
+      await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await settle();
+      expect(status()).toContain('No changes to save.');
+      await asJson();
+      expect(screen.queryByText('Unsaved changes.')).toBeNull();
+      await fireEvent.click(screen.getByRole('button', { name: 'Back to form' }));
+      expect(screen.queryByText('Unsaved changes.')).toBeNull();
+    }
+    expect(writes()).toHaveLength(0);
+    expect(calls.filter((call) => /^\/api\/goals\/./.test(call.path))).toHaveLength(0);
   });
 });

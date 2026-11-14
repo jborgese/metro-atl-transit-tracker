@@ -4,7 +4,11 @@ import CheckboxHarness from './CheckboxHarness.svelte';
 
 type Registry = { selected?: string[] };
 
-function renderGroup(props: { initial?: string[]; hint?: string; error?: string } = {}): Registry {
+type Option = { value: string; label: string };
+
+function renderGroup(
+  props: { initial?: string[]; hint?: string; error?: string; options?: Option[] } = {},
+): Registry {
   const registry: Registry = {};
   render(CheckboxHarness, { props: { ...props, registry } });
   return registry;
@@ -62,6 +66,34 @@ describe('CheckboxGroup', () => {
   it('does not list a value that is neither an option nor present at creation', () => {
     renderGroup({ initial: ['13121'] });
     expect(screen.queryByText(/not in the list/)).toBeNull();
+  });
+
+  it('renders two options that share a value', () => {
+    renderGroup({
+      initial: ['13121'],
+      options: [
+        { value: '13121', label: 'Fulton' },
+        { value: '13121', label: 'Fulton again' },
+      ],
+    });
+    expect(box('Fulton').checked).toBe(true);
+    expect(box('Fulton again').checked).toBe(true);
+    expect(box('Fulton again').id).toBe('counties-1');
+  });
+
+  it('renders a remembered unknown value that later becomes an option', async () => {
+    const registry: Registry = {};
+    const { rerender } = render(CheckboxHarness, { props: { initial: ['13999'], registry } });
+    expect(box('13999 (not in the list)').checked).toBe(true);
+    await rerender({
+      options: [
+        { value: '13121', label: 'Fulton' },
+        { value: '13999', label: 'Rockdale' },
+      ],
+    });
+    expect(box('Rockdale').checked).toBe(true);
+    expect(box('13999 (not in the list)').checked).toBe(true);
+    expect(box('13999 (not in the list)').id).toBe('counties-2');
   });
 
   it('removes every occurrence of a repeated value on untick', async () => {

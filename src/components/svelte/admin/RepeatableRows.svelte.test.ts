@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import RowsHarness from './RowsHarness.svelte';
 
@@ -6,7 +6,13 @@ type Row = { key: string; label: string };
 type Registry = { rows?: Row[] };
 
 function renderRows(
-  props: { initial?: string[]; reorder?: boolean; hint?: string } = {},
+  props: {
+    initial?: string[];
+    reorder?: boolean;
+    hint?: string;
+    itemName?: string;
+    locked?: 'first' | 'all';
+  } = {},
 ): Registry {
   const registry: Registry = {};
   render(RowsHarness, { props: { ...props, registry } });
@@ -148,6 +154,41 @@ describe('RepeatableRows', () => {
   it('describes nothing without a hint', () => {
     renderRows();
     expect(group('Sources').hasAttribute('aria-describedby')).toBe(false);
+  });
+
+  it('skips a disabled control when focusing a new row', async () => {
+    renderRows({ locked: 'first' });
+    await fireEvent.click(button('Add a source'));
+    expect(document.activeElement).toBe(within(group('Source 1')).getByLabelText('Label'));
+  });
+
+  it('focuses the new row when none of its controls can take focus', async () => {
+    renderRows({ locked: 'all' });
+    await fireEvent.click(button('Add a source'));
+    expect(document.activeElement).toBe(group('Source 1'));
+  });
+
+  it('uses "an" before an item name that starts with a vowel', async () => {
+    renderRows({ itemName: 'organisation' });
+    await fireEvent.click(button('Add an organisation'));
+    expect(group('Organisation 1')).toBeTruthy();
+    expect(button('Add another organisation')).toBeTruthy();
+  });
+
+  it('clears the status before repeating the same announcement', async () => {
+    renderRows({ reorder: true });
+    await addRows(2, ['first', 'second']);
+    await fireEvent.click(button('Move source 1 down'));
+    const status = screen.getByRole('status');
+    expect(status.textContent).toBe('Source 1 moved down.');
+    const seen: string[] = [];
+    const observer = new MutationObserver(() => seen.push(status.textContent ?? ''));
+    observer.observe(status, { childList: true, characterData: true, subtree: true });
+    await fireEvent.click(button('Move source 1 down'));
+    await waitFor(() => expect(seen.at(-1)).toBe('Source 1 moved down.'));
+    observer.disconnect();
+    expect(seen).toEqual(['', 'Source 1 moved down.']);
+    expect(labelsInOrder()).toEqual(['first', 'second']);
   });
 
   it('makes every button a plain button', async () => {

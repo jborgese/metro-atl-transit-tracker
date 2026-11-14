@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick, untrack, type Snippet } from 'svelte';
+  import { anchorOf, keepRowKeys, pathOf, relabel } from '#lib/content/formModel/anchors.ts';
   import {
     emptyRecord,
     pruneBlankRows,
@@ -13,12 +14,14 @@
   import type {
     ContentKind,
     ContentRecord,
+    GoalDraft,
     TimedActionDraft,
   } from '#lib/content/formModel/types.ts';
   import { validatePayload, type FieldIssue } from '#lib/content/formModel/validate.ts';
-  import type { Goal, Project } from '#types/content.ts';
+  import type { Goal, Project, TimedAction } from '#types/content.ts';
   import { atlantaDate } from '#utils/timedActions.ts';
   import ErrorSummary from './ErrorSummary.svelte';
+  import GoalFields from './GoalFields.svelte';
   import JsonView from './JsonView.svelte';
   import TimedActionFields from './TimedActionFields.svelte';
 
@@ -28,17 +31,22 @@
     record: ContentRecord | null;
     goals: Goal[];
     projects: Project[];
+    actions?: TimedAction[];
     existingIds: string[];
     saving: boolean;
     loading: boolean;
     serverIssue: FieldIssue | null;
     prefersJson?: boolean;
+    presetGoalId?: string;
+    returnToGoalId?: string;
     meta?: Snippet;
     onsave: (request: { mode: WriteMode; body: Record<string, unknown> }) => void;
     onnochanges: () => void;
     onarchive: () => void;
     onrestore: () => void;
     onclose: () => void;
+    onaddaction: (goalId: string) => void;
+    onbacktogoal: (goalId: string) => void;
   }
 
   let {
@@ -46,24 +54,35 @@
     title,
     record,
     goals,
+    projects,
+    actions = [],
     existingIds,
     saving,
     loading,
     serverIssue,
     prefersJson = $bindable(false),
+    presetGoalId,
+    returnToGoalId,
     meta,
     onsave,
     onnochanges,
     onarchive,
     onrestore,
     onclose,
+    onaddaction,
+    onbacktogoal,
   }: Props = $props();
 
   const loaded = $state.raw(untrack(() => record));
-  const stored = untrack(() => toFormDraft(kind, record ?? emptyRecord(kind)));
+  const blank = untrack(() =>
+    kind === 'timed_action' && presetGoalId
+      ? { ...emptyRecord(kind), goal_id: presetGoalId }
+      : emptyRecord(kind),
+  );
+  const stored = untrack(() => toFormDraft(kind, record ?? blank));
   let draft = $state(toFormDraft(stored.kind, stored.base));
   let jsonError = $state('');
-  let reportedPaths: string[] = $state.raw([]);
+  let reportedAnchors: string[] = $state.raw([]);
   let capturedJsonError = $state('');
   let today = $state(atlantaDate(new Date()));
   let sent: ContentRecord | null = $state.raw(null);
@@ -73,28 +92,38 @@
 
   const mode: WriteMode = $derived(loaded === null ? 'create' : 'update');
   const next = $derived(toRecord(draft));
-  const payload = $derived(toPayload(kind, mode, next, loaded ?? emptyRecord(kind)));
+  const payload = $derived(toPayload(kind, mode, next, loaded ?? blank));
   const dirty = $derived(payload.changed || jsonError !== '');
   const archived = $derived(loaded?.is_archived === true);
   const jsonId = $derived(fieldId(kind, 'json'));
-  const hasForm = $derived(kind === 'timed_action');
+  const hasForm = $derived(kind === 'timed_action' || kind === 'goal');
   const showJson = $derived(!hasForm || prefersJson);
   const liveIssues = $derived.by(() => {
-    if (reportedPaths.length === 0) {
+    if (reportedAnchors.length === 0) {
       return [];
     }
-    const attempted = toRecord(pruneBlankRows(draft));
-    const request = toPayload(kind, mode, attempted, loaded);
+    const attempted = pruneBlankRows(draft);
+    const request = toPayload(kind, mode, toRecord(attempted), loaded);
     return validatePayload(kind, mode, request.body, {
       today,
       goals,
       existingIds,
       loaded,
-    });
+    }).map((issue) => ({ ...issue, anchor: anchorOf(attempted, issue.path) }));
   });
-  const validationIssues = $derived(
-    liveIssues.filter((issue) => reportedPaths.includes(issue.path)),
-  );
+  const validationIssues: FieldIssue[] = $derived.by(() => {
+    const shown = liveIssues
+      .filter((issue) => reportedAnchors.includes(issue.anchor))
+      .flatMap((issue) => {
+        const path = pathOf(draft, issue.anchor);
+        return path === null
+          ? []
+          : [{ path, message: relabel(kind, issue.message, issue.path, path) }];
+      });
+    return shown.filter(
+      (issue, index) => shown.findIndex((other) => other.path === issue.path) === index,
+    );
+  });
   const shownServerIssue = $derived(
     serverIssue === null ||
       serverIssue === dismissedIssue ||
@@ -128,11 +157,11 @@
   const hasProblems = $derived(summaryIssues.length > 0);
 
   $effect(() => {
-    const live = new Set(liveIssues.map((issue) => issue.path));
-    const remembered = untrack(() => reportedPaths);
-    const kept = remembered.filter((path) => live.has(path));
+    const live = new Set(liveIssues.map((issue) => issue.anchor));
+    const remembered = untrack(() => reportedAnchors);
+    const kept = remembered.filter((anchor) => live.has(anchor));
     if (kept.length !== remembered.length) {
-      reportedPaths = kept;
+      reportedAnchors = kept;
     }
   });
 
@@ -179,7 +208,7 @@
     jsonError = result.ok ? '' : result.error;
     if (result.ok) {
       capturedJsonError = '';
-      draft = result.draft;
+      draft = keepRowKeys(draft, result.draft);
     }
   }
 
@@ -190,9 +219,21 @@
     prefersJson = !prefersJson;
   }
 
+  function addAction() {
+    if (loaded !== null) {
+      onaddaction(String(loaded.id));
+    }
+  }
+
+  function backToGoal() {
+    if (returnToGoalId !== undefined) {
+      onbacktogoal(returnToGoalId);
+    }
+  }
+
   function save() {
     dismissedIssue = serverIssue;
-    reportedPaths = [];
+    reportedAnchors = [];
     capturedJsonError = '';
     sent = null;
     today = atlantaDate(new Date());
@@ -215,7 +256,7 @@
       loaded,
     });
     if (found.length > 0) {
-      reportedPaths = found.map((issue) => issue.path);
+      reportedAnchors = found.map((issue) => anchorOf(draft, issue.path));
       void focusSummary();
       return;
     }
@@ -235,6 +276,12 @@
   {/if}
 </div>
 
+{#if loaded !== null && returnToGoalId !== undefined}
+  <div>
+    <button type="button" onclick={backToGoal} disabled={loading}>Back to goal</button>
+  </div>
+{/if}
+
 {@render meta?.()}
 
 {#if hasForm}
@@ -247,6 +294,17 @@
 
 {#if showJson}
   <JsonView id={jsonId} {draft} {stored} readonly={saving || loading} onedit={applyJson} />
+{:else if kind === 'goal'}
+  <GoalFields
+    bind:draft={() => draft as GoalDraft, (value) => (draft = value)}
+    {projects}
+    {actions}
+    issues={fieldIssues}
+    isNew={loaded === null}
+    {archived}
+    readonly={saving || loading}
+    onaddaction={addAction}
+  />
 {:else}
   <TimedActionFields
     bind:draft={() => draft as TimedActionDraft, (value) => (draft = value)}

@@ -6,10 +6,20 @@
     initial?: string[];
     hint?: string;
     error?: string;
+    options?: Array<{ value: string; label: string }>;
     registry?: { selected?: string[] };
   }
 
-  let { initial = [], hint, error, registry = {} }: Props = $props();
+  let {
+    initial = [],
+    hint,
+    error,
+    options = [
+      { value: '13121', label: 'Fulton' },
+      { value: '13089', label: 'DeKalb' },
+    ],
+    registry = {},
+  }: Props = $props();
 
   let selected = $state<string[]>(untrack(() => initial));
 
@@ -18,14 +28,4 @@
   });
 </script>
 
-<CheckboxGroup
-  id="counties"
-  legend="Counties"
-  {hint}
-  {error}
-  options={[
-    { value: '13121', label: 'Fulton' },
-    { value: '13089', label: 'DeKalb' },
-  ]}
-  bind:selected
-/>
+<CheckboxGroup id="counties" legend="Counties" {hint} {error} {options} bind:selected />

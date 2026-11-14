@@ -29,6 +29,7 @@
 
   const hintId = $derived(`${id}-hint`);
   const itemTitle = $derived(itemName.charAt(0).toUpperCase() + itemName.slice(1));
+  const article = $derived(/^[aeiou]/i.test(itemName) ? 'an' : 'a');
 
   function rowFieldset(index: number) {
     return list?.querySelectorAll<HTMLElement>(':scope > .row')[index];
@@ -38,22 +39,28 @@
     rows = [...rows, makeRow()];
     await tick();
     const fieldset = rowFieldset(rows.length - 1);
-    const control = fieldset?.querySelector<HTMLElement>(
+    const controls = fieldset?.querySelectorAll<HTMLElement>(
       '.row-body :is(input, select, textarea, button, a[href], [tabindex]:not([tabindex="-1"]))',
     );
+    const control = [...(controls ?? [])].find((element) => !element.matches(':disabled'));
     (control ?? fieldset)?.focus();
+  }
+
+  async function clearAnnouncement() {
+    announcement = '';
+    await tick();
   }
 
   async function remove(index: number) {
     rows = rows.filter((_, position) => position !== index);
     const left = rows.length;
-    announcement = `${itemTitle} ${index + 1} removed. ${left} ${left === 1 ? itemName : `${itemName}s`} left.`;
-    await tick();
+    await clearAnnouncement();
     if (left === 0) {
       addButton?.focus();
-      return;
+    } else {
+      rowFieldset(Math.max(index - 1, 0))?.focus();
     }
-    rowFieldset(Math.max(index - 1, 0))?.focus();
+    announcement = `${itemTitle} ${index + 1} removed. ${left} ${left === 1 ? itemName : `${itemName}s`} left.`;
   }
 
   async function move(index: number, offset: -1 | 1) {
@@ -67,9 +74,9 @@
     next[index] = neighbour;
     next[target] = current;
     rows = next;
-    announcement = `${itemTitle} ${index + 1} moved ${offset === -1 ? 'up' : 'down'}.`;
-    await tick();
+    await clearAnnouncement();
     rowFieldset(target)?.focus();
+    announcement = `${itemTitle} ${index + 1} moved ${offset === -1 ? 'up' : 'down'}.`;
   }
 </script>
 
@@ -111,7 +118,7 @@
   </div>
   <div class="add">
     <button type="button" bind:this={addButton} onclick={add}>
-      {rows.length === 0 ? `Add a ${itemName}` : `Add another ${itemName}`}
+      {rows.length === 0 ? `Add ${article} ${itemName}` : `Add another ${itemName}`}
     </button>
   </div>
   <p class="visually-hidden" role="status">{announcement}</p>
