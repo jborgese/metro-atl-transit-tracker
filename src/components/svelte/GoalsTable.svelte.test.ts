@@ -98,7 +98,8 @@ describe('GoalsTable', () => {
       const pin = screen.getByRole('link', { name: 'Murphy Crossing site' });
       expect(pin.getAttribute('href')).toBe(mapsSearchUrl('1050 Murphy Ave SW, Atlanta, GA'));
       expect(pin.getAttribute('target')).toBe('_blank');
-      expect(pin.getAttribute('rel')).toBe('noopener noreferrer');
+      expect(pin.getAttribute('rel')).toContain('noopener');
+      expect(pin.getAttribute('rel')).toContain('noreferrer');
       expect(screen.getByText('Expires today')).toBeTruthy();
     });
 

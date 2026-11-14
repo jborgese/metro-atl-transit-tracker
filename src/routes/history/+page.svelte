@@ -1,5 +1,6 @@
 <script lang="ts">
   import BaseLayout from '../../layouts/BaseLayout.svelte';
+  import { entityTypeLabel } from '../../utils/entityLabels';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
@@ -9,7 +10,7 @@
   <section class="history-page">
     <header>
       <h1>Public Change History</h1>
-      <p>All project and goal edits, including archive and restore actions.</p>
+      <p>All project, goal and timed-action edits, including archives and restores.</p>
     </header>
 
     {#if data.history.length === 0}
@@ -30,7 +31,7 @@
               <tr>
                 <td>{new Date(event.timestamp).toLocaleString()}</td>
                 <td>{event.action}</td>
-                <td>{event.entity_type}:{event.entity_id}</td>
+                <td>{entityTypeLabel(event.entity_type)}: {event.entity_id}</td>
                 <td>{event.actor}</td>
               </tr>
             {/each}

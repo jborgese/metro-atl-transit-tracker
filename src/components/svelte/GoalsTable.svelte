@@ -342,7 +342,7 @@
                 class="timed-action-button"
                 href={action.link.url}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener noreferrer external"
               >
                 {action.link.label}
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
@@ -353,7 +353,7 @@
                 class="timed-action-button"
                 href={mapsSearchUrl(action.location.address)}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener noreferrer external"
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
@@ -592,6 +592,10 @@
     font-weight: 600;
     text-decoration: none;
     overflow-wrap: anywhere;
+  }
+  td a.timed-action-button:focus-visible {
+    outline: 2px solid var(--atl-blue, #4280c4);
+    outline-offset: 2px;
   }
   td a.timed-action-button:hover,
   td a.timed-action-button:focus-visible {

@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import BaseLayout from '../../layouts/BaseLayout.svelte';
-  import type { ContentHistoryEvent, Goal, Project } from '#types/content.ts';
+  import type { ContentHistoryEvent, Goal, Project, TimedAction } from '#types/content.ts';
+  import { entityTypeLabel } from '../../utils/entityLabels';
+  import { DATASETS, isEditorEntity, type EditorEntity } from './datasets';
 
-  type EditorEntity = 'project' | 'goal';
-  type EntityItem = Project | Goal;
+  type EntityItem = Project | Goal | TimedAction;
   type MessageKind = 'info' | 'success' | 'error';
 
   let token = $state('');
@@ -13,6 +14,7 @@
   let selectedDataset: EditorEntity = $state('project');
   let projects: Project[] = $state([]);
   let goals: Goal[] = $state([]);
+  let timedActions: TimedAction[] = $state([]);
   let history: ContentHistoryEvent[] = $state([]);
   let selectedId = $state('');
   let editorJson = $state('');
@@ -33,31 +35,13 @@
   let savingDisplayName = $state(false);
   const displayNameDirty = $derived(myDisplayName.trim() !== (savedDisplayName ?? ''));
 
-  const entityTitle: Record<EditorEntity, string> = {
-    project: 'Project',
-    goal: 'Goal',
-  };
-
-  const newProjectTemplate: Project = {
-    id: '',
-    title: '',
-    summary: '',
-    status: 'planning',
-    modes: [],
-    related_counties: [],
-    sources: [],
-  };
-
-  const newGoalTemplate: Goal = {
-    id: '',
-    goal: '',
-    actions: '',
-    related_project_ids: [],
-    related_counties: [],
-    related_orgs: [],
-  };
-
-  const activeItems: EntityItem[] = $derived(dataset === 'project' ? projects : goals);
+  const lists: Record<EditorEntity, EntityItem[]> = $derived({
+    project: projects,
+    goal: goals,
+    timed_action: timedActions,
+  });
+  const entityKinds = Object.keys(DATASETS).filter(isEditorEntity);
+  const activeItems: EntityItem[] = $derived(lists[dataset]);
   const searchTerm = $derived(searchQuery.trim().toLowerCase());
   const filteredItems: EntityItem[] = $derived(
     activeItems.filter((item) => {
@@ -74,11 +58,7 @@
     }),
   );
   const selectedEntity: EntityItem | null = $derived(
-    selectedId
-      ? ((selectedDataset === 'project' ? projects : goals).find(
-          (item) => item.id === selectedId,
-        ) ?? null)
-      : null,
+    selectedId ? (lists[selectedDataset].find((item) => item.id === selectedId) ?? null) : null,
   );
   const selectedArchived = $derived(selectedEntity?.is_archived === true);
 
@@ -149,8 +129,7 @@
     dataset = mode;
     selectedDataset = mode;
     selectedId = '';
-    const template = mode === 'project' ? newProjectTemplate : newGoalTemplate;
-    editorJson = `${JSON.stringify(template, null, 2)}\n`;
+    editorJson = `${JSON.stringify(DATASETS[mode].template, null, 2)}\n`;
     dirty = false;
     validateEditorJson();
   }
@@ -164,10 +143,9 @@
   }
 
   function selectEntity(id: string, kind: EditorEntity) {
-    const items = kind === 'project' ? projects : goals;
-    const entity = items.find((item) => item.id === id);
+    const entity = lists[kind].find((item) => item.id === id);
     if (!entity) {
-      setMessage(`Could not find ${kind} ${id}`, 'error');
+      setMessage(`Could not find ${entityNoun(kind)} ${id}`, 'error');
       return;
     }
     dataset = kind;
@@ -183,25 +161,31 @@
     startNew(dataset);
   }
 
+  function entityNoun(kind: EditorEntity) {
+    return DATASETS[kind].title.toLowerCase();
+  }
+
+  const headlineOf: Record<EditorEntity, (item: EntityItem) => string> = {
+    project: (item) => (item as Project).title?.trim() || item.id,
+    goal: (item) => (item as Goal).goal?.trim() || item.id,
+    timed_action: (item) => (item as TimedAction).description?.trim() || item.id,
+  };
+
+  const sublineOf: Record<EditorEntity, (item: EntityItem) => string> = {
+    project: (item) => (item as Project).status?.trim() || 'status unknown',
+    goal: (item) => {
+      const ids = (item as Goal).related_project_ids;
+      return `${Array.isArray(ids) ? ids.length : 0} related projects`;
+    },
+    timed_action: (item) => (item as TimedAction).expires_on?.trim() || 'no expiry date',
+  };
+
   function toEntityHeadline(item: EntityItem, kind: EditorEntity) {
-    if (kind === 'project') {
-      const project = item as Project;
-      return project.title?.trim() || project.id;
-    }
-    const goal = item as Goal;
-    return goal.goal?.trim() || goal.id;
+    return headlineOf[kind](item);
   }
 
   function toEntitySubline(item: EntityItem, kind: EditorEntity) {
-    if (kind === 'project') {
-      const project = item as Project;
-      return project.status?.trim() || 'status unknown';
-    }
-    const goal = item as Goal;
-    const relatedCount = Array.isArray(goal.related_project_ids)
-      ? goal.related_project_ids.length
-      : 0;
-    return `${relatedCount} related projects`;
+    return sublineOf[kind](item);
   }
 
   function formatTimestamp(value: string) {
@@ -267,23 +251,22 @@
     const previousSelectedDataset = selectedDataset;
 
     try {
-      const [projectData, goalData, historyData] = await Promise.all([
-        fetchCollection<Project>('/api/projects?includeArchived=true'),
-        fetchCollection<Goal>('/api/goals?includeArchived=true'),
+      const [projectData, goalData, timedActionData, historyData] = await Promise.all([
+        fetchCollection<Project>(`${DATASETS.project.endpoint}?includeArchived=true`),
+        fetchCollection<Goal>(`${DATASETS.goal.endpoint}?includeArchived=true`),
+        fetchCollection<TimedAction>(`${DATASETS.timed_action.endpoint}?includeArchived=true`),
         fetchCollection<ContentHistoryEvent>('/api/history?limit=100'),
       ]);
 
       projects = projectData;
       goals = goalData;
+      timedActions = timedActionData;
       history = historyData;
       lastLoadedAt = new Date().toISOString();
       now = Date.now();
 
       if (previousSelection) {
-        const exists =
-          previousSelectedDataset === 'project'
-            ? projectData.some((item) => item.id === previousSelection)
-            : goalData.some((item) => item.id === previousSelection);
+        const exists = lists[previousSelectedDataset].some((item) => item.id === previousSelection);
         if (exists) {
           selectEntity(previousSelection, previousSelectedDataset);
         } else {
@@ -313,15 +296,15 @@
     const isCreate = selectedId.length === 0;
     const targetDataset: EditorEntity = isCreate ? dataset : selectedDataset;
 
-    if (isCreate) {
+    if (isCreate && DATASETS[targetDataset].requiresClientId) {
       const candidateId = parsed.id;
       if (typeof candidateId !== 'string' || candidateId.trim().length === 0) {
-        setMessage(`New ${targetDataset}s must include a non-empty "id".`, 'error');
+        setMessage(`New ${entityNoun(targetDataset)}s must include a non-empty "id".`, 'error');
         return;
       }
     }
 
-    const base = targetDataset === 'project' ? '/api/projects' : '/api/goals';
+    const base = DATASETS[targetDataset].endpoint;
     const endpoint = isCreate ? base : `${base}/${encodeURIComponent(selectedId)}`;
     const method = isCreate ? 'POST' : 'PATCH';
 
@@ -351,10 +334,15 @@
         selectEntity(savedId, targetDataset);
       }
       dirty = false;
-      setMessage(
-        isCreate ? `Created ${targetDataset} ${savedId}.` : `Updated ${targetDataset} ${savedId}.`,
-        'success',
-      );
+      if (targetDataset === 'timed_action' && selectedArchived) {
+        setMessage('Saved. This action is still archived; restore it to publish.', 'success');
+      } else {
+        const noun = entityNoun(targetDataset);
+        setMessage(
+          isCreate ? `Created ${noun} ${savedId}.` : `Updated ${noun} ${savedId}.`,
+          'success',
+        );
+      }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Save failed.', 'error');
     } finally {
@@ -369,20 +357,20 @@
     }
 
     if (selectedArchived) {
-      setMessage(`${entityTitle[selectedDataset]} ${selectedId} is already archived.`, 'info');
+      setMessage(`${DATASETS[selectedDataset].title} ${selectedId} is already archived.`, 'info');
       return;
     }
 
     const targetDataset = selectedDataset;
     const targetId = selectedId;
     const proceed = window.confirm(
-      `Archive ${entityTitle[targetDataset].toLowerCase()} ${targetId}?`,
+      `Archive ${DATASETS[targetDataset].title.toLowerCase()} ${targetId}?`,
     );
     if (!proceed) {
       return;
     }
 
-    const base = targetDataset === 'project' ? '/api/projects' : '/api/goals';
+    const base = DATASETS[targetDataset].endpoint;
     loading = true;
     try {
       const endpoint = `${base}/${encodeURIComponent(targetId)}`;
@@ -396,7 +384,7 @@
       await loadData({ quiet: true });
       selectEntity(targetId, targetDataset);
       dirty = false;
-      setMessage(`Archived ${targetDataset} ${targetId}.`, 'success');
+      setMessage(`Archived ${entityNoun(targetDataset)} ${targetId}.`, 'success');
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Archive failed.', 'error');
     } finally {
@@ -411,13 +399,13 @@
     }
 
     if (!selectedArchived) {
-      setMessage(`${entityTitle[selectedDataset]} ${selectedId} is already active.`, 'info');
+      setMessage(`${DATASETS[selectedDataset].title} ${selectedId} is already active.`, 'info');
       return;
     }
 
     const targetDataset = selectedDataset;
     const targetId = selectedId;
-    const base = targetDataset === 'project' ? '/api/projects' : '/api/goals';
+    const base = DATASETS[targetDataset].endpoint;
     loading = true;
     try {
       const endpoint = `${base}/${encodeURIComponent(targetId)}/restore`;
@@ -431,7 +419,7 @@
       await loadData({ quiet: true });
       selectEntity(targetId, targetDataset);
       dirty = false;
-      setMessage(`Restored ${targetDataset} ${targetId}.`, 'success');
+      setMessage(`Restored ${entityNoun(targetDataset)} ${targetId}.`, 'success');
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Restore failed.', 'error');
     } finally {
@@ -524,8 +512,8 @@
       <div class="header-copy">
         <h1>Admin Portal</h1>
         <p>
-          Edit projects and goals. Changes go live immediately and are logged to <a href="/history"
-            >/history</a
+          Edit projects, goals and actions. Changes go live immediately and are logged to <a
+            href="/history">/history</a
           >.
         </p>
       </div>
@@ -614,35 +602,22 @@
     <div class="admin-grid">
       <aside class="entity-list panel">
         <div class="list-actions" role="tablist" aria-label="Content type">
-          <button
-            role="tab"
-            id="tab-project"
-            aria-selected={dataset === 'project'}
-            aria-controls="content-list-panel"
-            class:active={dataset === 'project'}
-            onclick={() => setDataset('project')}
-            disabled={loading}
-          >
-            Projects ({projects.length})
-          </button>
-          <button
-            role="tab"
-            id="tab-goal"
-            aria-selected={dataset === 'goal'}
-            aria-controls="content-list-panel"
-            class:active={dataset === 'goal'}
-            onclick={() => setDataset('goal')}
-            disabled={loading}
-          >
-            Goals ({goals.length})
-          </button>
+          {#each entityKinds as kind (kind)}
+            <button
+              role="tab"
+              id={`tab-${kind}`}
+              aria-selected={dataset === kind}
+              aria-controls="content-list-panel"
+              class:active={dataset === kind}
+              onclick={() => setDataset(kind)}
+              disabled={loading}
+            >
+              {DATASETS[kind].tabLabel} ({lists[kind].length})
+            </button>
+          {/each}
         </div>
 
-        <div
-          id="content-list-panel"
-          role="tabpanel"
-          aria-labelledby={dataset === 'project' ? 'tab-project' : 'tab-goal'}
-        >
+        <div id="content-list-panel" role="tabpanel" aria-labelledby={`tab-${dataset}`}>
           <label class="search-field">
             <span class="search-label">
               <span>Search</span>
@@ -652,13 +627,13 @@
               bind:value={searchQuery}
               type="text"
               autocomplete="off"
-              placeholder={`Find a ${dataset} by id or text`}
+              placeholder={`Search ${entityNoun(dataset)}s by id or text`}
             />
           </label>
 
           <div class="list-toolbar">
             <button class="new-button" onclick={() => startNew(dataset)} disabled={loading}>
-              + New {entityTitle[dataset]}
+              + New {DATASETS[dataset].title}
             </button>
             <label class="archive-toggle">
               <input type="checkbox" bind:checked={includeArchived} />
@@ -668,7 +643,7 @@
 
           <ul>
             {#if filteredItems.length === 0}
-              <li class="empty-state">No {dataset}s match this filter.</li>
+              <li class="empty-state">No {entityNoun(dataset)}s match this filter.</li>
             {:else}
               {#each filteredItems as item (item.id)}
                 <li class:selected={selectedDataset === dataset && selectedId === item.id}>
@@ -694,8 +669,8 @@
         <div class="editor-head">
           <h2>
             {selectedId
-              ? `Editing ${entityTitle[selectedDataset]} ${selectedId}`
-              : `New ${entityTitle[dataset]}`}
+              ? `Editing ${DATASETS[selectedDataset].title} ${selectedId}`
+              : `New ${DATASETS[dataset].title}`}
           </h2>
           <div class="editor-head-actions">
             <button onclick={formatEditorJson} disabled={loading}>Format JSON</button>
@@ -752,7 +727,7 @@
 
         <div class="editor-actions">
           <button class="primary" onclick={saveEntity} disabled={loading || editorError.length > 0}>
-            {selectedId ? 'Save Changes' : `Create ${entityTitle[dataset]}`}
+            {selectedId ? 'Save Changes' : `Create ${DATASETS[dataset].title}`}
           </button>
           <button onclick={archiveSelected} disabled={loading || !selectedId || selectedArchived}>
             Archive
@@ -775,11 +750,15 @@
               <span class={`action-pill action-${event.action}`}>{event.action}</span>
               <button
                 class="entity-ref"
-                onclick={() => selectEntity(event.entity_id, event.entity_type as EditorEntity)}
+                onclick={() => {
+                  if (isEditorEntity(event.entity_type)) {
+                    selectEntity(event.entity_id, event.entity_type);
+                  }
+                }}
                 disabled={loading}
-                title={`Open ${event.entity_type} ${event.entity_id}`}
+                title={`Open ${entityTypeLabel(event.entity_type).toLowerCase()} ${event.entity_id}`}
               >
-                {event.entity_type}:{event.entity_id}
+                {entityTypeLabel(event.entity_type)}:{event.entity_id}
               </button>
               <time
                 class="history-time"
