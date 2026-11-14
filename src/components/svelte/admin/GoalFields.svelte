@@ -108,7 +108,7 @@
       <CheckboxGroup
         id={id('related_counties')}
         legend="Counties"
-        hint="Leave all unticked to list this goal under Regional."
+        hint="Leave all unchecked to list this goal under Regional."
         error={errorAt('related_counties')}
         options={COUNTY_OPTIONS}
         bind:selected={draft.related_counties}
@@ -162,8 +162,8 @@
 
       <RepeatableRows
         id={id('related_orgs')}
-        legend="Related organisations"
-        itemName="organisation"
+        legend="Related organizations"
+        itemName="organization"
         bind:rows={draft.related_orgs}
         makeRow={emptyRelatedOrgRow}
       >

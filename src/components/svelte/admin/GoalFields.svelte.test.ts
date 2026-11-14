@@ -57,7 +57,7 @@ function renderTracked(props: Partial<HarnessProps> = {}) {
 }
 
 const group = (name: string) => screen.getByRole('group', { name });
-const row = (n: number) => group(`Organisation ${n}`);
+const row = (n: number) => group(`Organization ${n}`);
 const boxLabels = (name: string) =>
   within(group(name))
     .getAllByRole('checkbox')
@@ -71,7 +71,7 @@ afterEach(() => {
 
 describe('GoalFields labels and hints', () => {
   it.each(['Id (required)', 'Goal (required)', 'Status', 'Ongoing actions'])(
-    'has one control labelled %s',
+    'has one control labeled %s',
     (label) => {
       renderFields({ isNew: true });
       expect(screen.getAllByLabelText(label)).toHaveLength(1);
@@ -79,7 +79,7 @@ describe('GoalFields labels and hints', () => {
   );
 
   it.each(['Name (required)', 'Web address', 'Contact info'])(
-    'labels the organisation field %s in each row',
+    'labels the organization field %s in each row',
     (label) => {
       renderFields({ initial: stored });
       expect(within(row(1)).getAllByLabelText(label)).toHaveLength(1);
@@ -88,7 +88,7 @@ describe('GoalFields labels and hints', () => {
     },
   );
 
-  it.each(['Counties', 'Related projects', 'Related organisations'])(
+  it.each(['Counties', 'Related projects', 'Related organizations'])(
     'has a group named %s',
     (name) => {
       renderFields();
@@ -112,7 +112,7 @@ describe('GoalFields labels and hints', () => {
     renderFields();
     const counties = group('Counties');
     expect(document.getElementById(counties.getAttribute('aria-describedby')!)!.textContent).toBe(
-      'Leave all unticked to list this goal under Regional.',
+      'Leave all unchecked to list this goal under Regional.',
     );
   });
 
@@ -131,7 +131,7 @@ describe('GoalFields labels and hints', () => {
     expect(screen.getByLabelText('Ongoing actions').id).toBe('goal-actions');
     expect(group('Counties').id).toBe('goal-related_counties');
     expect(group('Related projects').id).toBe('goal-related_project_ids');
-    expect(group('Related organisations').id).toBe('goal-related_orgs');
+    expect(group('Related organizations').id).toBe('goal-related_orgs');
     expect(within(row(2)).getByLabelText('Name (required)').id).toBe('goal-related_orgs-1-name');
     expect(within(row(2)).getByLabelText('Web address').id).toBe('goal-related_orgs-1-url');
     expect(within(row(2)).getByLabelText('Contact info').id).toBe(
@@ -177,7 +177,7 @@ describe('GoalFields sections', () => {
       screen.getByLabelText('Ongoing actions'),
       linksHeading!,
       group('Related projects'),
-      group('Related organisations'),
+      group('Related organizations'),
       screen.getByText('Actions for this goal'),
     ];
     for (const [index, node] of order.slice(1).entries()) {
@@ -227,7 +227,7 @@ describe('GoalFields choices', () => {
     ]);
   });
 
-  it('ticks the stored county and project', () => {
+  it('checks the stored county and project', () => {
     renderFields({ initial: stored });
     expect(box('Fulton').checked).toBe(true);
     expect(box('DeKalb').checked).toBe(false);
@@ -235,7 +235,7 @@ describe('GoalFields choices', () => {
     expect(box('Zebra line').checked).toBe(false);
   });
 
-  it('keeps an unknown county and an unknown project ticked and labelled', () => {
+  it('keeps an unknown county and an unknown project checked and labeled', () => {
     renderFields({
       initial: { ...stored, related_counties: ['13999'], related_project_ids: ['gone'] },
     });
@@ -263,7 +263,7 @@ describe('GoalFields editing', () => {
     });
   });
 
-  it('writes ticks into the draft lists', async () => {
+  it('writes checks into the draft lists', async () => {
     const latest = renderTracked({ initial: stored });
     await fireEvent.click(box('Cobb'));
     await fireEvent.click(box('Fulton'));
@@ -272,9 +272,9 @@ describe('GoalFields editing', () => {
     expect(latest().related_project_ids).toEqual(['airport', 'bus-plan']);
   });
 
-  it('adds, edits and removes organisations in the draft', async () => {
+  it('adds, edits and removes organizations in the draft', async () => {
     const latest = renderTracked({ initial: stored });
-    await fireEvent.click(screen.getByRole('button', { name: 'Add another organisation' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Add another organization' }));
     const third = row(3);
     expect(document.activeElement).toBe(within(third).getByLabelText('Name (required)'));
     await fireEvent.input(within(third).getByLabelText('Name (required)'), {
@@ -293,14 +293,14 @@ describe('GoalFields editing', () => {
       ['Second org', '', ''],
       ['Third org', 'https://third.example', 'Call us'],
     ]);
-    await fireEvent.click(screen.getByRole('button', { name: 'Remove organisation 1' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Remove organization 1' }));
     expect(latest().related_orgs.map((org) => org.name)).toEqual(['Second org', 'Third org']);
   });
 
-  it('starts with no organisations and offers to add one', () => {
+  it('starts with no organizations and offers to add one', () => {
     renderFields();
-    expect(screen.getByText('No organisations yet.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add an organisation' })).toBeTruthy();
+    expect(screen.getByText('No organizations yet.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add an organization' })).toBeTruthy();
   });
 });
 

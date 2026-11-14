@@ -54,7 +54,7 @@ describe('ConfirmDialog', () => {
     expect(dialog().open).toBe(false);
   });
 
-  it('resolves false when cancelled', async () => {
+  it('resolves false when canceled', async () => {
     const { ask, dialog } = renderDialog();
     const answer = ask();
     await tick();

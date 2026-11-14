@@ -27,7 +27,7 @@ describe('buildOpenApiDocument', () => {
     }
   });
 
-  it('publishes organisation and source links as uri strings', () => {
+  it('publishes organization and source links as uri strings', () => {
     const uri = { type: 'string', format: 'uri' };
     const schemas = doc.components?.schemas ?? {};
     for (const name of ['Project', 'ProjectPatch']) {

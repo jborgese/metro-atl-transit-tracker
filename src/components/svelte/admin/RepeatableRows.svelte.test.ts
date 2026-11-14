@@ -169,10 +169,10 @@ describe('RepeatableRows', () => {
   });
 
   it('uses "an" before an item name that starts with a vowel', async () => {
-    renderRows({ itemName: 'organisation' });
-    await fireEvent.click(button('Add an organisation'));
-    expect(group('Organisation 1')).toBeTruthy();
-    expect(button('Add another organisation')).toBeTruthy();
+    renderRows({ itemName: 'organization' });
+    await fireEvent.click(button('Add an organization'));
+    expect(group('Organization 1')).toBeTruthy();
+    expect(button('Add another organization')).toBeTruthy();
   });
 
   it('clears the status before repeating the same announcement', async () => {

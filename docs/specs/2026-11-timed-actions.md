@@ -3,7 +3,7 @@
 **Status:** Approved
 **Owner:** Jared B.
 **Last updated:** 2026-11-13
-**Related:** none (the repo has no tracker); design review notes are summarised in [Appendix D](#d-references)
+**Related:** none (the repo has no tracker); design review notes are summarized in [Appendix D](#d-references)
 
 ---
 
@@ -13,7 +13,7 @@
 
 1. Each goal has one free-text "Actions" field. Asks with a deadline (for example "Comment on the Murphy Crossing infill station study by Nov. 30, 2026") sit in that text beside standing advice and stay on the public page after the deadline until an editor remembers to remove them.
 2. A visitor cannot tell a deadline ask from standing advice, so the asks that most need attention get the least.
-3. A deadline ask usually has a place to act (a comment form, a meeting address). The free text can carry a bare URL but not a labelled button or a location.
+3. A deadline ask usually has a place to act (a comment form, a meeting address). The free text can carry a bare URL but not a labeled button or a location.
 
 **Spec category:** Feature. It adds a new kind of content with its own lifecycle; nothing existing is migrated or replaced.
 
@@ -187,7 +187,7 @@ DROP TABLE content_history_old;
 - **The admin posts back what it read,** so the update schema must tolerate exactly what a response contains beyond the editable fields. Responses carry `id`, `provenance`, and the three archive fields, as the other types do. The admin strips the archive fields before saving; the existing forbidden-field check rejects them from any other client. The update schema accepts `id` only when it equals the path id.
 - **`provenance` in a request body is accepted and ignored.** Responses rewrite `created_by` and `updated_by` to display names (`applyProfileMapToEntity`), and under replace semantics a client copy would otherwise be persisted. The server keeps the stored provenance and sets `updated_at` and `updated_by` itself.
 - **Add no new derived fields to responses** (no `expired` or `live` flag); the strict schema would reject them on the way back in.
-- **`link.url` uses `z.httpUrl()`.** Plain `z.string().url()` in the installed Zod accepts `javascript:` and `data:` addresses, and Svelte does not sanitise `href`.
+- **`link.url` uses `z.httpUrl()`.** Plain `z.string().url()` in the installed Zod accepts `javascript:` and `data:` addresses, and Svelte does not sanitize `href`.
 - **`expires_on` uses `z.iso.date()`,** which rejects impossible dates such as `2026-02-30`.
 - **Date window:** on create, and on update when the value changes, `expires_on` must be today (Atlanta) or later and at most 366 days out. An unchanged past date on an archived record is accepted, so an editor can fix a typo in an archived record's text.
 - **`goal_id` must name an existing, unarchived goal** on create, on restore, and on update when it changes. It is never checked inside archive or the sweep, or an action whose goal was removed could never be archived.
@@ -298,7 +298,7 @@ Built from `makeCollectionHandlers`, `makeItemHandlers` and `makeRestoreHandler`
 
 **Interfaces:** `src/routes/admin/+page.svelte`; the timed-actions routes.
 
-- A third dataset tab labelled "Actions".
+- A third dataset tab labeled "Actions".
 - **Starter template** for a new record: `goal_id`, `description`, `link` (with `label` and `url`), `location` (with `label` and `address`) and `expires_on`, with no `id`. `link` and `location` may be set to `null`.
 - The list shows each action's last day.
 

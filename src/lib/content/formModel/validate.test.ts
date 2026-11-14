@@ -107,7 +107,7 @@ describe('validatePayload', () => {
     });
   });
 
-  describe('lead organisation', () => {
+  describe('lead organization', () => {
     it('reports a blanked name on update exactly once, replacing the schema issue', () => {
       expect(
         validatePayload(
@@ -119,7 +119,7 @@ describe('validatePayload', () => {
       ).toEqual(
         only(
           'lead_org.name',
-          "Enter the lead organisation's name. It can be changed but not removed.",
+          "Enter the lead organization's name. It can be changed but not removed.",
         ),
       );
     });
@@ -135,7 +135,7 @@ describe('validatePayload', () => {
       ).toEqual(
         only(
           'lead_org.name',
-          "Enter the lead organisation's name. It can be changed but not removed.",
+          "Enter the lead organization's name. It can be changed but not removed.",
         ),
       );
     });
@@ -148,7 +148,7 @@ describe('validatePayload', () => {
           { id: 'p2', title: 'T', lead_org: { name: '', url: 'https://a.example' } },
           context,
         ),
-      ).toEqual(only('lead_org.name', 'Lead organisation name: enter a value'));
+      ).toEqual(only('lead_org.name', 'Lead organization name: enter a value'));
     });
   });
 
@@ -298,8 +298,8 @@ describe('fieldLabel', () => {
     ['timed_action', 'goal_id', 'Goal'],
     ['timed_action', 'description', 'Description'],
     ['timed_action', 'expires_on', 'Last day'],
-    ['project', 'lead_org.name', 'Lead organisation name'],
-    ['project', 'lead_org.url', 'Lead organisation web address'],
+    ['project', 'lead_org.name', 'Lead organization name'],
+    ['project', 'lead_org.url', 'Lead organization web address'],
     ['project', 'partners.0.name', 'Partner 1 name'],
     ['project', 'partners.2.url', 'Partner 3 web address'],
     ['project', 'milestones.0.title', 'Milestone 1 title'],
@@ -307,9 +307,9 @@ describe('fieldLabel', () => {
     ['project', 'sources.1.label', 'Source 2 label'],
     ['project', 'sources.1.url', 'Source 2 web address'],
     ['project', 'sources.1.last_verified', 'Source 2 last verified'],
-    ['goal', 'related_orgs.0.name', 'Organisation 1 name'],
-    ['goal', 'related_orgs.0.url', 'Organisation 1 web address'],
-    ['goal', 'related_orgs.1.contact_info', 'Organisation 2 contact info'],
+    ['goal', 'related_orgs.0.name', 'Organization 1 name'],
+    ['goal', 'related_orgs.0.url', 'Organization 1 web address'],
+    ['goal', 'related_orgs.1.contact_info', 'Organization 2 contact info'],
     ['timed_action', 'link.label', 'Link button label'],
     ['timed_action', 'link.url', 'Link web address'],
     ['timed_action', 'location.label', 'Location button label'],
@@ -336,15 +336,15 @@ describe('labels for every path the draft can produce', () => {
     ['project', 'modes.2', 'Mode 3'],
     ['goal', 'related_project_ids', 'Related projects'],
     ['goal', 'related_project_ids.1', 'Related project 2'],
-    ['project', 'lead_org', 'Lead organisation'],
+    ['project', 'lead_org', 'Lead organization'],
     ['project', 'partners', 'Partners'],
     ['project', 'partners.0', 'Partner 1'],
     ['project', 'milestones', 'Milestones'],
     ['project', 'milestones.1', 'Milestone 2'],
     ['project', 'sources', 'Sources'],
     ['project', 'sources.0', 'Source 1'],
-    ['goal', 'related_orgs', 'Related organisations'],
-    ['goal', 'related_orgs.2', 'Organisation 3'],
+    ['goal', 'related_orgs', 'Related organizations'],
+    ['goal', 'related_orgs.2', 'Organization 3'],
     ['timed_action', 'link', 'Link'],
     ['timed_action', 'location', 'Location'],
   ] as const)('labels %s %s as %s', (kind, path, label) => {

@@ -66,12 +66,12 @@
   async function move(index: number, offset: -1 | 1) {
     const target = index + offset;
     const current = rows[index];
-    const neighbour = rows[target];
-    if (current === undefined || neighbour === undefined) {
+    const neighbor = rows[target];
+    if (current === undefined || neighbor === undefined) {
       return;
     }
     const next = [...rows];
-    next[index] = neighbour;
+    next[index] = neighbor;
     next[target] = current;
     rows = next;
     await clearAnnouncement();

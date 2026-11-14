@@ -25,8 +25,8 @@ function expectFieldError(fn: () => unknown, path: string) {
   expect((thrown as ContentStoreError).message).toContain(path);
 }
 
-describe('http(s)-only organisation and source links', () => {
-  it.each(bad)('rejects %s as a lead organisation link', (url) => {
+describe('http(s)-only organization and source links', () => {
+  it.each(bad)('rejects %s as a lead organization link', (url) => {
     expectFieldError(
       () => toProjectCreate({ id: 'p', title: 'T', lead_org: { name: 'A', url } }),
       'lead_org.url',
@@ -47,7 +47,7 @@ describe('http(s)-only organisation and source links', () => {
     );
   });
 
-  it.each(bad)('rejects %s as a related organisation link', (url) => {
+  it.each(bad)('rejects %s as a related organization link', (url) => {
     expectFieldError(
       () => toGoalCreate({ id: 'g', goal: 'G', related_orgs: [{ name: 'A', url }] }),
       'related_orgs.0.url',

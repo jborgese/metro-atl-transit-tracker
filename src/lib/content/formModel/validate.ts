@@ -39,7 +39,7 @@ const MISSING_TOP_LEVEL: Record<string, string> = {
 };
 
 const ID_PATTERN_MESSAGE = 'Use lowercase letters, numbers and hyphens only';
-const LEAD_ORG_MESSAGE = "Enter the lead organisation's name. It can be changed but not removed.";
+const LEAD_ORG_MESSAGE = "Enter the lead organization's name. It can be changed but not removed.";
 
 const SCHEMAS = {
   project: { create: projectCreateSchema, update: projectPatchSchema },

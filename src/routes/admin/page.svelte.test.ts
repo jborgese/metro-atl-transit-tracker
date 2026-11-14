@@ -254,12 +254,12 @@ async function typeIntoEditor(value: string) {
   await fireEvent.input(editor(), { target: { value } });
 }
 
-async function editLabelled(label: string, value: string) {
+async function editLabeled(label: string, value: string) {
   await fireEvent.input(screen.getByLabelText(label), { target: { value } });
 }
 
 async function editGoalActions(text: string) {
-  await editLabelled('Ongoing actions', text);
+  await editLabeled('Ongoing actions', text);
 }
 
 async function editJsonActions(text: string) {
@@ -310,8 +310,8 @@ async function addSource({
 }
 
 async function fillAction({ description, lastDay }: { description: string; lastDay: string }) {
-  await editLabelled('Description (required)', description);
-  await editLabelled('Last day (required)', lastDay);
+  await editLabeled('Description (required)', description);
+  await editLabeled('Last day (required)', lastDay);
 }
 
 const ongoingActions = () =>
@@ -369,7 +369,7 @@ describe('admin page editor target', () => {
 
   it('saves a selected project to /api/projects', async () => {
     await selectProject('Proj One');
-    await editLabelled('Title (required)', 'Proj Two');
+    await editLabeled('Title (required)', 'Proj Two');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
 
     await waitFor(() => expect(writes()).toHaveLength(1));
@@ -416,7 +416,7 @@ describe('admin page editor target', () => {
 
     await fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
     await fireEvent.click(tab(/^Projects/));
-    await editLabelled('Title (required)', 'Draft title');
+    await editLabeled('Title (required)', 'Draft title');
     await fireEvent.click(tab(/^Goals/));
     expect(heading().textContent?.trim()).toBe('New Project');
     expect((screen.getByLabelText('Title (required)') as HTMLInputElement).value).toBe(
@@ -455,7 +455,7 @@ describe('leaving a record', () => {
   it('names a new record in the prompt', async () => {
     const typedId = () => (screen.getByLabelText('Id (required)') as HTMLInputElement).value;
     await startNew('Projects');
-    await editLabelled('Id (required)', 'typed-id');
+    await editLabeled('Id (required)', 'typed-id');
     await fireEvent.click(screen.getByRole('button', { name: /Proj One/ }));
     expect(screen.getByRole('alertdialog')).toHaveProperty('open', true);
     expect(screen.getByText('Discard your changes to this new project?')).toBeTruthy();
@@ -542,7 +542,7 @@ describe('archive and restore', () => {
       'Its banner will disappear from the public site. You can restore it until its last day has passed.',
     ],
   ])(
-    'says what archiving does on %s and sends nothing when cancelled',
+    'says what archiving does on %s and sends nothing when canceled',
     async (tabLabel, record, title, body) => {
       await renderLoaded();
       await fireEvent.click(tab(new RegExp(`^${tabLabel}`)));
@@ -623,11 +623,11 @@ describe('record tabs', () => {
   it.each(['altKey', 'ctrlKey', 'metaKey'])('leaves an arrow key with %s alone', async (key) => {
     await renderLoaded();
     tab(/^Projects/).focus();
-    const notCancelled = await fireEvent.keyDown(tab(/^Projects/), {
+    const notCanceled = await fireEvent.keyDown(tab(/^Projects/), {
       key: 'ArrowLeft',
       [key]: true,
     });
-    expect(notCancelled).toBe(true);
+    expect(notCanceled).toBe(true);
     expect(tab(/^Projects/).getAttribute('aria-selected')).toBe('true');
     expect(document.activeElement).toBe(tab(/^Projects/));
   });
@@ -1378,7 +1378,7 @@ describe('keeping drafts and focus', () => {
 
   it('starts a fresh new record when Refresh discards one', async () => {
     await startNew('Projects');
-    await editLabelled('Id (required)', 'typed-id');
+    await editLabeled('Id (required)', 'typed-id');
     await fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(screen.getByText('Discard your changes to this new project?')).toBeTruthy();
     await fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
@@ -1665,27 +1665,27 @@ describe('goal form', () => {
   const summary = () => screen.getByRole('alert');
   const group = (name: string) => screen.getByRole('group', { name });
   const orgField = (row: number, label: string) =>
-    within(group(`Organisation ${row}`)).getByLabelText(label);
+    within(group(`Organization ${row}`)).getByLabelText(label);
 
   function serveGoal(overrides: Row) {
     stored['/api/goals'] = [{ ...structuredClone(goal), ...overrides }];
   }
 
-  async function addOrganisation(url: string) {
-    const name = screen.queryByRole('button', { name: 'Add an organisation' })
-      ? 'Add an organisation'
-      : 'Add another organisation';
+  async function addOrganization(url: string) {
+    const name = screen.queryByRole('button', { name: 'Add an organization' })
+      ? 'Add an organization'
+      : 'Add another organization';
     await fireEvent.click(screen.getByRole('button', { name }));
-    const rows = screen.getAllByRole('group', { name: /^Organisation \d+$/ });
+    const rows = screen.getAllByRole('group', { name: /^Organization \d+$/ });
     await fireEvent.input(within(rows.at(-1)!).getByLabelText('Web address'), {
       target: { value: url },
     });
   }
 
-  it('saves a county tick and a new organisation as two changed keys', async () => {
+  it('saves a county check and a new organization as two changed keys', async () => {
     await selectGoal('Regional goal');
     await fireEvent.click(screen.getByLabelText('Fulton'));
-    await fireEvent.click(screen.getByRole('button', { name: 'Add an organisation' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Add an organization' }));
     await fireEvent.input(screen.getByLabelText('Name (required)'), {
       target: { value: 'Beltline Rail Now' },
     });
@@ -1757,7 +1757,7 @@ describe('goal form', () => {
         'This goal has 1 field the form does not show: Extra Key. Use Edit as JSON to change them.',
       ),
     ).toBeTruthy();
-    await editLabelled('Ongoing actions', 'New advice');
+    await editLabeled('Ongoing actions', 'New advice');
     await save();
     expect(JSON.parse(lastWrite().body!)).toEqual({ actions: 'New advice' });
   });
@@ -1768,7 +1768,7 @@ describe('goal form', () => {
     expect((screen.getByLabelText('gone (not in the list)') as HTMLInputElement).checked).toBe(
       true,
     );
-    await editLabelled('Ongoing actions', 'New advice');
+    await editLabeled('Ongoing actions', 'New advice');
     await save();
     expect(JSON.parse(lastWrite().body!)).toEqual({ actions: 'New advice' });
   });
@@ -1776,8 +1776,8 @@ describe('goal form', () => {
   it('creates a goal from the form with the typed id and no server-managed keys', async () => {
     await startNew('Goals');
     expect(screen.getByText('Save this goal before adding an action.')).toBeTruthy();
-    await editLabelled('Id (required)', 'new-goal');
-    await editLabelled('Goal (required)', 'A new goal');
+    await editLabeled('Id (required)', 'new-goal');
+    await editLabeled('Goal (required)', 'A new goal');
     await fireEvent.click(screen.getByLabelText('DeKalb'));
     await fireEvent.click(screen.getByRole('button', { name: 'Create Goal' }));
     await waitFor(() => expect(writes()).toHaveLength(1));
@@ -1797,8 +1797,8 @@ describe('goal form', () => {
 
   it('reports an id that is already used at Id (required)', async () => {
     await startNew('Goals');
-    await editLabelled('Id (required)', 'g1');
-    await editLabelled('Goal (required)', 'Copy');
+    await editLabeled('Id (required)', 'g1');
+    await editLabeled('Goal (required)', 'Copy');
     await fireEvent.click(screen.getByRole('button', { name: 'Create Goal' }));
     await settle();
     expect(writes()).toHaveLength(0);
@@ -1809,7 +1809,7 @@ describe('goal form', () => {
     expect(document.activeElement).toBe(summary());
   });
 
-  it('stays clean when a county is unticked and ticked again', async () => {
+  it('stays clean when a county is unchecked and checked again', async () => {
     serveGoal({ related_counties: ['13121', '13089'] });
     await selectGoal('Regional goal');
     await fireEvent.click(screen.getByLabelText('Fulton'));
@@ -1822,7 +1822,7 @@ describe('goal form', () => {
     expect(writes()).toHaveLength(0);
   });
 
-  it('sends only related_orgs, the other organisation unchanged, after one name changes', async () => {
+  it('sends only related_orgs, the other organization unchanged, after one name changes', async () => {
     const first = {
       name: 'First org',
       url: 'https://first.example',
@@ -1840,12 +1840,12 @@ describe('goal form', () => {
     );
   });
 
-  it('sends the remaining organisations after one is removed', async () => {
+  it('sends the remaining organizations after one is removed', async () => {
     const first = { name: 'First org', url: 'https://first.example' };
     const second = { name: 'Second org', notes: 'kept', contact_info: '' };
     serveGoal({ related_orgs: [first, second] });
     await selectGoal('Regional goal');
-    await fireEvent.click(screen.getByRole('button', { name: 'Remove organisation 1' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Remove organization 1' }));
     await save();
     expect(lastWrite().body).toBe(JSON.stringify({ related_orgs: [second] }));
   });
@@ -1938,7 +1938,7 @@ describe('goal form', () => {
     ).toBeTruthy();
   });
 
-  it('keeps stored county and project ids it does not know when others are ticked', async () => {
+  it('keeps stored county and project ids it does not know when others are checked', async () => {
     serveGoal({ related_counties: ['13999'], related_project_ids: ['gone'] });
     await selectGoal('Regional goal');
     await fireEvent.click(screen.getByLabelText('Fulton'));
@@ -1963,22 +1963,22 @@ describe('goal form', () => {
     expect(screen.queryByRole('button', { name: 'Back to goal' })).toBeNull();
   });
 
-  it('keeps organisation errors on their rows as rows are added and removed', async () => {
+  it('keeps organization errors on their rows as rows are added and removed', async () => {
     await selectGoal('Regional goal');
-    await addOrganisation('https://first.example');
-    await addOrganisation('https://second.example');
+    await addOrganization('https://first.example');
+    await addOrganization('https://second.example');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await settle();
     expect(writes()).toHaveLength(0);
     const both = [
-      ['Organisation 1 name: enter a value', '#goal-related_orgs-0-name'],
-      ['Organisation 2 name: enter a value', '#goal-related_orgs-1-name'],
+      ['Organization 1 name: enter a value', '#goal-related_orgs-0-name'],
+      ['Organization 2 name: enter a value', '#goal-related_orgs-1-name'],
     ];
     expect(summaryLinks()).toEqual(both);
     expect(orgField(1, 'Name (required)').getAttribute('aria-invalid')).toBe('true');
     expect(orgField(2, 'Name (required)').getAttribute('aria-invalid')).toBe('true');
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Add another organisation' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Add another organization' }));
     expect(summaryLinks()).toEqual(both);
     expect(orgField(3, 'Name (required)').hasAttribute('aria-invalid')).toBe(false);
     await fireEvent.input(orgField(3, 'Web address'), {
@@ -1987,9 +1987,9 @@ describe('goal form', () => {
     expect(summaryLinks()).toEqual(both);
     expect(orgField(3, 'Name (required)').hasAttribute('aria-invalid')).toBe(false);
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Remove organisation 1' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Remove organization 1' }));
     expect(summaryLinks()).toEqual([
-      ['Organisation 1 name: enter a value', '#goal-related_orgs-0-name'],
+      ['Organization 1 name: enter a value', '#goal-related_orgs-0-name'],
     ]);
     expect((orgField(1, 'Web address') as HTMLInputElement).value).toBe('https://second.example');
     expect(orgField(1, 'Name (required)').getAttribute('aria-invalid')).toBe('true');
@@ -2002,16 +2002,16 @@ describe('goal form', () => {
 
   it('keeps row errors on their rows across a JSON edit and back', async () => {
     await selectGoal('Regional goal');
-    await addOrganisation('https://first.example');
-    await addOrganisation('https://second.example');
+    await addOrganization('https://first.example');
+    await addOrganization('https://second.example');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await asJson();
     await typeIntoEditor(JSON.stringify({ ...editorValue(), goal: 'Edited in JSON' }));
     expect(within(summary()).getAllByRole('link')).toHaveLength(2);
     await fireEvent.click(screen.getByRole('button', { name: 'Back to form' }));
     expect(summaryLinks()).toEqual([
-      ['Organisation 1 name: enter a value', '#goal-related_orgs-0-name'],
-      ['Organisation 2 name: enter a value', '#goal-related_orgs-1-name'],
+      ['Organization 1 name: enter a value', '#goal-related_orgs-0-name'],
+      ['Organization 2 name: enter a value', '#goal-related_orgs-1-name'],
     ]);
     expect(orgField(2, 'Name (required)').getAttribute('aria-invalid')).toBe('true');
     expect((screen.getByLabelText('Goal (required)') as HTMLTextAreaElement).value).toBe(
@@ -2021,16 +2021,16 @@ describe('goal form', () => {
 
   it('renames a row error when a blank row before it is dropped', async () => {
     await selectGoal('Regional goal');
-    await addOrganisation('https://first.example');
-    await addOrganisation('https://second.example');
+    await addOrganization('https://first.example');
+    await addOrganization('https://second.example');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await fireEvent.input(orgField(1, 'Web address'), { target: { value: '' } });
     expect(summaryLinks()).toEqual([
-      ['Organisation 2 name: enter a value', '#goal-related_orgs-1-name'],
+      ['Organization 2 name: enter a value', '#goal-related_orgs-1-name'],
     ]);
     expect(orgField(1, 'Name (required)').hasAttribute('aria-invalid')).toBe(false);
     expect(
-      within(group('Organisation 2')).getByText('Error: Organisation 2 name: enter a value'),
+      within(group('Organization 2')).getByText('Error: Organization 2 name: enter a value'),
     ).toBeTruthy();
   });
 
@@ -2154,7 +2154,7 @@ describe('project form', () => {
     expect((screen.getByLabelText('ferry (not in the list)') as HTMLInputElement).checked).toBe(
       true,
     );
-    await editLabelled('Title (required)', 'Odd, renamed');
+    await editLabeled('Title (required)', 'Odd, renamed');
     await save();
     expect(JSON.parse(lastWrite().body!)).toEqual({ title: 'Odd, renamed' });
   });
@@ -2174,24 +2174,24 @@ describe('project form', () => {
     });
   });
 
-  it('will not blank a stored lead organisation', async () => {
+  it('will not blank a stored lead organization', async () => {
     serveProject({ ...project, lead_org: { name: 'MARTA', url: 'https://itsmarta.com/' } });
     await selectProject('Proj One');
     expect(screen.getByText('Can be changed but not removed.')).toBeTruthy();
-    await editLabelled('Lead organisation name', '');
+    await editLabeled('Lead organization name', '');
     await attemptSave();
     expect(writes()).toHaveLength(0);
     expect(
       within(screen.getByRole('alert')).getByText(
-        "Enter the lead organisation's name. It can be changed but not removed.",
+        "Enter the lead organization's name. It can be changed but not removed.",
       ),
     ).toBeTruthy();
   });
 
   it('creates a project with its id', async () => {
     await startNew('Projects');
-    await editLabelled('Id (required)', 'new-line');
-    await editLabelled('Title (required)', 'New line');
+    await editLabeled('Id (required)', 'new-line');
+    await editLabeled('Title (required)', 'New line');
     await fireEvent.click(screen.getByRole('button', { name: 'Create Project' }));
     await waitFor(() => expect(writes()).toHaveLength(1));
     expect(lastWrite()).toMatchObject({ method: 'POST', path: '/api/projects' });
@@ -2250,7 +2250,7 @@ describe('project form', () => {
     ],
     [
       'the summary',
-      () => editLabelled('Summary', 'Shorter summary'),
+      () => editLabeled('Summary', 'Shorter summary'),
       { summary: 'Shorter summary' },
     ],
     [
@@ -2268,29 +2268,29 @@ describe('project form', () => {
     ],
     [
       'a start date set',
-      () => editLabelled('Start date', '2025-01-01'),
+      () => editLabeled('Start date', '2025-01-01'),
       { start_date: '2025-01-01' },
     ],
-    ['a start date cleared', () => editLabelled('Start date', ''), { start_date: null }],
-    ['an end date set', () => editLabelled('End date', '2027-12-31'), { end_date: '2027-12-31' }],
+    ['a start date cleared', () => editLabeled('Start date', ''), { start_date: null }],
+    ['an end date set', () => editLabeled('End date', '2027-12-31'), { end_date: '2027-12-31' }],
     [
-      'a county ticked',
+      'a county checked',
       () => fireEvent.click(screen.getByLabelText('Cobb')),
       { related_counties: ['13121', '13089', '13067'] },
     ],
     [
-      'a mode ticked',
+      'a mode checked',
       () => fireEvent.click(screen.getByLabelText('Rail')),
       { modes: ['bus', 'transit', 'rail'] },
     ],
     [
-      'the lead organisation web address changed',
-      () => editLabelled('Lead organisation web address', 'https://www.itsmarta.com/'),
+      'the lead organization web address changed',
+      () => editLabeled('Lead organization web address', 'https://www.itsmarta.com/'),
       { lead_org: { ...liveBrt.lead_org, url: 'https://www.itsmarta.com/' } },
     ],
     [
-      'the lead organisation web address cleared',
-      () => editLabelled('Lead organisation web address', ''),
+      'the lead organization web address cleared',
+      () => editLabeled('Lead organization web address', ''),
       { lead_org: { name: liveBrt.lead_org.name } },
     ],
     [
@@ -2522,7 +2522,7 @@ describe('project form', () => {
       'statewide',
     );
     expect(screen.queryByText('Unsaved changes.')).toBeNull();
-    await editLabelled('Summary', 'New summary');
+    await editLabeled('Summary', 'New summary');
     await fireEvent.click(screen.getByLabelText('Rail'));
     await fireEvent.click(screen.getByLabelText('Fulton'));
     await save();
@@ -2535,8 +2535,8 @@ describe('project form', () => {
 
   it('reports a duplicate id on create at Id (required)', async () => {
     await startNew('Projects');
-    await editLabelled('Id (required)', 'p1');
-    await editLabelled('Title (required)', 'Copy');
+    await editLabeled('Id (required)', 'p1');
+    await editLabeled('Title (required)', 'Copy');
     await fireEvent.click(screen.getByRole('button', { name: 'Create Project' }));
     await settle();
     expect(writes()).toHaveLength(0);
@@ -2554,7 +2554,7 @@ describe('project form', () => {
         'This project has 1 field the form does not show: notes. Use Edit as JSON to change them.',
       ),
     ).toBeTruthy();
-    await editLabelled('Summary', 'Shorter summary');
+    await editLabeled('Summary', 'Shorter summary');
     await save();
     expect(lastWrite().body).toBe(JSON.stringify({ summary: 'Shorter summary' }));
     await waitFor(() => expect(status()).toContain('Updated project'));
@@ -2567,7 +2567,7 @@ describe('project form', () => {
       release = resolve;
     });
     await selectProject('Proj One');
-    await editLabelled('Summary', 'Edited');
+    await editLabeled('Summary', 'Edited');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(writes()).toHaveLength(1));
     expect(screen.getByLabelText('Summary').matches(':disabled')).toBe(true);

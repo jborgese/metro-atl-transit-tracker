@@ -19,7 +19,7 @@ const box = (name: string) => screen.getByLabelText(name) as HTMLInputElement;
 afterEach(cleanup);
 
 describe('CheckboxGroup', () => {
-  it('renders a fieldset with the legend and one labelled checkbox per option', () => {
+  it('renders a fieldset with the legend and one labeled checkbox per option', () => {
     renderGroup();
     expect(screen.getByRole('group', { name: 'Counties' })).toBeTruthy();
     expect(box('Fulton').id).toBe('counties-0');
@@ -42,7 +42,7 @@ describe('CheckboxGroup', () => {
     expect(screen.getByRole('group').hasAttribute('aria-describedby')).toBe(false);
   });
 
-  it('ticks and unticks into the bound list, and keeps unknown values', async () => {
+  it('checks and unchecks into the bound list, and keeps unknown values', async () => {
     const registry = renderGroup({ initial: ['13999'] });
     expect(box('13999 (not in the list)').checked).toBe(true);
     expect(box('13999 (not in the list)').id).toBe('counties-2');
@@ -53,7 +53,7 @@ describe('CheckboxGroup', () => {
     expect(box('Fulton').checked).toBe(false);
   });
 
-  it('keeps an unticked unknown value listed so it can be ticked again', async () => {
+  it('keeps an unchecked unknown value listed so it can be checked again', async () => {
     const registry = renderGroup({ initial: ['13999', '13121'] });
     await fireEvent.click(box('13999 (not in the list)'));
     expect(registry.selected).toEqual(['13121']);
@@ -96,7 +96,7 @@ describe('CheckboxGroup', () => {
     expect(box('13999 (not in the list)').id).toBe('counties-2');
   });
 
-  it('removes every occurrence of a repeated value on untick', async () => {
+  it('removes every occurrence of a repeated value on uncheck', async () => {
     const registry = renderGroup({ initial: ['13121', '13089', '13121'] });
     expect(box('Fulton').checked).toBe(true);
     await fireEvent.click(box('Fulton'));

@@ -122,11 +122,11 @@ describe('relabel', () => {
     expect(
       relabel(
         'goal',
-        'Organisation 2 name: enter a value',
+        'Organization 2 name: enter a value',
         'related_orgs.1.name',
         'related_orgs.0.name',
       ),
-    ).toBe('Organisation 1 name: enter a value');
+    ).toBe('Organization 1 name: enter a value');
   });
 
   it('renames a list item to its group', () => {
@@ -144,11 +144,11 @@ describe('relabel', () => {
     expect(
       relabel(
         'goal',
-        'Organisation 1 name must be 160 characters or fewer',
+        'Organization 1 name must be 160 characters or fewer',
         'related_orgs.0.name',
         'related_orgs.2.name',
       ),
-    ).toBe('Organisation 3 name must be 160 characters or fewer');
+    ).toBe('Organization 3 name must be 160 characters or fewer');
   });
 
   it('leaves a message that does not start with the label', () => {
@@ -183,11 +183,11 @@ describe('anchors across row changes', () => {
     expect(
       relabel(
         'goal',
-        'Organisation 2 name: enter a value',
+        'Organization 2 name: enter a value',
         'related_orgs.1.name',
         'related_orgs.0.name',
       ),
-    ).toBe('Organisation 1 name: enter a value');
+    ).toBe('Organization 1 name: enter a value');
   });
 });
 

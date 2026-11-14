@@ -116,6 +116,7 @@ Follow [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) for cross-cutting 
 - Content writes go through the content service so they append a history event; never write the content tables directly.
 - Code runs on Cloudflare Workers (`nodejs_compat` enabled); a new dependency must run there.
 - Prettier owns formatting (single quotes, semicolons, 2-space indent, 100-column lines). Run `npm run format` instead of formatting by hand.
+- Write interface copy, identifiers and docs in US English ("organization", "color", "canceled", "check a box"); the site serves metro Atlanta.
 
 ---
 
