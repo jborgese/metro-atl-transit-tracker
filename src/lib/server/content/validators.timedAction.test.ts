@@ -128,3 +128,41 @@ describe('generateTimedActionId', () => {
     expect(generateTimedActionId()).toMatch(/^ta-[a-z0-9]{8}$/);
   });
 });
+
+describe('malformed input is rejected with a 400, never another error', () => {
+  const starterTemplate = {
+    goal_id: '',
+    description: '',
+    link: { label: '', url: '' },
+    location: { label: '', address: '' },
+    expires_on: '',
+  };
+  const cases: [string, unknown][] = [
+    ['empty link url', { ...valid, link: { label: 'x', url: '' } }],
+    ['unparseable link url', { ...valid, link: { label: 'x', url: 'not a url' } }],
+    ['unfilled starter template', starterTemplate],
+    ['non-object body', 'text'],
+    ['null body', null],
+    ['non-string date', { ...valid, expires_on: 20261130 }],
+  ];
+
+  it.each(cases)('create: %s', (_name, input) => {
+    expect.assertions(2);
+    try {
+      toTimedActionCreate(input, today);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ContentStoreError);
+      expect((err as ContentStoreError).status).toBe(400);
+    }
+  });
+
+  it.each(cases)('replace: %s', (_name, input) => {
+    expect.assertions(2);
+    try {
+      toTimedActionReplace(input, 'ta-abcdefgh', '2026-11-30', today);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ContentStoreError);
+      expect((err as ContentStoreError).status).toBe(400);
+    }
+  });
+});

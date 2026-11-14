@@ -177,7 +177,10 @@
       const ids = (item as Goal).related_project_ids;
       return `${Array.isArray(ids) ? ids.length : 0} related projects`;
     },
-    timed_action: (item) => (item as TimedAction).expires_on?.trim() || 'no expiry date',
+    timed_action: (item) => {
+      const action = item as TimedAction;
+      return `${action.expires_on?.trim() || 'no expiry date'} · ${action.goal_id}`;
+    },
   };
 
   function toEntityHeadline(item: EntityItem, kind: EditorEntity) {
@@ -249,12 +252,18 @@
     loading = true;
     const previousSelection = selectedId;
     const previousSelectedDataset = selectedDataset;
+    let actionsLoadError = '';
 
     try {
       const [projectData, goalData, timedActionData, historyData] = await Promise.all([
         fetchCollection<Project>(`${DATASETS.project.endpoint}?includeArchived=true`),
         fetchCollection<Goal>(`${DATASETS.goal.endpoint}?includeArchived=true`),
-        fetchCollection<TimedAction>(`${DATASETS.timed_action.endpoint}?includeArchived=true`),
+        fetchCollection<TimedAction>(
+          `${DATASETS.timed_action.endpoint}?includeArchived=true`,
+        ).catch((err: unknown) => {
+          actionsLoadError = err instanceof Error ? err.message : 'Failed to load actions.';
+          return [] as TimedAction[];
+        }),
         fetchCollection<ContentHistoryEvent>('/api/history?limit=100'),
       ]);
 
@@ -270,13 +279,15 @@
         if (exists) {
           selectEntity(previousSelection, previousSelectedDataset);
         } else {
-          startNew(dataset);
+          startNew(selectedDataset);
         }
-      } else if (!selectedId) {
+      } else if (!selectedId && editorJson === '') {
         startNew(dataset);
       }
 
-      if (!options.quiet) {
+      if (actionsLoadError) {
+        setMessage(`Could not load the actions list. ${actionsLoadError}`, 'error');
+      } else if (!options.quiet) {
         setMessage('Loaded latest content.', 'success');
       }
     } catch (err) {
@@ -294,7 +305,7 @@
     }
 
     const isCreate = selectedId.length === 0;
-    const targetDataset: EditorEntity = isCreate ? dataset : selectedDataset;
+    const targetDataset: EditorEntity = selectedDataset;
 
     if (isCreate && DATASETS[targetDataset].requiresClientId) {
       const candidateId = parsed.id;
@@ -670,7 +681,7 @@
           <h2>
             {selectedId
               ? `Editing ${DATASETS[selectedDataset].title} ${selectedId}`
-              : `New ${DATASETS[dataset].title}`}
+              : `New ${DATASETS[selectedDataset].title}`}
           </h2>
           <div class="editor-head-actions">
             <button onclick={formatEditorJson} disabled={loading}>Format JSON</button>
@@ -727,7 +738,7 @@
 
         <div class="editor-actions">
           <button class="primary" onclick={saveEntity} disabled={loading || editorError.length > 0}>
-            {selectedId ? 'Save Changes' : `Create ${DATASETS[dataset].title}`}
+            {selectedId ? 'Save Changes' : `Create ${DATASETS[selectedDataset].title}`}
           </button>
           <button onclick={archiveSelected} disabled={loading || !selectedId || selectedArchived}>
             Archive
@@ -758,7 +769,7 @@
                 disabled={loading}
                 title={`Open ${entityTypeLabel(event.entity_type).toLowerCase()} ${event.entity_id}`}
               >
-                {entityTypeLabel(event.entity_type)}:{event.entity_id}
+                {`${entityTypeLabel(event.entity_type)}: ${event.entity_id}`}
               </button>
               <time
                 class="history-time"
@@ -1036,8 +1047,8 @@
 
   .list-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.65rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
   }
 
   .list-actions button.active {

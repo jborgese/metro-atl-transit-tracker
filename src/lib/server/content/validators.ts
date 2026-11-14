@@ -88,6 +88,9 @@ export interface TimedActionInput {
 }
 
 function hasNoCredentials(url: string): boolean {
+  if (!URL.canParse(url)) {
+    return true;
+  }
   const parsed = new URL(url);
   return parsed.username === '' && parsed.password === '';
 }

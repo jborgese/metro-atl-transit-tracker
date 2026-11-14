@@ -594,7 +594,7 @@
     overflow-wrap: anywhere;
   }
   td a.timed-action-button:focus-visible {
-    outline: 2px solid var(--atl-blue, #4280c4);
+    outline: 2px solid var(--text-on-dark);
     outline-offset: 2px;
   }
   td a.timed-action-button:hover,
