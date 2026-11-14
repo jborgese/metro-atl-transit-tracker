@@ -1,4 +1,4 @@
-export type ContentEntityType = 'project' | 'goal';
+export type ContentEntityType = 'project' | 'goal' | 'timed_action';
 export type ContentMutationAction = 'create' | 'update' | 'archive' | 'restore';
 
 export interface RelatedOrg {
@@ -61,6 +61,29 @@ export interface Goal {
   archived_at?: string | null;
   archived_by?: string | null;
   [key: string]: unknown;
+}
+
+export interface TimedActionLink {
+  label: string;
+  url: string;
+}
+
+export interface TimedActionLocation {
+  label: string;
+  address: string;
+}
+
+export interface TimedAction {
+  id: string;
+  goal_id: string;
+  description: string;
+  link: TimedActionLink | null;
+  location: TimedActionLocation | null;
+  expires_on: string;
+  provenance?: Provenance;
+  is_archived?: boolean;
+  archived_at?: string | null;
+  archived_by?: string | null;
 }
 
 export interface ContentHistoryEvent {

@@ -5,6 +5,7 @@
 //   - repository.ts : SQL constants, getDb, executeInBatches, find*Row
 //   - seeding.ts    : ensureSeeded + the 3 split seedXxxIfEmpty functions
 //   - service.ts    : public CRUD operations + listHistory
+//   - timedActions.ts : timed-action CRUD + sweepExpiredTimedActions
 //
 // External callers should import from this file; internal modules import
 // from each other through the DAG above (no cycles).
@@ -34,6 +35,16 @@ export {
   updateGoal,
   updateProject,
 } from './service';
+
+export {
+  archiveTimedAction,
+  createTimedAction,
+  getTimedActionById,
+  listTimedActions,
+  restoreTimedAction,
+  sweepExpiredTimedActions,
+  updateTimedAction,
+} from './timedActions';
 
 export {
   deleteProfile,
