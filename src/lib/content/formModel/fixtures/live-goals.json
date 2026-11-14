@@ -1,0 +1,271 @@
+[
+  {
+    "id": "regional-outer-metro-passenger-rail",
+    "goal": "Frequent passenger rail service in the outer metro ATL counties.",
+    "status_related_projects": "",
+    "actions": "",
+    "related_orgs": [],
+    "related_project_ids": [],
+    "related_counties": [],
+    "provenance": {
+      "created_at": "2026-02-07T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-06-09T01:45:03.482Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-06-09T01:45:03.482Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "regional-beltline-rail",
+    "goal": "Immediate work on as much beltline rail as possible (including its supporting infrastructure).",
+    "status_related_projects": "Atlanta City Council unanimously passed a resolution backing light rail on the full 22-mile Beltline on Sept. 21, 2026; an implementation and funding report from the mayor, MARTA and Atlanta Beltline Inc. is due Jan. 26, 2027. Streetcar East Extension work has been halted since May 2025. The Murphy Crossing infill station study began Oct. 29, 2026: https://beltline.org/learn/current-projects/murphy-crossing-infill-station/",
+    "actions": "Ask the mayor, MARTA and Atlanta Beltline Inc. to deliver the Beltline rail implementation report due Jan. 26, 2027.",
+    "related_orgs": [
+      {
+        "name": "Beltline Rail Now",
+        "url": "https://beltlinerailnow.com/",
+        "contact_info": ""
+      }
+    ],
+    "related_project_ids": [],
+    "related_counties": [],
+    "provenance": {
+      "created_at": "2026-02-07T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:29:07.763Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "regional-amtrak-intercity-rail",
+    "goal": "Additional Amtrak (or any inter city rail provider) frequency and coverage out of Atlanta. As well as improving the infrastructure of the existing Amtrak station and its surrounding area.",
+    "status_related_projects": "The mayors of Birmingham, AL and Chattanooga, TN have publicly voiced their interest in rail services to Atlanta. The Chattanooga plan is detailed here: https://www.sunbeltatlanticrailroad.com",
+    "actions": "Write Gov.-elect Bottoms to emphasize the importance of reviving the Georgia Rail Passenger Authority.",
+    "related_orgs": [
+      {
+        "name": "Sunbelt Atlantic Railway Coalition",
+        "url": "https://www.sunbeltatlanticrailroad.com",
+        "contact_info": ""
+      }
+    ],
+    "related_project_ids": ["atl-sav"],
+    "related_counties": [],
+    "provenance": {
+      "created_at": "2026-02-07T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-13T20:03:01.137Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null,
+    "GDOT ATL to SAV Study Public Comment Resoponses": [
+      {
+        "url": "https://atlsavpassrail-gdot.hub.arcgis.com/"
+      }
+    ]
+  },
+  {
+    "id": "regional-hub-spoke-network",
+    "goal": "Move away from our current \"hub and spoke\" network setup.",
+    "status_related_projects": "The State Transportation Board selected a developer for the first phase of I-285 express lanes on Oct. 15, 2026; construction is expected to start in late 2027 or 2028 and the lanes to open in 2034. Transit buses would use the lanes at no charge, but no bus service in them is funded yet. https://i285topendexpresslanes-gdot.hub.arcgis.com/",
+    "actions": "Speak to leaders within the metro's transit agencies about wanting to see improved connectivity between them.",
+    "related_orgs": [
+      {
+        "name": "GTEA (Georgia Transportation Efficiency Authority, formerly ATL)",
+        "url": "https://gtea.ga.gov/",
+        "contact_info": ""
+      }
+    ],
+    "related_project_ids": [],
+    "related_counties": [],
+    "provenance": {
+      "created_at": "2026-02-07T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-13T20:03:01.310Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "cobb-support-regional-transit",
+    "goal": "Support broader regional transit goals.",
+    "status_related_projects": "More information under the Regional section",
+    "actions": "",
+    "related_orgs": [],
+    "related_project_ids": ["arc-transportation-index"],
+    "related_counties": ["13067"],
+    "provenance": {
+      "created_at": "2026-02-04T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-13T20:03:02.203Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-13T20:03:02.203Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "cobb-improve-cobblinc-frequency",
+    "goal": "Improve CobbLinc frequency, especially on weekends.",
+    "status_related_projects": "CobbLinc runs seven days a week, but Sunday service on core routes such as Routes 10 and 30 is hourly. In September 2026 the Board of Commissioners approved a $6.3M CobbLinc Go microtransit expansion; no fixed-route frequency increase has been announced.",
+    "actions": "Contact the Cobb board of commissioners. Make comment at BoC meetings. Use Cobblinc.",
+    "related_orgs": [
+      {
+        "name": "Cobb Board of Commissioners",
+        "url": "https://www.cobbcounty.gov/board",
+        "contact_info": "contact information at bottom of their site"
+      }
+    ],
+    "related_project_ids": [],
+    "related_counties": ["13067"],
+    "provenance": {
+      "created_at": "2026-02-04T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-13T20:03:01.479Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "cobb-cobblinc-venue-partnerships",
+    "goal": "Create and foster CobbLinc partnership with and promotion of venues and destinations it serves.",
+    "status_related_projects": "In June 2026 Cobb's Transit Advisory Board asked CobbLinc to build relationships with Six Flags Over Georgia, the National Park Service, The Battery Atlanta and Lockheed Martin. No formal venue partnership has been announced.",
+    "actions": "Take CobbLinc to a business or venue along its fixed route service and let staff know you took CobbLinc to get there.",
+    "related_orgs": [
+      {
+        "name": "CobbLinc",
+        "url": "https://www.cobbcounty.gov/transportation/cobblinc",
+        "contact_info": "contact information at bottom of their site"
+      }
+    ],
+    "related_project_ids": [],
+    "related_counties": ["13067"],
+    "provenance": {
+      "created_at": "2026-02-04T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-13T20:03:01.616Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "cobb-cobblinc-event-support",
+    "goal": "Have CobbLinc play a more deliberate role in supporting events across the county and potentially even hosting its own.",
+    "status_related_projects": "Cobb's Transit Advisory Board asked CobbLinc in 2026 to publish event routes and, on Sept. 28, 2026, to define a detour for Marietta Square event closures; staff took the request back to Cobb DOT.",
+    "actions": "Contact the municipalities of Cobb County about interest in having CobbLinc service support things like concerts, holiday events, etc.",
+    "related_orgs": [
+      {
+        "name": "CobbLinc",
+        "url": "https://www.cobbcounty.gov/transportation/cobblinc",
+        "contact_info": "contact information at bottom of their site"
+      }
+    ],
+    "related_project_ids": [],
+    "related_counties": ["13067"],
+    "provenance": {
+      "created_at": "2026-02-04T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-13T20:03:01.776Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "marta-support-regional-transit",
+    "goal": "Support broader regional transit goals.",
+    "status_related_projects": "More information under the Regional section",
+    "actions": "",
+    "related_orgs": [],
+    "related_project_ids": ["arc-transportation-index"],
+    "related_counties": ["13121", "13089"],
+    "provenance": {
+      "created_at": "2026-02-04T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-13T20:03:02.326Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-13T20:03:02.326Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "marta-improve-frequency",
+    "goal": "Improve heavy rail and bus frequency. Specifically on weekends.",
+    "status_related_projects": "MARTA's NextGen Bus Network launched April 18, 2026 with seven-day bus schedules. Weekend trains still run about every 20 minutes.",
+    "actions": "Hold MARTA accountable to its own service standards (heavy rail typically every 15 minutes off-peak) and to its published weekend schedules.",
+    "related_orgs": [],
+    "related_project_ids": ["marta-rapid-a-line"],
+    "related_counties": ["13121", "13089"],
+    "provenance": {
+      "created_at": "2026-02-04T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-13T20:03:01.898Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "marta-ridership-utility",
+    "goal": "Get more people riding MARTA for trips that highlight the system's utility.",
+    "status_related_projects": "",
+    "actions": "Encourage others to take MARTA rail for trips to State Farm Arena, Mercedes-Benz Stadium, Hartsfield-Jackson Intl' Airport, High Museum of Art, Perimeter & Lenox Malls, etc.",
+    "related_orgs": [],
+    "related_project_ids": [],
+    "related_counties": ["13121", "13089"],
+    "provenance": {
+      "created_at": "2026-02-04T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-13T20:03:02.046Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "marta-tod-advocacy",
+    "goal": "Advocate for land use surrounding train stations and bus stops that emphasize density, safe pedestrian and cycling infrastructure, and accessibility.",
+    "status_related_projects": "5 Points facelift",
+    "actions": "Be a customer at a business along and near fixed route transit service and let the staff know you took transit to get there.",
+    "related_orgs": [],
+    "related_project_ids": ["marta-five-points-facelift"],
+    "related_counties": ["13121", "13089"],
+    "provenance": {
+      "created_at": "2026-02-04T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-06-09T02:00:33.275Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  }
+]

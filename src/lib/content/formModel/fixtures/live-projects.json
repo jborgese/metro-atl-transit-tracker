@@ -1,0 +1,762 @@
+[
+  {
+    "id": "marta-rapid-a-line",
+    "title": "MARTA Rapid A-Line",
+    "summary": "Atlanta's first bus rapid transit line, running about 5 miles round trip between downtown/Five Points and Carver via Summerhill and Peoplestown. Phase 1 service began April 18, 2026 with temporary stops; full service with all 14 stations is still pending.",
+    "status": "implementation",
+    "lead_org": {
+      "name": "Metropolitan Atlanta Rapid Transit Authority",
+      "url": "https://itsmarta.com/"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [
+      {
+        "title": "Phase 1 operations start",
+        "date": "2026-04-18"
+      }
+    ],
+    "geo_scope": "corridor",
+    "modes": ["bus", "transit"],
+    "related_counties": ["13121"],
+    "sources": [
+      {
+        "label": "MARTA Rapid A-Line",
+        "url": "https://itsmarta.com/aline.aspx",
+        "last_verified": "2026-11-13"
+      },
+      {
+        "label": "MARTA: Phase 1 announcement",
+        "url": "https://itsmarta.com/marta-rapid-a-line-phase-one.aspx",
+        "last_verified": "2026-11-13"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-02-04T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:03.703Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "marta-five-points-facelift",
+    "title": "Five Points Station Renovation",
+    "summary": "Rebuild of Five Points Station, MARTA's central hub connecting all rail lines. Construction began in May 2025, and canopy deconstruction was about 60% complete in October 2026. The station is open through the Forsyth Street entrance only; rail service is unchanged. The contractor's schedule now runs to May 2031, which MARTA has not approved, and the $230 million budget may rise.",
+    "status": "implementation",
+    "lead_org": {
+      "name": "Metropolitan Atlanta Rapid Transit Authority",
+      "url": "https://itsmarta.com/projectsnapshot.aspx"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "local",
+    "modes": ["rail", "transit"],
+    "related_counties": ["13121"],
+    "sources": [
+      {
+        "label": "MARTA Five Points Transformation",
+        "url": "https://itsmarta.com/fivepointstransformation.aspx",
+        "last_verified": "2026-11-13"
+      },
+      {
+        "label": "AJC, Oct. 23, 2026",
+        "url": "https://www.ajc.com/news/2026/10/marta-five-points-renovation-delayed/",
+        "last_verified": "2026-11-13"
+      },
+      {
+        "label": "Atlanta News First, Oct. 6, 2026",
+        "url": "https://www.atlantanewsfirst.com/2026/10/06/look-inside-martas-five-points-transformation/",
+        "last_verified": "2026-11-13"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-02-04T00:00:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:03.793Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "marta-bus-rapid-transit-study-2025",
+    "title": "MARTA Bus Rapid Transit Study",
+    "summary": "Study and pilot implementation of BRT corridors to improve high-capacity bus service in core Atlanta.",
+    "status": "planning",
+    "lead_org": {
+      "name": "Metropolitan Atlanta Rapid Transit Authority",
+      "url": "https://itsmarta.com/"
+    },
+    "partners": [
+      {
+        "name": "Atlanta Regional Commission",
+        "url": "https://atlantaregional.org/"
+      }
+    ],
+    "start_date": "2024-10-01",
+    "end_date": null,
+    "milestones": [
+      {
+        "title": "Project kickoff",
+        "date": "2024-10-15"
+      }
+    ],
+    "geo_scope": "corridor",
+    "modes": ["bus", "transit"],
+    "related_counties": ["13121", "13089"],
+    "sources": [
+      {
+        "label": "MARTA Projects",
+        "url": "https://itsmarta.com/projects",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:30:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:04.418Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-14T04:32:04.418Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "marta-projects-index",
+    "title": "MARTA - Projects & Programs (index)",
+    "summary": "Official MARTA projects and programs index (capital projects, studies, and planning). Use this record as an index pointing to MARTA's project pages for verification.",
+    "status": "ongoing",
+    "lead_org": {
+      "name": "Metropolitan Atlanta Rapid Transit Authority",
+      "url": "https://itsmarta.com/"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "regional",
+    "modes": ["transit", "bus", "rail"],
+    "related_counties": ["13121", "13089", "13067", "13135", "13063", "13151"],
+    "sources": [
+      {
+        "label": "MARTA Projects index",
+        "url": "https://www.itsmarta.com/projects",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:30:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:04.511Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-14T04:32:04.511Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "arc-transportation-index",
+    "title": "Atlanta Regional Commission - Transportation Projects & Plans (index)",
+    "summary": "ARC maintains regional transportation plans, the TIP, and related project trackers; this record points to ARC transportation program pages for verification and project harvesting.",
+    "status": "ongoing",
+    "lead_org": {
+      "name": "Atlanta Regional Commission",
+      "url": "https://atlantaregional.org/"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "regional",
+    "modes": ["multi-modal", "transit", "road", "bike", "walk"],
+    "related_counties": ["13121", "13089", "13067", "13135", "13063", "13151"],
+    "sources": [
+      {
+        "label": "ARC Transportation program pages",
+        "url": "https://atlantaregional.org/programs/transportation/",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:30:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:04.602Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-14T04:32:04.602Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "fulton-county-projects-index",
+    "title": "Fulton County - Public Works & Transportation (index)",
+    "summary": "Fulton County public works and transportation pages; use as an index for county-level projects and road/public-works initiatives.",
+    "status": "ongoing",
+    "lead_org": {
+      "name": "Fulton County Government",
+      "url": "https://www.fultoncountyga.gov/"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "county",
+    "modes": ["road", "transit", "multi-modal"],
+    "related_counties": ["13121"],
+    "sources": [
+      {
+        "label": "Fulton County Public Works",
+        "url": "https://www.fultoncountyga.gov/",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:40:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:04.694Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-14T04:32:04.694Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "dekalb-county-projects-index",
+    "title": "DeKalb County - Public Works & Transportation (index)",
+    "summary": "DeKalb County public works pages and transportation resources; use as an index for county-level projects.",
+    "status": "ongoing",
+    "lead_org": {
+      "name": "DeKalb County Government",
+      "url": "https://www.dekalbcountyga.gov/"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "county",
+    "modes": ["road", "transit", "multi-modal"],
+    "related_counties": ["13089"],
+    "sources": [
+      {
+        "label": "DeKalb County Public Works",
+        "url": "https://www.dekalbcountyga.gov/departments/public-works",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:40:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:04.793Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-14T04:32:04.793Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "cobb-county-projects-index",
+    "title": "Cobb County - Transportation & Public Works (index)",
+    "summary": "Cobb County transportation and public works resources; acts as an index for county projects and road initiatives.",
+    "status": "ongoing",
+    "lead_org": {
+      "name": "Cobb County Government",
+      "url": "https://www.cobbcounty.org/"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "county",
+    "modes": ["road", "transit", "multi-modal"],
+    "related_counties": ["13067"],
+    "sources": [
+      {
+        "label": "Cobb County",
+        "url": "https://www.cobbcounty.org/",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:40:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:04.918Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-14T04:32:04.918Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "gwinnett-county-projects-index",
+    "title": "Gwinnett County - Public Works & Transportation (index)",
+    "summary": "Gwinnett County public works and transportation pages; use as an index for county-level projects and improvements.",
+    "status": "ongoing",
+    "lead_org": {
+      "name": "Gwinnett County Government",
+      "url": "https://www.gwinnettcounty.com/"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "county",
+    "modes": ["road", "transit", "multi-modal"],
+    "related_counties": ["13135"],
+    "sources": [
+      {
+        "label": "Gwinnett County",
+        "url": "https://www.gwinnettcounty.com/",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:40:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:05.017Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-14T04:32:05.017Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "clayton-county-projects-index",
+    "title": "Clayton County - Public Works & Transportation (index)",
+    "summary": "Clayton County public works pages and transportation resources; index for local county projects.",
+    "status": "ongoing",
+    "lead_org": {
+      "name": "Clayton County Government",
+      "url": "https://www.claytoncountyga.gov/"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "county",
+    "modes": ["road", "transit", "multi-modal"],
+    "related_counties": ["13063"],
+    "sources": [
+      {
+        "label": "Clayton County Public Works",
+        "url": "https://www.claytoncountyga.gov/departments/public-works",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:40:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:05.116Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-14T04:32:05.116Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "henry-county-projects-index",
+    "title": "Henry County - Public Works & Transportation (index)",
+    "summary": "Henry County public works and transportation pages; index entry for county road and mobility projects.",
+    "status": "ongoing",
+    "lead_org": {
+      "name": "Henry County Government",
+      "url": "https://www.henrycountyga.gov/"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "county",
+    "modes": ["road", "transit", "multi-modal"],
+    "related_counties": ["13151"],
+    "sources": [
+      {
+        "label": "Henry County Public Works",
+        "url": "https://www.henrycountyga.gov/departments/public-works",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:40:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:05.209Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-14T04:32:05.209Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "dekalb-transit-master-plan",
+    "title": "DeKalb County Transit Master Plan (2019)",
+    "summary": "DeKalb County's 2019 Transit Master Plan; its final report is dated August 2019. The plan is being replaced: the county authorized an update on Oct. 31, 2025 with $500,000 from the Atlanta Regional Commission, and named a transit director in September 2026.",
+    "status": "completed",
+    "lead_org": {
+      "name": "DeKalb County Government",
+      "url": "https://www.dekalbcountyga.gov/"
+    },
+    "partners": [
+      {
+        "name": "Atlanta Regional Commission",
+        "url": "https://atlantaregional.org/"
+      }
+    ],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "county",
+    "modes": ["transit"],
+    "related_counties": ["13089"],
+    "sources": [
+      {
+        "label": "DeKalb County, Oct. 31, 2025",
+        "url": "https://dekalbcountyga.gov/news/2025-10-31/dekalb-county-ceo-lorraine-cochran-johnson-appoints-sarah-galica-marta-board",
+        "last_verified": "2026-11-13"
+      },
+      {
+        "label": "The Champion, Sept. 8, 2026",
+        "url": "https://thechampionnewspaper.com/director-of-transit-established-for-dekalb/",
+        "last_verified": "2026-11-13"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:50:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:03.998Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "fulton-tsplost-program-2026",
+    "title": "Fulton County TSPLOST (cities outside Atlanta)",
+    "summary": "A 0.75% transportation sales tax covering the 14 Fulton County cities outside the City of Atlanta. It funds roads, bridges, maintenance, and pedestrian, bike and streetscape work; it has no transit category. Voters renewed it on Nov. 3, 2026 with 50.76% of the vote. The current term ends March 31, 2027.",
+    "status": "ongoing",
+    "lead_org": {
+      "name": "Fulton County Government",
+      "url": "https://www.fultoncountyga.gov/"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "county",
+    "modes": ["road", "bike", "walk", "multi-modal"],
+    "related_counties": ["13121"],
+    "sources": [
+      {
+        "label": "Fulton County TSPLOST projects",
+        "url": "https://tsplost.fultoncountyga.gov/projects",
+        "last_verified": "2026-11-13"
+      },
+      {
+        "label": "Appen Media, Nov. 4, 2026",
+        "url": "https://www.appenmedia.com/fulton_county/fulton-county-s-passes-new-tsplost-with-razor-thin-victory/article_f508ebb7-b313-4e2e-9c92-eaac025fd69a.html",
+        "last_verified": "2026-11-13"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:50:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:04.101Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "henry-willow-lane-widening-2026",
+    "title": "Willow Lane widening (Willow Lane / Oak Grove Road Open House)",
+    "summary": "Willow Lane widening project from Jonesboro Road to Bridges Road, proposed to add capacity and include pedestrian/bicycle accommodations; project materials presented at a public open house in January 2026.",
+    "status": "public-outreach",
+    "lead_org": {
+      "name": "Henry County SPLOST Department",
+      "url": "https://www.henrycountyga.gov/327/SPLOST-Department"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [
+      {
+        "title": "Public information open house",
+        "date": "2026-01-28"
+      }
+    ],
+    "geo_scope": "corridor",
+    "modes": ["road", "bike", "walk"],
+    "related_counties": ["13151"],
+    "sources": [
+      {
+        "label": "Willow Lane / Oak Grove Road Open House",
+        "url": "https://www.henrycountyga.gov/936/Willow-Lane-Oak-Grove-Road-Open-House",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:50:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-04T21:40:42.825Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-04T21:40:42.825Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "henry-oak-grove-widening-2026",
+    "title": "Oak Grove Road widening (Willow Lane / Oak Grove Road Open House)",
+    "summary": "Oak Grove Road widening project from Jonesboro Road to Jodeco Road; presented alongside Willow Lane at the January 2026 public open house.",
+    "status": "public-outreach",
+    "lead_org": {
+      "name": "Henry County SPLOST Department",
+      "url": "https://www.henrycountyga.gov/327/SPLOST-Department"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [
+      {
+        "title": "Public information open house",
+        "date": "2026-01-28"
+      }
+    ],
+    "geo_scope": "corridor",
+    "modes": ["road", "bike", "walk"],
+    "related_counties": ["13151"],
+    "sources": [
+      {
+        "label": "Willow Lane / Oak Grove Road Open House",
+        "url": "https://www.henrycountyga.gov/936/Willow-Lane-Oak-Grove-Road-Open-House",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:50:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-04T21:40:48.674Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-04T21:40:48.674Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "henry-road-resurfacing-2025-2027",
+    "title": "Henry County Road Resurfacing Program",
+    "summary": "Ongoing county road resurfacing program; 2025 contracts awarded to resurface nearly 200 county roads and continued annual resurfacing work.",
+    "status": "implementation",
+    "lead_org": {
+      "name": "Henry County Public Works",
+      "url": "https://www.henrycountyga.gov/157/Departments"
+    },
+    "partners": [],
+    "start_date": "2020-01-01",
+    "end_date": null,
+    "milestones": [
+      {
+        "title": "2025 resurfacing contracts awarded",
+        "date": "2025-01-01"
+      }
+    ],
+    "geo_scope": "county",
+    "modes": ["road"],
+    "related_counties": ["13151"],
+    "sources": [
+      {
+        "label": "Henry County Road Projects",
+        "url": "https://www.henrycountyga.gov/823/Road-Projects",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:50:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-04T21:41:10.299Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-04T21:41:10.299Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "henry-keys-ferry-airline-gtib-applications-2025",
+    "title": "GTIB Applications: Keys Ferry & Airline Road Extensions",
+    "summary": "Henry County submitted Keys Ferry Road Extension and Airline Road Extension projects for Georgia Transportation Infrastructure Bank (GTIB) funding consideration; local match proposed from SPLOST VI.",
+    "status": "funding-application",
+    "lead_org": {
+      "name": "Henry County Transportation Planning",
+      "url": "https://www.henrycountyga.gov/157/Departments"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "corridor",
+    "modes": ["road"],
+    "related_counties": ["13151"],
+    "sources": [
+      {
+        "label": "Henry County news: GTIB submissions",
+        "url": "https://www.henrycountyga.gov/",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:50:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:05.298Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-14T04:32:05.298Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "henry-camp-creek-greenway-trail-2025-application",
+    "title": "Camp Creek Greenway Trail (McDonough)",
+    "summary": "Planned trail in McDonough, a joint project of Henry County and the city, ending at McDonough Square. The Atlanta Regional Commission approved federal funding in February 2025, and a 2025 agreement with GDOT provides $1.5 million federal plus a $375,000 county match. The funding covers design only.",
+    "status": "planning",
+    "lead_org": {
+      "name": "Henry County Planning / SPLOST",
+      "url": "https://www.henrycountyga.gov/327/SPLOST-Department"
+    },
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "local",
+    "modes": ["walk", "bike"],
+    "related_counties": ["13151"],
+    "sources": [
+      {
+        "label": "Henry County project page",
+        "url": "https://www.henrycountyga.gov/camp-creek-greenway-trail",
+        "last_verified": "2026-11-13"
+      },
+      {
+        "label": "Henry Reporter, Feb. 19, 2025",
+        "url": "https://henryga.news/?p=15010",
+        "last_verified": "2026-11-13"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:50:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:04.238Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null
+  },
+  {
+    "id": "i-75-express-lanes-expansion-henry",
+    "title": "I-75 Express Lanes Expansion (Henry County segment)",
+    "summary": "State-level express lanes expansion on I-75 affecting Henry County; announced in Jan 2026 and expected to proceed through state DOT procurement and design-build phases.",
+    "status": "planning",
+    "lead_org": {
+      "name": "Georgia Department of Transportation",
+      "url": "https://www.dot.ga.gov/"
+    },
+    "partners": [
+      {
+        "name": "Henry County Government",
+        "url": "https://www.henrycountyga.gov/"
+      }
+    ],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [],
+    "geo_scope": "regional",
+    "modes": ["road"],
+    "related_counties": ["13151"],
+    "sources": [
+      {
+        "label": "Henry County news: I-75 Express Lanes",
+        "url": "https://www.henrycountyga.gov/",
+        "last_verified": "2026-01-29"
+      }
+    ],
+    "provenance": {
+      "created_at": "2026-01-29T12:50:00Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-04T21:41:28.276Z",
+      "license": "CC-BY-4.0",
+      "updated_by": "editor"
+    },
+    "is_archived": true,
+    "archived_at": "2026-11-04T21:41:28.276Z",
+    "archived_by": "editor"
+  },
+  {
+    "id": "atl-sav",
+    "title": "Atlanta – Savannah Intercity Passenger Rail Project",
+    "summary": "GDOT is studying passenger rail service between Atlanta and Savannah. A $10 million Service Development Plan ($8 million federal, $2 million GDOT) is evaluating route alternatives through 2027; the latest public comment period closed Aug. 6, 2026. No construction funding is identified.",
+    "status": "planning",
+    "modes": ["transit", "rail"],
+    "related_counties": [],
+    "sources": [
+      {
+        "label": "GDOT Atlanta-Savannah passenger rail study",
+        "url": "https://atlsavpassrail-gdot.hub.arcgis.com/",
+        "last_verified": "2026-11-13"
+      },
+      {
+        "label": "CBS Atlanta, Aug. 6, 2026",
+        "url": "https://www.cbsnews.com/atlanta/news/gdot-wants-your-opinion-on-the-proposed-atlanta-savannah-passenger-train-heres-how-to-weigh-in/",
+        "last_verified": "2026-11-13"
+      }
+    ],
+    "is_archived": false,
+    "archived_at": null,
+    "archived_by": null,
+    "provenance": {
+      "created_at": "2026-07-13T03:11:45.164Z",
+      "created_by": "editor",
+      "updated_at": "2026-11-14T04:32:03.885Z",
+      "updated_by": "editor",
+      "license": "CC-BY-4.0"
+    },
+    "lead_org": {
+      "name": "GDOT",
+      "url": "https://atlsavpassrail-gdot.hub.arcgis.com/"
+    },
+    "geo_scope": "regional",
+    "partners": [],
+    "start_date": null,
+    "end_date": null,
+    "milestones": [
+      {
+        "title": "Public comment survey closed",
+        "date": "2026-08-06"
+      }
+    ]
+  }
+]
