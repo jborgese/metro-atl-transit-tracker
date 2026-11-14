@@ -2,13 +2,24 @@
   import { onMount } from 'svelte';
   import { beforeNavigate } from '$app/navigation';
   import ConfirmDialog from '../../components/svelte/admin/ConfirmDialog.svelte';
+  import EditorPane from '../../components/svelte/admin/EditorPane.svelte';
   import BaseLayout from '../../layouts/BaseLayout.svelte';
+  import type { WriteMode } from '#lib/content/formModel/payload.ts';
+  import { parseServerError } from '#lib/content/formModel/serverErrors.ts';
+  import type { ContentRecord } from '#lib/content/formModel/types.ts';
+  import type { FieldIssue } from '#lib/content/formModel/validate.ts';
   import type { ContentHistoryEvent, Goal, Project, TimedAction } from '#types/content.ts';
   import { entityTypeLabel } from '../../utils/entityLabels';
   import { DATASETS, isEditorEntity, type EditorEntity } from './datasets';
 
   type EntityItem = Project | Goal | TimedAction;
   type MessageKind = 'info' | 'success' | 'error';
+  interface SaveRequest {
+    mode: WriteMode;
+    body: Record<string, unknown>;
+  }
+
+  const UNREACHABLE = 'Could not reach the server. Your sign-in may have expired.';
 
   let token = $state('');
   let actor = $state('admin');
@@ -19,16 +30,19 @@
   let timedActions: TimedAction[] = $state([]);
   let history: ContentHistoryEvent[] = $state([]);
   let selectedId = $state('');
-  let editorJson = $state('');
   let searchQuery = $state('');
   let includeArchived = $state(true);
   let loading = $state(false);
   let message = $state('');
   let messageKind: MessageKind = $state('info');
-  let dirty = $state(false);
   let confirmDialog: ConfirmDialog | undefined = $state();
+  let pane: EditorPane | undefined = $state();
+  let editorVersion = $state(0);
+  let saving = $state(false);
+  let serverIssue: FieldIssue | null = $state(null);
+  let writing = false;
+  let editorStarted = false;
   let editorIsPlaceholder = false;
-  let editorError = $state('');
   let lastLoadedAt = $state('');
   let now = $state(Date.now());
 
@@ -65,6 +79,15 @@
     selectedId ? (lists[selectedDataset].find((item) => item.id === selectedId) ?? null) : null,
   );
   const selectedArchived = $derived(selectedEntity?.is_archived === true);
+  const selectedRecord: ContentRecord | null = $derived(
+    selectedEntity === null ? null : { ...selectedEntity },
+  );
+  const existingIds = $derived(lists[selectedDataset].map((item) => item.id));
+  const paneKey = $derived(
+    [selectedDataset, selectedId, selectedEntity?.provenance?.updated_at ?? '', editorVersion].join(
+      '|',
+    ),
+  );
 
   function authHeaders() {
     const headers: Record<string, string> = {
@@ -88,23 +111,20 @@
     return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 
-  async function toResponseErrorMessage(url: string, res: Response) {
+  async function readServerError(url: string, res: Response) {
     const raw = (await res.text()).trim();
-    if (!raw) {
-      return `${url} returned ${res.status}`;
-    }
-
     try {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      const messageCandidate = parsed.message;
-      if (typeof messageCandidate === 'string' && messageCandidate.trim().length > 0) {
-        return `${url} returned ${res.status}: ${messageCandidate.trim()}`;
-      }
+      return parseServerError(res.status, JSON.parse(raw), url);
     } catch {
-      // ignore parse failures and keep raw body
+      return {
+        message: raw ? `${url} returned ${res.status}: ${raw}` : `${url} returned ${res.status}`,
+        issue: null,
+      };
     }
+  }
 
-    return `${url} returned ${res.status}: ${raw}`;
+  async function toResponseErrorMessage(url: string, res: Response) {
+    return (await readServerError(url, res)).message;
   }
 
   async function fetchCollection<T>(url: string) {
@@ -123,10 +143,10 @@
     return [] as T[];
   }
 
-  function setEditorFromEntity(entity: EntityItem) {
-    editorJson = `${JSON.stringify(entity, null, 2)}\n`;
-    dirty = false;
-    validateEditorJson();
+  function openEditor() {
+    editorStarted = true;
+    serverIssue = null;
+    editorVersion += 1;
   }
 
   function startNew(mode: EditorEntity, placeholder = false) {
@@ -134,9 +154,11 @@
     dataset = mode;
     selectedDataset = mode;
     selectedId = '';
-    editorJson = `${JSON.stringify(DATASETS[mode].template, null, 2)}\n`;
-    dirty = false;
-    validateEditorJson();
+    openEditor();
+  }
+
+  function editorIsDirty() {
+    return pane?.isDirty() ?? false;
   }
 
   function setDataset(kind: EditorEntity) {
@@ -145,7 +167,7 @@
     }
     dataset = kind;
     searchQuery = '';
-    if (!selectedId && !dirty && editorIsPlaceholder) {
+    if (!selectedId && !editorIsDirty() && editorIsPlaceholder) {
       startNew(kind, true);
     }
   }
@@ -159,11 +181,11 @@
     dataset = kind;
     selectedDataset = kind;
     selectedId = id;
-    setEditorFromEntity(entity);
+    openEditor();
   }
 
   async function confirmLeave(): Promise<boolean> {
-    if (!dirty) {
+    if (!editorIsDirty()) {
       return true;
     }
     const title = DATASETS[selectedDataset].title;
@@ -204,6 +226,9 @@
   }
 
   function handleTabKeydown(event: KeyboardEvent, kind: EditorEntity) {
+    if (event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
     const last = entityKinds.length - 1;
     const index = entityKinds.indexOf(kind);
     const targets: Record<string, number> = {
@@ -223,7 +248,7 @@
   }
 
   beforeNavigate(({ cancel }) => {
-    if (dirty) {
+    if (editorIsDirty()) {
       cancel();
     }
   });
@@ -284,37 +309,6 @@
     return date.toLocaleDateString();
   }
 
-  function validateEditorJson() {
-    try {
-      const parsed = JSON.parse(editorJson);
-      if (!isRecord(parsed)) {
-        editorError = 'Top-level JSON value must be an object.';
-        return null;
-      }
-      editorError = '';
-      return parsed;
-    } catch (err) {
-      editorError = err instanceof Error ? err.message : 'Invalid JSON';
-      return null;
-    }
-  }
-
-  function handleEditorInput() {
-    dirty = true;
-    validateEditorJson();
-  }
-
-  function formatEditorJson() {
-    const parsed = validateEditorJson();
-    if (!parsed) {
-      setMessage('Fix JSON errors before formatting.', 'error');
-      return;
-    }
-    editorJson = `${JSON.stringify(parsed, null, 2)}\n`;
-    dirty = true;
-    editorError = '';
-  }
-
   interface LoadFailure {
     label: string;
     reason: string;
@@ -354,7 +348,6 @@
   }
 
   function finishWrite(summary: string, failure: LoadFailure | null) {
-    dirty = false;
     if (failure) {
       setMessage(`${summary} Saved, but ${describeLoadFailure(failure)}`, 'error');
     } else {
@@ -399,7 +392,7 @@
         } else {
           startNew(selectedDataset, true);
         }
-      } else if (!selectedId && editorJson === '') {
+      } else if (!selectedId && !editorStarted) {
         startNew(dataset, true);
       }
 
@@ -418,43 +411,82 @@
     return failure;
   }
 
-  async function saveEntity() {
-    const parsed = validateEditorJson();
-    if (!parsed) {
-      setMessage('Editor JSON is invalid. Fix formatting and try again.', 'error');
+  async function confirmFresh(
+    endpoint: string,
+    kind: EditorEntity,
+    loadedAt: string | undefined,
+  ): Promise<boolean> {
+    const res = await fetch(endpoint, { cache: 'no-store' }).catch(() => null);
+    if (res === null) {
+      setMessage(UNREACHABLE, 'error');
+      return false;
+    }
+    const fresh = res.ok ? await readReturnedRecord(res) : null;
+    const freshAt = fresh?.provenance?.updated_at;
+    if (typeof freshAt !== 'string' || freshAt === loadedAt) {
+      return true;
+    }
+    const who = fresh?.provenance?.updated_by ?? 'Someone';
+    const consequence =
+      kind === 'timed_action'
+        ? 'Saving now replaces the whole action.'
+        : 'Saving now overwrites the fields you changed.';
+    return (
+      (await confirmDialog?.ask({
+        title: 'This record changed after you opened it',
+        body: `${who} saved it at ${formatTimestamp(freshAt)}. ${consequence}`,
+        confirmLabel: 'Save anyway',
+        cancelLabel: 'Cancel',
+      })) ?? false
+    );
+  }
+
+  async function handleSave(request: SaveRequest) {
+    if (writing || loading) {
       return;
     }
-
-    const isCreate = selectedId.length === 0;
-    const targetDataset: EditorEntity = selectedDataset;
-
-    if (isCreate && DATASETS[targetDataset].requiresClientId) {
-      const candidateId = parsed.id;
-      if (typeof candidateId !== 'string' || candidateId.trim().length === 0) {
-        setMessage(`New ${entityNoun(targetDataset)}s must include a non-empty "id".`, 'error');
-        return;
-      }
+    writing = true;
+    saving = true;
+    serverIssue = null;
+    try {
+      await saveEntity(request);
+    } finally {
+      writing = false;
+      saving = false;
     }
+  }
+
+  async function saveEntity({ mode, body }: SaveRequest) {
+    const isCreate = mode === 'create';
+    const targetDataset: EditorEntity = selectedDataset;
+    const loadedAt = selectedEntity?.provenance?.updated_at;
 
     const base = DATASETS[targetDataset].endpoint;
     const endpoint = isCreate ? base : `${base}/${encodeURIComponent(selectedId)}`;
     const method = isCreate ? 'POST' : 'PATCH';
 
-    const body = { ...parsed };
-    delete body.is_archived;
-    delete body.archived_at;
-    delete body.archived_by;
-
     loading = true;
     try {
+      if (!isCreate && !(await confirmFresh(endpoint, targetDataset, loadedAt))) {
+        return;
+      }
+
       const res = await fetch(endpoint, {
         method,
         headers: authHeaders(),
         body: JSON.stringify(body),
-      });
+      }).catch(() => null);
+
+      if (res === null) {
+        setMessage(UNREACHABLE, 'error');
+        return;
+      }
 
       if (!res.ok) {
-        throw new Error(await toResponseErrorMessage(endpoint, res));
+        const failure = await readServerError(endpoint, res);
+        serverIssue = failure.issue;
+        setMessage(failure.message, 'error');
+        return;
       }
 
       const record = await readReturnedRecord(res);
@@ -503,9 +535,10 @@
 
     const targetDataset = selectedDataset;
     const targetId = selectedId;
+    const lostChanges = editorIsDirty() ? ' Your unsaved changes will be lost.' : '';
     const proceed = await confirmDialog?.ask({
       title: `Archive ${DATASETS[targetDataset].title} ${targetId}?`,
-      body: archiveBodies[targetDataset],
+      body: `${archiveBodies[targetDataset]}${lostChanges}`,
       confirmLabel: 'Archive',
     });
     if (!proceed) {
@@ -545,6 +578,10 @@
 
     if (!selectedArchived) {
       setMessage(`${DATASETS[selectedDataset].title} ${selectedId} is already active.`, 'info');
+      return;
+    }
+
+    if (!(await confirmLeave())) {
       return;
     }
 
@@ -814,76 +851,53 @@
       </aside>
 
       <section class="editor-pane panel">
-        <div class="editor-head">
-          <h2>
-            {selectedId
-              ? `Editing ${DATASETS[selectedDataset].title} ${selectedId}`
-              : `New ${DATASETS[selectedDataset].title}`}
-          </h2>
-          <div class="editor-head-actions">
-            <button onclick={formatEditorJson} disabled={loading}>Format JSON</button>
-            {#if selectedId}
-              <button
-                class="ghost"
-                onclick={closeEditor}
-                disabled={loading}
-                aria-label="Close editor"
-              >
-                Close
-              </button>
-            {/if}
-          </div>
-        </div>
-
-        {#if selectedEntity}
-          <div class="entity-meta">
-            <span class="meta-pill" class:archived={selectedArchived}>
-              {selectedArchived ? 'Archived' : 'Active'}
-            </span>
-            <span class="meta-text">
-              Updated
-              {#if selectedEntity.provenance?.updated_at}
-                <time
-                  datetime={String(selectedEntity.provenance.updated_at)}
-                  title={formatTimestamp(String(selectedEntity.provenance.updated_at))}
-                >
-                  {formatRelative(String(selectedEntity.provenance.updated_at), now)}
-                </time>
-              {:else}
-                <span class="meta-dim">n/a</span>
+        {#key paneKey}
+          <EditorPane
+            bind:this={pane}
+            kind={selectedDataset}
+            title={DATASETS[selectedDataset].title}
+            record={selectedRecord}
+            {goals}
+            {projects}
+            {existingIds}
+            {saving}
+            {loading}
+            {serverIssue}
+            onsave={handleSave}
+            onnochanges={() => setMessage('No changes to save.', 'info')}
+            onarchive={archiveSelected}
+            onrestore={restoreSelected}
+            onclose={closeEditor}
+          >
+            {#snippet meta()}
+              {#if selectedEntity}
+                <div class="entity-meta">
+                  <span class="meta-pill" class:archived={selectedArchived}>
+                    {selectedArchived ? 'Archived' : 'Active'}
+                  </span>
+                  <span class="meta-text">
+                    Updated
+                    {#if selectedEntity.provenance?.updated_at}
+                      <time
+                        datetime={String(selectedEntity.provenance.updated_at)}
+                        title={formatTimestamp(String(selectedEntity.provenance.updated_at))}
+                      >
+                        {formatRelative(String(selectedEntity.provenance.updated_at), now)}
+                      </time>
+                    {:else}
+                      <span class="meta-dim">n/a</span>
+                    {/if}
+                    {#if selectedEntity.provenance?.updated_by}
+                      by <span class="meta-actor"
+                        >{String(selectedEntity.provenance.updated_by)}</span
+                      >
+                    {/if}
+                  </span>
+                </div>
               {/if}
-              {#if selectedEntity.provenance?.updated_by}
-                by <span class="meta-actor">{String(selectedEntity.provenance.updated_by)}</span>
-              {/if}
-            </span>
-          </div>
-        {/if}
-
-        <p class="editor-note">
-          Use Archive/Restore — don't edit <code>is_archived</code> fields by hand.
-        </p>
-
-        <textarea bind:value={editorJson} spellcheck="false" oninput={handleEditorInput}></textarea>
-
-        {#if editorError}
-          <p class="editor-state error">JSON error: {editorError}</p>
-        {:else if dirty}
-          <p class="editor-state warning">Unsaved changes.</p>
-        {:else if selectedId}
-          <p class="editor-state">Saved.</p>
-        {/if}
-
-        <div class="editor-actions">
-          <button class="primary" onclick={saveEntity} disabled={loading || editorError.length > 0}>
-            {selectedId ? 'Save Changes' : `Create ${DATASETS[selectedDataset].title}`}
-          </button>
-          <button onclick={archiveSelected} disabled={loading || !selectedId || selectedArchived}>
-            Archive
-          </button>
-          <button onclick={restoreSelected} disabled={loading || !selectedId || !selectedArchived}>
-            Restore
-          </button>
-        </div>
+            {/snippet}
+          </EditorPane>
+        {/key}
       </section>
     </div>
 
@@ -1104,8 +1118,7 @@
   }
 
   input,
-  button,
-  textarea {
+  button {
     font: inherit;
   }
 
@@ -1119,8 +1132,7 @@
     font-size: 1rem;
   }
 
-  .entity-list button,
-  .editor-pane button {
+  .entity-list button {
     border: 1px solid var(--border-subtle, rgba(126, 110, 79, 0.3));
     border-radius: 0.5rem;
     background: rgba(255, 255, 255, 0.08);
@@ -1129,15 +1141,13 @@
     cursor: pointer;
   }
 
-  .entity-list button:disabled,
-  .editor-pane button:disabled {
+  .entity-list button:disabled {
     opacity: 0.55;
     cursor: default;
   }
 
   .admin-page button:focus-visible,
   .admin-page input:focus-visible,
-  .admin-page textarea:focus-visible,
   .admin-page summary:focus-visible {
     outline: 2px solid rgba(66, 128, 196, 0.75);
     outline-offset: 2px;
@@ -1295,89 +1305,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
-  }
-
-  .editor-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: center;
-  }
-
-  .editor-head h2 {
-    margin: 0;
-    font-size: 1rem;
-    word-break: break-word;
-  }
-
-  .editor-head-actions {
-    display: inline-flex;
-    gap: 0.55rem;
-    flex-shrink: 0;
-  }
-
-  .editor-head-actions .ghost {
-    background: transparent;
-    color: var(--text-muted, #c6cbc6);
-  }
-
-  .editor-head-actions .ghost:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.06);
-    color: inherit;
-  }
-
-  .editor-note {
-    margin: 0;
-    color: var(--text-muted, #c6cbc6);
-    font-size: 0.8rem;
-  }
-
-  .editor-note code {
-    background: rgba(0, 0, 0, 0.28);
-    padding: 0.05rem 0.3rem;
-    border-radius: 0.3rem;
-    font-size: 0.78rem;
-  }
-
-  .editor-pane textarea {
-    min-height: 24rem;
-    width: 100%;
-    resize: vertical;
-    border: 1px solid var(--border-subtle, rgba(126, 110, 79, 0.3));
-    border-radius: 0.5rem;
-    background: rgba(0, 0, 0, 0.3);
-    color: inherit;
-    font-family: var(--font-mono, monospace);
-    font-size: max(0.84rem, 16px);
-    line-height: 1.5;
-    padding: 0.65rem;
-  }
-
-  .editor-state {
-    margin: 0;
-    font-size: 0.8rem;
-    color: var(--text-muted, #c6cbc6);
-  }
-
-  .editor-state.warning {
-    color: #f7d7b5;
-  }
-
-  .editor-state.error {
-    color: #f0b8b3;
-  }
-
-  .editor-actions {
-    display: flex;
-    flex-wrap: wrap;
-    column-gap: 0.65rem;
-    row-gap: 0.55rem;
-    margin-top: 0.15rem;
-  }
-
-  .editor-actions .primary {
-    border-color: rgba(66, 128, 196, 0.7);
-    background: rgba(66, 128, 196, 0.25);
   }
 
   .entity-meta {
@@ -1575,16 +1502,6 @@
     .list-toolbar {
       flex-direction: column;
       align-items: stretch;
-    }
-
-    .editor-pane textarea {
-      min-height: 16rem;
-    }
-  }
-
-  @media (max-height: 640px) {
-    .editor-pane textarea {
-      min-height: 14rem;
     }
   }
 
