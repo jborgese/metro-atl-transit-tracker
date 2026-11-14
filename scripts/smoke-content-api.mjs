@@ -56,6 +56,18 @@ async function run() {
     assert.equal(goalsList.status, 200, 'GET /api/goals should return 200');
     assert.ok(Array.isArray(goalsList.data?.data), 'GET /api/goals should return array data');
 
+    const timedActionsList = await requestJson(`${baseUrl}/api/timed-actions`);
+    assert.equal(timedActionsList.status, 200, 'GET /api/timed-actions should return 200');
+    assert.ok(
+      Array.isArray(timedActionsList.data?.data),
+      'GET /api/timed-actions should return array data',
+    );
+    assert.equal(
+      timedActionsList.data?.meta?.count,
+      timedActionsList.data.data.length,
+      'GET /api/timed-actions should return meta.count equal to the list length',
+    );
+
     const historyList = await requestJson(`${baseUrl}/api/history?limit=5`);
     assert.equal(historyList.status, 200, 'GET /api/history should return 200');
     assert.ok(Array.isArray(historyList.data?.data), 'GET /api/history should return array data');

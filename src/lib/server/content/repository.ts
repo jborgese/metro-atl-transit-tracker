@@ -83,6 +83,66 @@ SET
 WHERE id = ?9
 `;
 
+export const INSERT_TIMED_ACTION_SQL = `
+INSERT INTO timed_actions (
+  id,
+  payload_json,
+  is_archived,
+  archived_at,
+  archived_by,
+  created_at,
+  created_by,
+  updated_at,
+  updated_by
+)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+`;
+
+export const UPDATE_TIMED_ACTION_SQL = `
+UPDATE timed_actions
+SET
+  payload_json = ?1,
+  is_archived = ?2,
+  archived_at = ?3,
+  archived_by = ?4,
+  created_at = ?5,
+  created_by = ?6,
+  updated_at = ?7,
+  updated_by = ?8
+WHERE id = ?9
+`;
+
+export const INSERT_TIMED_ACTION_ARCHIVE_EVENT_SQL = `
+INSERT INTO content_history (id, entity_type, entity_id, action, actor, timestamp, before_json, after_json)
+SELECT ?1, 'timed_action', ?2, 'archive', ?3, ?4, ?5, ?6
+WHERE EXISTS (SELECT 1 FROM timed_actions WHERE id = ?2 AND is_archived = 0)
+`;
+
+export const ARCHIVE_TIMED_ACTION_SQL = `
+UPDATE timed_actions
+SET payload_json = ?1, is_archived = 1, archived_at = ?2, archived_by = ?3, updated_at = ?4, updated_by = ?5
+WHERE id = ?6 AND is_archived = 0
+`;
+
+export const SELECT_LIVE_TIMED_ACTIONS_SQL = `
+SELECT ${SELECT_ENTITY_COLUMNS} FROM timed_actions t
+WHERE t.is_archived = 0
+  AND json_extract(t.payload_json, '$.expires_on') >= ?1
+  AND EXISTS (
+    SELECT 1 FROM goals g
+    WHERE g.id = json_extract(t.payload_json, '$.goal_id') AND g.is_archived = 0
+  )
+ORDER BY json_extract(t.payload_json, '$.expires_on'), t.rowid
+`;
+
+export const SELECT_ALL_TIMED_ACTIONS_SQL = `SELECT ${SELECT_ENTITY_COLUMNS} FROM timed_actions ORDER BY rowid`;
+
+export const SELECT_EXPIRED_TIMED_ACTIONS_SQL = `
+SELECT ${SELECT_ENTITY_COLUMNS} FROM timed_actions
+WHERE is_archived = 0 AND json_extract(payload_json, '$.expires_on') < ?1
+ORDER BY rowid
+`;
+
 export type { D1Database, D1PreparedStatement };
 
 export function getDb(): D1Database {
@@ -122,6 +182,13 @@ export async function findProjectRow(db: D1Database, id: string) {
 export async function findGoalRow(db: D1Database, id: string) {
   return await db
     .prepare(`SELECT ${SELECT_ENTITY_COLUMNS} FROM goals WHERE id = ?1`)
+    .bind(id)
+    .first<StoredEntityRow>();
+}
+
+export async function findTimedActionRow(db: D1Database, id: string) {
+  return await db
+    .prepare(`SELECT ${SELECT_ENTITY_COLUMNS} FROM timed_actions WHERE id = ?1`)
     .bind(id)
     .first<StoredEntityRow>();
 }

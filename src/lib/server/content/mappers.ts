@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import type { ContentEntityType, ContentHistoryEvent, Goal, Project } from '#types/content.ts';
+import type {
+  ContentEntityType,
+  ContentHistoryEvent,
+  Goal,
+  Project,
+  TimedAction,
+} from '#types/content.ts';
 import { ContentStoreError } from './errors';
 import { parseIntSafe, SEED_ACTOR } from './validators';
 
@@ -206,6 +212,23 @@ export function rowToGoal(row: StoredEntityRow): Goal {
   payload.provenance = provenance;
 
   return payload as Goal;
+}
+
+export function rowToTimedAction(row: StoredEntityRow): TimedAction {
+  const payload = parseJsonObject(row.payload_json, `timed action ${row.id}`);
+  payload.id = row.id;
+  payload.is_archived = parseIntSafe(row.is_archived) === 1;
+  payload.archived_at = row.archived_at;
+  payload.archived_by = row.archived_by;
+
+  const provenance = isRecord(payload.provenance) ? { ...payload.provenance } : {};
+  provenance.created_at = row.created_at;
+  provenance.created_by = row.created_by;
+  provenance.updated_at = row.updated_at;
+  provenance.updated_by = row.updated_by;
+  payload.provenance = provenance;
+
+  return payload as unknown as TimedAction;
 }
 
 export function rowToHistoryEvent(row: StoredHistoryRow): ContentHistoryEvent {

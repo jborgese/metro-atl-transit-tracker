@@ -30,6 +30,7 @@ import {
   getDb,
 } from './repository';
 import { ensureSeeded } from './seeding';
+import { sweepExpiredTimedActions } from './timedActions';
 import {
   isUniqueConstraintError,
   toGoalCreate,
@@ -689,6 +690,7 @@ export async function listHistory(
 ) {
   const db = getDb();
   await ensureSeeded(db);
+  await sweepExpiredTimedActions(db);
 
   const limit =
     typeof options.limit === 'number' && options.limit > 0 ? Math.floor(options.limit) : 200;
@@ -720,7 +722,7 @@ FROM content_history
   if (predicates.length > 0) {
     sql += ` WHERE ${predicates.join(' AND ')}`;
   }
-  sql += ' ORDER BY timestamp DESC LIMIT ?';
+  sql += ' ORDER BY timestamp DESC, rowid DESC LIMIT ?';
   values.push(limit);
 
   const [rows, profiles] = await Promise.all([

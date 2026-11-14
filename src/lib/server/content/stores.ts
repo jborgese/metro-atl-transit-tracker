@@ -1,4 +1,4 @@
-import type { Goal, Project } from '#types/content.ts';
+import type { Goal, Project, TimedAction } from '#types/content.ts';
 import type { ContentStore } from './handlers';
 import {
   archiveGoal,
@@ -14,6 +14,14 @@ import {
   updateGoal,
   updateProject,
 } from './service';
+import {
+  archiveTimedAction,
+  createTimedAction,
+  getTimedActionById,
+  listTimedActions,
+  restoreTimedAction,
+  updateTimedAction,
+} from './timedActions';
 
 export const projectStore: ContentStore<Project> = {
   list: listProjects,
@@ -31,4 +39,13 @@ export const goalStore: ContentStore<Goal> = {
   update: updateGoal,
   archive: archiveGoal,
   restore: restoreGoal,
+};
+
+export const timedActionStore: ContentStore<TimedAction> = {
+  list: listTimedActions,
+  getById: getTimedActionById,
+  create: createTimedAction,
+  update: updateTimedAction,
+  archive: archiveTimedAction,
+  restore: restoreTimedAction,
 };

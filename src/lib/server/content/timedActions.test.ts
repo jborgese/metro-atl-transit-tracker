@@ -1,0 +1,76 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { D1Database } from './repository';
+import { SYSTEM_ACTOR, sweepExpiredTimedActions } from './timedActions';
+
+function expiredRow(id: string) {
+  return {
+    id,
+    payload_json: JSON.stringify({
+      id,
+      goal_id: 'regional-goal',
+      description: 'Comment on the study.',
+      link: null,
+      location: null,
+      expires_on: '2026-11-12',
+    }),
+    is_archived: 0,
+    archived_at: null,
+    archived_by: null,
+    created_at: '2026-11-01T00:00:00.000Z',
+    created_by: 'editor@example.test',
+    updated_at: '2026-11-01T00:00:00.000Z',
+    updated_by: 'editor@example.test',
+  };
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('sweepExpiredTimedActions', () => {
+  it('logs and returns 0 instead of throwing when the database fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const db = {
+      prepare: () => {
+        throw new Error('D1 is unavailable');
+      },
+    } as unknown as D1Database;
+
+    await expect(sweepExpiredTimedActions(db)).resolves.toBe(0);
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining('timed action sweep failed'),
+      expect.any(Error),
+    );
+  });
+
+  it('selects by the Atlanta date, archives as system, and counts only rows it changed', async () => {
+    const bound: Array<{ sql: string; values: unknown[] }> = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...values: unknown[]) => {
+          bound.push({ sql, values });
+          return {
+            all: async () => ({ results: [expiredRow('ta-aaaaaaaa'), expiredRow('ta-bbbbbbbb')] }),
+          };
+        },
+      }),
+      batch: vi
+        .fn()
+        .mockResolvedValueOnce([{ meta: { changes: 1 } }, { meta: { changes: 1 } }])
+        .mockResolvedValueOnce([{ meta: { changes: 0 } }, { meta: { changes: 0 } }]),
+    } as unknown as D1Database;
+
+    const archived = await sweepExpiredTimedActions(db, new Date('2026-11-14T03:00:00Z'));
+
+    expect(archived).toBe(1);
+    expect(bound[0]?.values).toEqual(['2026-11-13']);
+    expect(
+      bound
+        .filter(({ sql }) => sql.includes('INSERT INTO content_history'))
+        .map(({ values }) => [values[1], values[2]]),
+    ).toEqual([
+      ['ta-aaaaaaaa', SYSTEM_ACTOR],
+      ['ta-bbbbbbbb', SYSTEM_ACTOR],
+    ]);
+  });
+});

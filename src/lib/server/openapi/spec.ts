@@ -9,6 +9,7 @@ import {
   goalPatchSchema,
   projectCreateSchema,
   projectPatchSchema,
+  timedActionInputSchema,
 } from '#lib/server/content/validators.ts';
 import { feedbackCreateSchema } from '#lib/server/feedback/validators.ts';
 
@@ -27,6 +28,11 @@ const idParam = z.string().openapi({
   description: 'Stable, lowercase, hyphenated identifier.',
 });
 
+const timedActionIdParam = z.string().openapi({
+  example: 'ta-k3f9x2ab',
+  description: 'Server-generated identifier: "ta-" and eight lowercase letters or digits.',
+});
+
 const includeArchivedQuery = z
   .union([z.literal('true'), z.literal('false'), z.literal('1'), z.literal('0')])
   .optional()
@@ -34,7 +40,7 @@ const includeArchivedQuery = z
 
 const historyEvent = z.object({
   id: z.string(),
-  entity_type: z.union([z.literal('project'), z.literal('goal')]),
+  entity_type: z.union([z.literal('project'), z.literal('goal'), z.literal('timed_action')]),
   entity_id: z.string(),
   action: z.union([
     z.literal('create'),
@@ -71,6 +77,7 @@ export function buildOpenApiDocument(serverUrl = '/') {
   const projectPatch = registry.register('ProjectPatch', withOpenApi(projectPatchSchema));
   const goalSchema = registry.register('Goal', withOpenApi(goalCreateSchema));
   const goalPatch = registry.register('GoalPatch', withOpenApi(goalPatchSchema));
+  const timedActionSchema = registry.register('TimedAction', withOpenApi(timedActionInputSchema));
   const errorSchema = registry.register('ErrorResponse', errorResponse);
   const historySchema = registry.register('HistoryEvent', historyEvent);
   const meSchema = registry.register('Me', meResponse);
@@ -100,6 +107,17 @@ export function buildOpenApiDocument(serverUrl = '/') {
     }),
   );
   const goalItemResponse = registry.register('GoalItemResponse', z.object({ data: goalSchema }));
+  const timedActionListResponse = registry.register(
+    'TimedActionListResponse',
+    z.object({
+      data: z.array(timedActionSchema),
+      meta: z.object({ count: z.number().int().nonnegative() }),
+    }),
+  );
+  const timedActionItemResponse = registry.register(
+    'TimedActionItemResponse',
+    z.object({ data: timedActionSchema }),
+  );
   const historyListResponse = registry.register(
     'HistoryListResponse',
     z.object({
@@ -319,13 +337,110 @@ export function buildOpenApiDocument(serverUrl = '/') {
 
   registry.registerPath({
     method: 'get',
+    path: '/api/timed-actions',
+    summary: 'List timed actions',
+    tags: ['timed-actions'],
+    request: { query: z.object({ includeArchived: includeArchivedQuery }) },
+    responses: {
+      200: { description: 'Timed action list', content: jsonContent(timedActionListResponse) },
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/timed-actions',
+    summary: 'Create a timed action',
+    tags: ['timed-actions'],
+    security: editorAuth,
+    request: { body: { content: jsonContent(timedActionSchema), required: true } },
+    responses: {
+      201: { description: 'Created', content: jsonContent(timedActionItemResponse) },
+      400: errorContent,
+      401: errorContent,
+      403: errorContent,
+      413: errorContent,
+      429: errorContent,
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/timed-actions/{id}',
+    summary: 'Get one timed action',
+    tags: ['timed-actions'],
+    request: {
+      params: z.object({ id: timedActionIdParam }),
+      query: z.object({ includeArchived: includeArchivedQuery }),
+    },
+    responses: {
+      200: { description: 'Timed action', content: jsonContent(timedActionItemResponse) },
+      404: errorContent,
+    },
+  });
+
+  registry.registerPath({
+    method: 'patch',
+    path: '/api/timed-actions/{id}',
+    summary: 'Replace a timed action',
+    tags: ['timed-actions'],
+    security: editorAuth,
+    request: {
+      params: z.object({ id: timedActionIdParam }),
+      body: { content: jsonContent(timedActionSchema), required: true },
+    },
+    responses: {
+      200: { description: 'Updated', content: jsonContent(timedActionItemResponse) },
+      400: errorContent,
+      401: errorContent,
+      403: errorContent,
+      404: errorContent,
+      413: errorContent,
+      429: errorContent,
+    },
+  });
+
+  registry.registerPath({
+    method: 'delete',
+    path: '/api/timed-actions/{id}',
+    summary: 'Archive a timed action',
+    tags: ['timed-actions'],
+    security: editorAuth,
+    request: { params: z.object({ id: timedActionIdParam }) },
+    responses: {
+      200: { description: 'Archived', content: jsonContent(timedActionItemResponse) },
+      401: errorContent,
+      403: errorContent,
+      404: errorContent,
+      429: errorContent,
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/timed-actions/{id}/restore',
+    summary: 'Restore an archived timed action',
+    tags: ['timed-actions'],
+    security: editorAuth,
+    request: { params: z.object({ id: timedActionIdParam }) },
+    responses: {
+      200: { description: 'Restored', content: jsonContent(timedActionItemResponse) },
+      401: errorContent,
+      403: errorContent,
+      404: errorContent,
+      409: errorContent,
+      429: errorContent,
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
     path: '/api/history',
     summary: 'List mutation history events',
     tags: ['history'],
     request: {
       query: z.object({
         entityType: z
-          .union([z.literal('project'), z.literal('goal')])
+          .union([z.literal('project'), z.literal('goal'), z.literal('timed_action')])
           .optional()
           .openapi({ description: 'Filter by entity type.' }),
         entityId: z.string().optional().openapi({ description: 'Filter by entity id.' }),
@@ -388,12 +503,13 @@ export function buildOpenApiDocument(serverUrl = '/') {
       title: 'Metro ATL Transit Tracker — Content API',
       version: '1.0.0',
       description:
-        'CRUD + history endpoints for projects and goals. Reads are public; writes require Cloudflare Access JWT (or a test-only editor token).',
+        'CRUD + history endpoints for projects, goals and timed actions. Reads are public; writes require Cloudflare Access JWT (or a test-only editor token).',
     },
     servers: [{ url: serverUrl }],
     tags: [
       { name: 'projects', description: 'Project resources.' },
       { name: 'goals', description: 'Goal resources.' },
+      { name: 'timed-actions', description: 'Timed action resources.' },
       { name: 'history', description: 'Append-only mutation log.' },
       { name: 'me', description: 'Authenticated caller profile.' },
       { name: 'feedback', description: 'Public visitor feedback submissions.' },

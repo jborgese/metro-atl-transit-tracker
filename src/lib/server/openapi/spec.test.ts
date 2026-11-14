@@ -27,6 +27,32 @@ describe('buildOpenApiDocument', () => {
     }
   });
 
+  it('registers every timed-action path and its schema', () => {
+    expect(Object.keys(doc.paths ?? {})).toEqual(
+      expect.arrayContaining([
+        '/api/timed-actions',
+        '/api/timed-actions/{id}',
+        '/api/timed-actions/{id}/restore',
+      ]),
+    );
+    expect(Object.keys(doc.components?.schemas ?? {})).toContain('TimedAction');
+  });
+
+  it('publishes timed_action as a history entity type in the event and the filter', () => {
+    const entityTypes = {
+      anyOf: ['project', 'goal', 'timed_action'].map((value) => ({
+        type: 'string',
+        enum: [value],
+      })),
+    };
+    expect(doc.components?.schemas?.HistoryEvent).toMatchObject({
+      properties: { entity_type: entityTypes },
+    });
+    expect(doc.paths?.['/api/history']?.get?.parameters).toContainEqual(
+      expect.objectContaining({ name: 'entityType', schema: expect.objectContaining(entityTypes) }),
+    );
+  });
+
   it('marks write methods with editor auth security', () => {
     const post = doc.paths?.['/api/projects']?.post;
     expect(post?.security).toBeDefined();
@@ -49,6 +75,8 @@ describe('buildOpenApiDocument', () => {
       ['/api/projects/{id}', 'patch'],
       ['/api/goals', 'post'],
       ['/api/goals/{id}', 'patch'],
+      ['/api/timed-actions', 'post'],
+      ['/api/timed-actions/{id}', 'patch'],
     ];
     for (const [path, method] of writePaths) {
       const op = doc.paths?.[path]?.[method];
