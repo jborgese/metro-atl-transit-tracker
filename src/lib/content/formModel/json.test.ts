@@ -162,6 +162,58 @@ it('lists only keys that are neither known nor already stored', () => {
   expect(result.ok && result.unknownKeys).toEqual(['added', 'another']);
 });
 
+describe('keys named like built-in object members', () => {
+  it.each(['constructor', 'toString'])('reports %s on a project as unknown', (key) => {
+    const result = fromJsonText(draft, `{"title":"T","geo_scope":"corridor","${key}":"x"}`);
+    expect(result.ok && result.unknownKeys).toEqual([key]);
+  });
+  it.each(['constructor', 'toString'])('refuses %s on an action', (key) => {
+    const action = toFormDraft('timed_action', emptyRecord('timed_action'));
+    const result = fromJsonText(
+      action,
+      `{"goal_id":"g1","description":"D","link":null,"location":null,"expires_on":"2026-12-01","${key}":"x"}`,
+    );
+    expect(result).toEqual({ ok: false, error: `Actions cannot have other fields: ${key}` });
+  });
+});
+
+describe('an action with fields left out', () => {
+  const stored = toFormDraft('timed_action', {
+    id: 'ta-1',
+    goal_id: 'g1',
+    description: 'D',
+    link: { label: 'Comment', url: 'https://example.org/comment' },
+    location: { label: 'Hall', address: '1 Main St' },
+    expires_on: '2026-12-01',
+  });
+
+  it('treats a missing link or location as null', () => {
+    const result = fromJsonText(
+      stored,
+      '{"goal_id":"g1","description":"D","expires_on":"2026-12-01"}',
+    );
+    expect(result.ok && toRecord(result.draft)).toEqual({
+      id: 'ta-1',
+      goal_id: 'g1',
+      description: 'D',
+      link: null,
+      location: null,
+      expires_on: '2026-12-01',
+    });
+  });
+  it('treats a missing goal, description or last day as empty text', () => {
+    const result = fromJsonText(stored, '{"link":null,"location":null}');
+    expect(result.ok && toRecord(result.draft)).toEqual({
+      id: 'ta-1',
+      goal_id: '',
+      description: '',
+      link: null,
+      location: null,
+      expires_on: '',
+    });
+  });
+});
+
 it('formats the text with two-space indent and a final newline', () => {
   expect(toJsonText(draft)).toBe('{\n  "title": "T",\n  "geo_scope": "corridor"\n}\n');
 });

@@ -1,4 +1,4 @@
-import { KNOWN_FIELDS, toFormDraft, toRecord, type FieldType } from './draft';
+import { emptyRecord, KNOWN_FIELDS, toFormDraft, toRecord, type FieldType } from './draft';
 import { SERVER_MANAGED_KEYS } from './payload';
 import type { FormDraft } from './types';
 
@@ -64,14 +64,14 @@ function parse(text: string): { ok: true; value: unknown } | { ok: false; error:
 
 function typeError(draft: FormDraft, typed: Plain): string | null {
   const wrong = Object.entries(KNOWN_FIELDS[draft.kind]).find(
-    ([key, type]) => key in typed && !hasType(typed[key], type),
+    ([key, type]) => Object.hasOwn(typed, key) && !hasType(typed[key], type),
   );
   return wrong === undefined ? null : `${wrong[0]} must be ${TYPE_WORDS[wrong[1]]}`;
 }
 
 function extraActionError(draft: FormDraft, typed: Plain): string | null {
   if (draft.kind !== 'timed_action') return null;
-  const extra = Object.keys(typed).filter((key) => !(key in KNOWN_FIELDS.timed_action));
+  const extra = Object.keys(typed).filter((key) => !Object.hasOwn(KNOWN_FIELDS.timed_action, key));
   return extra.length === 0 ? null : `Actions cannot have other fields: ${extra.join(', ')}`;
 }
 
@@ -83,10 +83,14 @@ function rebuild(draft: FormDraft, typed: Plain): FormDraft {
   return { ...rebuilt, id: typed.id };
 }
 
+function withActionDefaults(draft: FormDraft, typed: Plain): Plain {
+  return draft.kind === 'timed_action' ? { ...emptyRecord('timed_action'), ...typed } : typed;
+}
+
 function unknownKeys(draft: FormDraft, typed: Plain): string[] {
   const known = KNOWN_FIELDS[draft.kind];
   return Object.keys(typed).filter(
-    (key) => !(key in known) && key !== 'id' && !(key in draft.base),
+    (key) => !Object.hasOwn(known, key) && key !== 'id' && !Object.hasOwn(draft.base, key),
   );
 }
 
@@ -102,5 +106,9 @@ export function fromJsonText(draft: FormDraft, text: string): JsonResult {
   const typed = withoutKeys(parsed.value, managedKeys(draft));
   const error = typeError(draft, typed) ?? extraActionError(draft, typed);
   if (error !== null) return { ok: false, error };
-  return { ok: true, draft: rebuild(draft, typed), unknownKeys: unknownKeys(draft, typed) };
+  return {
+    ok: true,
+    draft: rebuild(draft, withActionDefaults(draft, typed)),
+    unknownKeys: unknownKeys(draft, typed),
+  };
 }

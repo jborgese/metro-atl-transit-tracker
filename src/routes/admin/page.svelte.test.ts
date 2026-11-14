@@ -51,6 +51,8 @@ let failActionsReload = false;
 let actionsGetCount = 0;
 let version = 0;
 let writeGate: Promise<void> | null = null;
+let readGate: Promise<void> | null = null;
+let profile: Row | null = null;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status });
@@ -134,8 +136,19 @@ function readRecords(collection: string, id: string | undefined) {
   return found ? json({ data: found }) : json({ message: 'not found' }, 404);
 }
 
+function answerProfile(method: string, body: string | undefined): Response {
+  if (method === 'GET') {
+    return profile ? json({ data: profile }) : json({}, 401);
+  }
+  const { display_name } = JSON.parse(body ?? '{}') as Row;
+  return json({ data: { ...profile, display_name } });
+}
+
 function respond(method: string, path: string, body: string | undefined): Response {
   const [, collection = '', id] = /^(\/api\/[a-z-]+)(?:\/([^/?]+))?/.exec(path) ?? [];
+  if (collection === '/api/me') {
+    return answerProfile(method, body);
+  }
   if (!COLLECTIONS.includes(collection)) {
     return method === 'GET' && path.startsWith('/api/history') ? json({ data: [] }) : json({}, 401);
   }
@@ -153,6 +166,8 @@ function stubFetch() {
   actionsGetCount = 0;
   version = 0;
   writeGate = null;
+  readGate = null;
+  profile = null;
   writeFailure = null;
   freshnessFailure = null;
   for (const key of Object.keys(serverCopyOf)) {
@@ -172,6 +187,9 @@ function stubFetch() {
       if (method !== 'GET' && writeGate) {
         await writeGate;
       }
+      if (method === 'GET' && readGate) {
+        await readGate;
+      }
       return respond(method, input, body);
     }),
   );
@@ -179,6 +197,8 @@ function stubFetch() {
 
 const writes = () => calls.filter((call) => call.method !== 'GET');
 const lastWrite = () => writes().at(-1)!;
+const reads = (path: string) => calls.filter((call) => call.method === 'GET' && call.path === path);
+const listReloads = () => calls.filter((call) => call.path.startsWith('/api/history'));
 const tab = (name: RegExp) => screen.getByRole('tab', { name });
 const heading = () => screen.getByRole('heading', { level: 2, name: /^(New|Editing) / });
 const editor = () => screen.getByLabelText('Record as JSON') as HTMLTextAreaElement;
@@ -383,9 +403,7 @@ describe('leaving a record', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(screen.getByText('Discard your changes to Goal g1?')).toBeTruthy();
     await fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
-    await waitFor(() =>
-      expect(calls.filter((call) => call.path.startsWith('/api/history'))).toHaveLength(2),
-    );
+    await waitFor(() => expect(listReloads()).toHaveLength(2));
     await waitFor(() =>
       expect(editorValue()).toEqual({ goal: 'Regional goal', related_project_ids: [] }),
     );
@@ -420,6 +438,9 @@ describe('archive and restore', () => {
       within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Archive' }),
     );
     await waitFor(() => expect(writes()).toEqual([{ method: 'DELETE', path: '/api/goals/g1' }]));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Editing Goal g1' })),
+    );
   });
 
   it.each([
@@ -486,6 +507,8 @@ describe('archive and restore', () => {
     await fireEvent.click(within(dialog).getByRole('button', { name: 'Discard changes' }));
     await waitFor(() => expect(writes()).toHaveLength(2));
     expect(lastWrite()).toEqual({ method: 'POST', path: '/api/goals/g1/restore' });
+    await waitFor(() => expect(status()).toContain('Restored goal g1.'));
+    await waitFor(() => expect(document.activeElement).toBe(heading()));
   });
 });
 
@@ -529,7 +552,9 @@ describe('saving', () => {
   it('sends nothing when nothing changed', async () => {
     await selectGoal('Regional goal');
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
     expect(writes()).toHaveLength(0);
+    expect(reads('/api/goals/g1')).toHaveLength(0);
     expect(screen.getByRole('status').textContent).toContain('No changes to save.');
   });
   it('sends only the changed key of a goal', async () => {
@@ -551,6 +576,7 @@ describe('saving', () => {
   it('lists problems instead of sending them', async () => {
     await startNew('Actions');
     await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await settle();
     expect(writes()).toHaveLength(0);
     const summary = screen.getByRole('alert');
     expect(within(summary).getByText('There is a problem')).toBeTruthy();
@@ -577,7 +603,10 @@ describe('saving', () => {
     await editGoalActions('Mine');
     const save = screen.getByRole('button', { name: 'Save Changes' });
     await Promise.all([fireEvent.click(save), fireEvent.click(save)]);
-    await waitFor(() => expect(writes()).toHaveLength(1));
+    await waitFor(() => expect(status()).toContain('Updated goal g1.'));
+    await settle();
+    expect(writes()).toHaveLength(1);
+    expect(reads('/api/goals/g1')).toHaveLength(1);
   });
   it('keeps the draft and explains when the server cannot be reached', async () => {
     failWritesWith(new TypeError('Failed to fetch'));
@@ -670,6 +699,7 @@ describe('saving', () => {
       sources: [],
     });
     await waitFor(() => expect(heading().textContent?.trim()).toBe('Editing Project new-one'));
+    await waitFor(() => expect(document.activeElement).toBe(heading()));
   });
 
   it('says a key the form does not know will be stored for good', async () => {
@@ -722,8 +752,10 @@ describe('saving', () => {
     expect(editorValue().actions).toBe('Mine');
 
     await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
     expect(status()).toContain('No changes to save.');
     expect(writes()).toHaveLength(1);
+    expect(reads('/api/goals/g1')).toHaveLength(1);
 
     await fireEvent.click(tab(/^Projects/));
     await fireEvent.click(screen.getByRole('button', { name: /Proj One/ }));
@@ -844,5 +876,155 @@ describe('freshness check before an update', () => {
       path: '/api/goals/g1',
       body: JSON.stringify({ actions: 'Mine' }),
     });
+  });
+});
+
+describe('keeping drafts and focus', () => {
+  it('makes the text read-only while a save is in flight', async () => {
+    let release = () => {};
+    writeGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await selectGoal('Regional goal');
+    expect(editor().hasAttribute('readonly')).toBe(false);
+    await editGoalActions('Mine');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(editor().hasAttribute('readonly')).toBe(true);
+    release();
+    await waitFor(() => expect(status()).toContain('Updated goal g1.'));
+    await settle();
+    expect(editor().hasAttribute('readonly')).toBe(false);
+  });
+
+  it('keeps the same editor when the first load finishes', async () => {
+    let release = () => {};
+    readGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    render(AdminPage);
+    const before = editor();
+    expect(heading().textContent?.trim()).toBe('New Project');
+    await settle();
+    expect(before.hasAttribute('readonly')).toBe(true);
+    release();
+    await screen.findByRole('tab', { name: 'Projects (1)' });
+    await settle();
+    expect(editor()).toBe(before);
+    expect(editor().hasAttribute('readonly')).toBe(false);
+  });
+
+  it('starts a fresh new record when Refresh discards one', async () => {
+    await startNew('Projects');
+    await typeIntoEditor(JSON.stringify({ ...editorValue(), id: 'typed-id' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(screen.getByText('Discard your changes to this new project?')).toBeTruthy();
+    await fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => expect(listReloads()).toHaveLength(2));
+    await settle();
+    expect(editorValue()).toEqual({
+      id: '',
+      title: '',
+      summary: '',
+      status: 'planning',
+      modes: [],
+      related_counties: [],
+      sources: [],
+    });
+    await fireEvent.click(screen.getByRole('button', { name: /Proj One/ }));
+    expect(heading().textContent?.trim()).toBe('Editing Project p1');
+  });
+
+  it('keeps a dirty draft when the display name is saved', async () => {
+    profile = { identity: 'ed@example.test', actor: 'ed@example.test', display_name: null };
+    await selectGoal('Regional goal');
+    await screen.findByText(/Signed in as/);
+    await editGoalActions('Mine');
+    const reloadsBefore = listReloads().length;
+    await fireEvent.input(screen.getByLabelText(/^Display Name/), { target: { value: 'Ed' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(status()).toContain('Display name set to "Ed".'));
+    await settle();
+    expect(lastWrite()).toEqual({
+      method: 'PUT',
+      path: '/api/me',
+      body: JSON.stringify({ display_name: 'Ed' }),
+    });
+    expect(listReloads()).toHaveLength(reloadsBefore);
+    expect(editorValue().actions).toBe('Mine');
+    expect(document.querySelector('dialog')?.open).toBe(false);
+  });
+
+  it('reloads after a display-name save when the editor is clean', async () => {
+    profile = { identity: 'ed@example.test', actor: 'ed@example.test', display_name: null };
+    await selectGoal('Regional goal');
+    await screen.findByText(/Signed in as/);
+    const reloadsBefore = listReloads().length;
+    await fireEvent.input(screen.getByLabelText(/^Display Name/), { target: { value: 'Ed' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(listReloads()).toHaveLength(reloadsBefore + 1));
+  });
+
+  it('moves focus to the heading after a successful save', async () => {
+    await selectGoal('Regional goal');
+    await editGoalActions('Mine');
+    const save = screen.getByRole('button', { name: 'Save Changes' });
+    save.focus();
+    await fireEvent.click(save);
+    await waitFor(() => expect(status()).toContain('Updated goal g1.'));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Editing Goal g1' })),
+    );
+    expect(heading().getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('leaves focus on Save after a failed save', async () => {
+    failWritesWith(json({ message: 'boom' }, 500));
+    await selectGoal('Regional goal');
+    await editGoalActions('Mine');
+    const save = screen.getByRole('button', { name: 'Save Changes' });
+    save.focus();
+    await fireEvent.click(save);
+    await waitFor(() => expect(status()).toContain('/api/goals/g1 returned 500: boom'));
+    await settle();
+    expect(document.activeElement).toBe(save);
+    expect(document.activeElement).not.toBe(heading());
+  });
+
+  it('sends null for a link deleted from an action, with all five fields', async () => {
+    stored['/api/timed-actions'] = [
+      { ...action, link: { label: 'Comment', url: 'https://example.org/comment' } },
+    ];
+    await openActionsTabAndSelect('Existing action');
+    await typeIntoEditor(
+      JSON.stringify({
+        goal_id: 'g1',
+        description: 'Existing action',
+        location: null,
+        expires_on: '2026-12-01',
+      }),
+    );
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(lastWrite()).toMatchObject({ method: 'PATCH', path: '/api/timed-actions/ta-existing' });
+    expect(JSON.parse(lastWrite().body!)).toEqual({
+      goal_id: 'g1',
+      description: 'Existing action',
+      link: null,
+      location: null,
+      expires_on: '2026-12-01',
+    });
+  });
+
+  it('reports a description deleted from an action and sends nothing', async () => {
+    await openActionsTabAndSelect('Existing action');
+    await typeIntoEditor(
+      JSON.stringify({ goal_id: 'g1', link: null, location: null, expires_on: '2026-12-01' }),
+    );
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    expect(within(screen.getByRole('alert')).getByText('Enter a description')).toBeTruthy();
+    await settle();
+    expect(writes()).toHaveLength(0);
+    expect(reads('/api/timed-actions/ta-existing')).toHaveLength(0);
   });
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { beforeNavigate } from '$app/navigation';
   import ConfirmDialog from '../../components/svelte/admin/ConfirmDialog.svelte';
   import EditorPane from '../../components/svelte/admin/EditorPane.svelte';
@@ -41,8 +41,7 @@
   let saving = $state(false);
   let serverIssue: FieldIssue | null = $state(null);
   let writing = false;
-  let editorStarted = false;
-  let editorIsPlaceholder = false;
+  let editorIsPlaceholder = true;
   let lastLoadedAt = $state('');
   let now = $state(Date.now());
 
@@ -144,7 +143,6 @@
   }
 
   function openEditor() {
-    editorStarted = true;
     serverIssue = null;
     editorVersion += 1;
   }
@@ -214,9 +212,13 @@
   }
 
   async function handleRefresh() {
-    if (await confirmLeave()) {
-      await loadData();
+    if (!(await confirmLeave())) {
+      return;
     }
+    if (!selectedId) {
+      openEditor();
+    }
+    await loadData();
   }
 
   async function closeEditor() {
@@ -347,12 +349,18 @@
     }
   }
 
+  async function focusEditorHeading() {
+    await tick();
+    pane?.focusHeading();
+  }
+
   function finishWrite(summary: string, failure: LoadFailure | null) {
     if (failure) {
       setMessage(`${summary} Saved, but ${describeLoadFailure(failure)}`, 'error');
     } else {
       setMessage(summary, 'success');
     }
+    void focusEditorHeading();
   }
 
   async function loadData(options: { quiet?: boolean } = {}): Promise<LoadFailure | null> {
@@ -392,8 +400,6 @@
         } else {
           startNew(selectedDataset, true);
         }
-      } else if (!selectedId && !editorStarted) {
-        startNew(dataset, true);
       }
 
       if (timedActionData.error) {
@@ -664,7 +670,9 @@
         resolved ? `Display name set to "${resolved}".` : 'Display name cleared.',
         'success',
       );
-      await loadData({ quiet: true });
+      if (!editorIsDirty()) {
+        await loadData({ quiet: true });
+      }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Failed to save display name.', 'error');
     } finally {

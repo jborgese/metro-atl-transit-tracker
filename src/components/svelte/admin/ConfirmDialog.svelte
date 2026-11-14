@@ -80,6 +80,7 @@
 
 <style>
   dialog {
+    margin: auto;
     width: min(28rem, calc(100vw - 2rem));
     max-height: calc(100dvh - 2rem);
     overflow-y: auto;

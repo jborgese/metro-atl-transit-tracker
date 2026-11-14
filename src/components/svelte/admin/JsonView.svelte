@@ -6,10 +6,11 @@
   interface Props {
     draft: FormDraft;
     stored: FormDraft;
+    readonly: boolean;
     onedit: (result: JsonResult) => void;
   }
 
-  let { draft, stored, onedit }: Props = $props();
+  let { draft, stored, readonly, onedit }: Props = $props();
 
   const uid = $props.id();
   const textId = `${uid}-text`;
@@ -40,6 +41,7 @@
   id={textId}
   value={text}
   spellcheck="false"
+  {readonly}
   aria-invalid={result.ok ? undefined : 'true'}
   aria-describedby={hasNote ? noteId : undefined}
   oninput={handleInput}></textarea>

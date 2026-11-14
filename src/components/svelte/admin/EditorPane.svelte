@@ -56,6 +56,7 @@
   let jsonError = $state('');
   let issues: FieldIssue[] = $state([]);
   let dismissedIssue: FieldIssue | null = $state(null);
+  let heading: HTMLHeadingElement | undefined = $state();
 
   const mode: WriteMode = $derived(loaded === null ? 'create' : 'update');
   const next = $derived(toRecord(draft));
@@ -76,6 +77,10 @@
 
   export function draftText(): string {
     return toJsonText(draft);
+  }
+
+  export function focusHeading() {
+    heading?.focus();
   }
 
   function describeServerIssue(issue: FieldIssue): string {
@@ -119,7 +124,9 @@
 </script>
 
 <div class="editor-head">
-  <h2>{loaded === null ? `New ${title}` : `Editing ${title} ${String(loaded.id)}`}</h2>
+  <h2 bind:this={heading} tabindex="-1">
+    {loaded === null ? `New ${title}` : `Editing ${title} ${String(loaded.id)}`}
+  </h2>
   {#if loaded !== null}
     <button class="ghost" onclick={onclose} disabled={loading} aria-label="Close editor">
       Close
@@ -129,9 +136,7 @@
 
 {@render meta?.()}
 
-<p class="editor-note">Use Archive/Restore — don't edit <code>is_archived</code> fields by hand.</p>
-
-<JsonView {draft} {stored} onedit={applyJson} />
+<JsonView {draft} {stored} readonly={saving || loading} onedit={applyJson} />
 
 {#each payload.removedKeys as key (key)}
   <p class="editor-state warning">
@@ -209,19 +214,6 @@
   .ghost:hover:not(:disabled) {
     color: inherit;
     border-color: var(--border-subtle);
-  }
-
-  .editor-note {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 0.8rem;
-  }
-
-  .editor-note code {
-    background: var(--surface-1);
-    padding: 0.05rem 0.3rem;
-    border-radius: 0.3rem;
-    font-size: 0.78rem;
   }
 
   .editor-state {
