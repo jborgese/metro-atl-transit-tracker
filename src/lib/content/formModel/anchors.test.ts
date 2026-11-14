@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { anchorOf, keepRowKeys, pathOf, relabel } from './anchors';
-import { emptyRelatedOrgRow, toFormDraft } from './draft';
+import { emptyRelatedOrgRow, toFormDraft, toRecord } from './draft';
 import type { GoalDraft, ProjectDraft } from './types';
 
 function goalWithOrgs(count: number): GoalDraft {
@@ -208,10 +208,88 @@ describe('keepRowKeys', () => {
     expect(new Set(keys(kept)).size).toBe(3);
   });
 
-  it('keeps the keys of the first rows when rows are gone', () => {
+  it('gives a row the key of the old row with the same content when rows before it are gone', () => {
     const previous = toFormDraft('goal', record(['A', 'B', 'C'])) as GoalDraft;
     const next = toFormDraft('goal', record(['B'])) as GoalDraft;
-    expect(keys(keepRowKeys(previous, next) as GoalDraft)).toEqual([keys(previous)[0]]);
+    expect(keys(keepRowKeys(previous, next) as GoalDraft)).toEqual([keys(previous)[1]]);
+  });
+
+  it('keeps a still-invalid row on its key when an invalid row before it is removed', () => {
+    const previous = toFormDraft('goal', record(['', 'B', ''])) as GoalDraft;
+    previous.related_orgs[0]!.url = 'https://a.example';
+    previous.related_orgs[2]!.url = 'https://c.example';
+    const anchors = ['related_orgs.0.name', 'related_orgs.2.name'].map((path) =>
+      anchorOf(previous, path),
+    );
+    const next = toFormDraft('goal', {
+      ...record([]),
+      related_orgs: [{ name: 'B' }, { name: '', url: 'https://c.example' }],
+    });
+    const kept = keepRowKeys(previous, next) as GoalDraft;
+    expect(keys(kept)).toEqual([keys(previous)[1], keys(previous)[2]]);
+    expect(anchors.map((anchor) => pathOf(kept, anchor))).toEqual([null, 'related_orgs.1.name']);
+  });
+
+  it('lets the keys follow the content when rows are swapped', () => {
+    const previous = toFormDraft('goal', record(['A', 'B', 'C'])) as GoalDraft;
+    const next = toFormDraft('goal', record(['C', 'B', 'A'])) as GoalDraft;
+    const [a, b, c] = keys(previous);
+    expect(keys(keepRowKeys(previous, next) as GoalDraft)).toEqual([c, b, a]);
+  });
+
+  it('matches a row the form made or edited against the same row read back from the JSON', () => {
+    const previous = toFormDraft('goal', record(['A', 'B'])) as GoalDraft;
+    previous.related_orgs[1]!.name = 'B edited';
+    const added = { ...emptyRelatedOrgRow(), name: 'New', url: 'https://new.example' };
+    previous.related_orgs.push(added);
+    const [, ...rest] = toRecord(previous).related_orgs as object[];
+    const next = toFormDraft('goal', { ...record([]), related_orgs: rest }) as GoalDraft;
+    const kept = keepRowKeys(previous, next) as GoalDraft;
+    expect(keys(kept)).toEqual(keys(previous).slice(1));
+    expect(kept.related_orgs.map((row) => row.name)).toEqual(['B edited', 'New']);
+  });
+
+  it('falls back to the row at the same index only when it is not taken', () => {
+    const previous = toFormDraft('goal', record(['A', 'B'])) as GoalDraft;
+    const next = toFormDraft('goal', record(['B', 'Z', 'Y'])) as GoalDraft;
+    const kept = keys(keepRowKeys(previous, next) as GoalDraft);
+    expect(kept.slice(0, 2)).toEqual([keys(previous)[1], keys(next)[1]]);
+    expect(kept[2]).toBe(keys(next)[2]);
+    expect(new Set(kept).size).toBe(3);
+  });
+
+  it('gives identical rows the old keys in order', () => {
+    const previous = toFormDraft('goal', record(['X', 'X', 'Y'])) as GoalDraft;
+    const next = toFormDraft('goal', record(['X', 'Y', 'X'])) as GoalDraft;
+    const [x1, x2, y] = keys(previous);
+    expect(keys(keepRowKeys(previous, next) as GoalDraft)).toEqual([x1, y, x2]);
+  });
+
+  it('follows the content in every project row list', () => {
+    const previous = toFormDraft('project', {
+      id: 'p',
+      title: 'T',
+      partners: [{ name: 'P1' }, { name: 'P2' }],
+      milestones: [{ title: 'M1' }, { title: 'M2', date: '2026-01-01' }],
+      sources: [
+        { label: 'S1', url: 'https://s1.example' },
+        { label: 'S2', url: 'https://s2.example', last_verified: '2026-01-01' },
+      ],
+    }) as ProjectDraft;
+    const swapped = (rows: object[]) => [rows[1], rows[0]];
+    const next = toFormDraft('project', {
+      id: 'p',
+      title: 'T',
+      partners: swapped(previous.base.partners as object[]),
+      milestones: swapped(previous.base.milestones as object[]),
+      sources: swapped(previous.base.sources as object[]),
+    }) as ProjectDraft;
+    const kept = keepRowKeys(previous, next) as ProjectDraft;
+    for (const list of ['partners', 'milestones', 'sources'] as const) {
+      expect(kept[list].map((row) => row.key)).toEqual(
+        [...previous[list]].reverse().map((row) => row.key),
+      );
+    }
   });
 
   it('keeps the keys of every project row list', () => {

@@ -542,7 +542,9 @@
       if (savedId) {
         selectEntity(savedId, targetDataset);
         if (fromGoal) {
-          createdFromGoal = { actionId: savedId, goalId: fromGoal };
+          const savedGoalId = record?.goal_id;
+          const goalId = typeof savedGoalId === 'string' ? savedGoalId : fromGoal;
+          createdFromGoal = { actionId: savedId, goalId };
         }
       }
       const noun = entityNoun(targetDataset);

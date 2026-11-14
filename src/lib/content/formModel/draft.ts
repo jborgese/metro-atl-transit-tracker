@@ -175,12 +175,12 @@ function sourceRow(original: Plain): SourceRow {
   };
 }
 
-function orgRecord(row: OrgRow): Plain | null {
+export function orgRecord(row: OrgRow): Plain | null {
   const fields = (r: OrgRow) => ({ name: r.name, url: r.url });
   return buildRow(row.original, fields(row), fields(orgRow(row.original)), ['url']);
 }
 
-function relatedOrgRecord(row: RelatedOrgRow): Plain | null {
+export function relatedOrgRecord(row: RelatedOrgRow): Plain | null {
   const fields = (r: RelatedOrgRow) => ({
     name: r.name,
     url: r.url,
@@ -192,12 +192,12 @@ function relatedOrgRecord(row: RelatedOrgRow): Plain | null {
   ]);
 }
 
-function milestoneRecord(row: MilestoneRow): Plain | null {
+export function milestoneRecord(row: MilestoneRow): Plain | null {
   const fields = (r: MilestoneRow) => ({ title: r.title, date: r.date });
   return buildRow(row.original, fields(row), fields(milestoneRow(row.original)), []);
 }
 
-function sourceRecord(row: SourceRow): Plain | null {
+export function sourceRecord(row: SourceRow): Plain | null {
   const fields = (r: SourceRow) => ({
     label: r.label,
     url: r.url,

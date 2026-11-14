@@ -15,6 +15,7 @@
     ContentKind,
     ContentRecord,
     GoalDraft,
+    ProjectDraft,
     TimedActionDraft,
   } from '#lib/content/formModel/types.ts';
   import { validatePayload, type FieldIssue } from '#lib/content/formModel/validate.ts';
@@ -23,6 +24,7 @@
   import ErrorSummary from './ErrorSummary.svelte';
   import GoalFields from './GoalFields.svelte';
   import JsonView from './JsonView.svelte';
+  import ProjectFields from './ProjectFields.svelte';
   import TimedActionFields from './TimedActionFields.svelte';
 
   interface Props {
@@ -80,6 +82,11 @@
       : emptyRecord(kind),
   );
   const stored = untrack(() => toFormDraft(kind, record ?? blank));
+  const storedProject = untrack(() =>
+    stored.kind === 'project' && record !== null ? stored : null,
+  );
+  const hasStoredLeadOrg = storedProject !== null && storedProject.lead_org.name.trim() !== '';
+  const hasStoredScope = storedProject !== null && storedProject.geo_scope.trim() !== '';
   let draft = $state(toFormDraft(stored.kind, stored.base));
   let jsonError = $state('');
   let reportedAnchors: string[] = $state.raw([]);
@@ -96,8 +103,6 @@
   const dirty = $derived(payload.changed || jsonError !== '');
   const archived = $derived(loaded?.is_archived === true);
   const jsonId = $derived(fieldId(kind, 'json'));
-  const hasForm = $derived(kind === 'timed_action' || kind === 'goal');
-  const showJson = $derived(!hasForm || prefersJson);
   const liveIssues = $derived.by(() => {
     if (reportedAnchors.length === 0) {
       return [];
@@ -151,7 +156,7 @@
       ? [{ path: '', message: capturedJsonError, href: `#${jsonId}` }]
       : fieldIssues.map((issue) => ({
           ...issue,
-          href: `#${showJson ? jsonId : fieldId(kind, issue.path)}`,
+          href: `#${prefersJson ? jsonId : fieldId(kind, issue.path)}`,
         })),
   );
   const hasProblems = $derived(summaryIssues.length > 0);
@@ -284,16 +289,23 @@
 
 {@render meta?.()}
 
-{#if hasForm}
-  <div class="view-switch">
-    <button type="button" onclick={switchView}>
-      {prefersJson ? 'Back to form' : 'Edit as JSON (advanced)'}
-    </button>
-  </div>
-{/if}
+<div class="view-switch">
+  <button type="button" onclick={switchView}>
+    {prefersJson ? 'Back to form' : 'Edit as JSON (advanced)'}
+  </button>
+</div>
 
-{#if showJson}
+{#if prefersJson}
   <JsonView id={jsonId} {draft} {stored} readonly={saving || loading} onedit={applyJson} />
+{:else if kind === 'project'}
+  <ProjectFields
+    bind:draft={() => draft as ProjectDraft, (value) => (draft = value)}
+    issues={fieldIssues}
+    isNew={loaded === null}
+    {hasStoredLeadOrg}
+    {hasStoredScope}
+    readonly={saving || loading}
+  />
 {:else if kind === 'goal'}
   <GoalFields
     bind:draft={() => draft as GoalDraft, (value) => (draft = value)}

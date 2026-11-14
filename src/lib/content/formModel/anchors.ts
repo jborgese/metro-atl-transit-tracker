@@ -1,3 +1,4 @@
+import { milestoneRecord, orgRecord, relatedOrgRecord, sameValue, sourceRecord } from './draft';
 import { fieldLabel } from './labels';
 import type { ContentKind, FormDraft } from './types';
 
@@ -42,20 +43,49 @@ export function pathOf(draft: FormDraft, anchor: string): string | null {
   return rest === undefined ? `${array}.${index}` : `${array}.${index}.${rest}`;
 }
 
-function carryKeys<T extends { key: string }>(previous: Array<{ key: string }>, next: T[]): T[] {
-  return next.map((row, index) => ({ ...row, key: previous[index]?.key ?? row.key }));
+function sameContentIndexes<T>(previous: T[], next: T[], write: (row: T) => unknown): number[] {
+  const written = previous.map(write);
+  const taken = new Set<number>();
+  return next.map((row) => {
+    const content = write(row);
+    const match = written.findIndex((old, index) => !taken.has(index) && sameValue(old, content));
+    if (match !== -1) {
+      taken.add(match);
+    }
+    return match;
+  });
+}
+
+function carryKeys<T extends { key: string }>(
+  previous: T[],
+  next: T[],
+  write: (row: T) => unknown,
+): T[] {
+  const matches = sameContentIndexes(previous, next, write);
+  const taken = new Set(matches.filter((match) => match !== -1));
+  return next.map((row, index) => {
+    const match = matches[index] ?? -1;
+    if (match !== -1) {
+      return { ...row, key: previous[match]?.key ?? row.key };
+    }
+    const sameIndex = taken.has(index) ? undefined : previous[index];
+    return { ...row, key: sameIndex?.key ?? row.key };
+  });
 }
 
 export function keepRowKeys(previous: FormDraft, next: FormDraft): FormDraft {
   if (previous.kind === 'goal' && next.kind === 'goal') {
-    return { ...next, related_orgs: carryKeys(previous.related_orgs, next.related_orgs) };
+    return {
+      ...next,
+      related_orgs: carryKeys(previous.related_orgs, next.related_orgs, relatedOrgRecord),
+    };
   }
   if (previous.kind === 'project' && next.kind === 'project') {
     return {
       ...next,
-      partners: carryKeys(previous.partners, next.partners),
-      milestones: carryKeys(previous.milestones, next.milestones),
-      sources: carryKeys(previous.sources, next.sources),
+      partners: carryKeys(previous.partners, next.partners, orgRecord),
+      milestones: carryKeys(previous.milestones, next.milestones, milestoneRecord),
+      sources: carryKeys(previous.sources, next.sources, sourceRecord),
     };
   }
   return next;
