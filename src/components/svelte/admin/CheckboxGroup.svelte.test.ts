@@ -7,7 +7,14 @@ type Registry = { selected?: string[] };
 type Option = { value: string; label: string };
 
 function renderGroup(
-  props: { initial?: string[]; hint?: string; error?: string; options?: Option[] } = {},
+  props: {
+    initial?: string[];
+    hint?: string;
+    error?: string;
+    options?: Option[];
+    archivedOptions?: Option[];
+    archivedLabel?: string;
+  } = {},
 ): Registry {
   const registry: Registry = {};
   render(CheckboxHarness, { props: { ...props, registry } });
@@ -17,6 +24,63 @@ function renderGroup(
 const box = (name: string) => screen.getByLabelText(name) as HTMLInputElement;
 
 afterEach(cleanup);
+
+describe('CheckboxGroup archived options', () => {
+  const archivedOptions = [
+    { value: 'old-1', label: 'Old plan' },
+    { value: 'old-2', label: 'Older plan' },
+  ];
+  const disclosure = () => document.querySelector('details') as HTMLDetailsElement;
+
+  it('has no disclosure when there are no archived options', () => {
+    renderGroup();
+    expect(document.querySelector('details')).toBeNull();
+  });
+
+  it('keeps archived options apart in a closed disclosure that counts them', () => {
+    renderGroup({ archivedOptions, archivedLabel: 'Archived projects' });
+    expect(disclosure().open).toBe(false);
+    expect(disclosure().querySelector('summary')!.textContent).toBe('Archived projects (2)');
+    expect(disclosure().contains(box('Old plan (archived)'))).toBe(true);
+    expect(disclosure().contains(box('Older plan (archived)'))).toBe(true);
+    expect(disclosure().contains(box('Fulton'))).toBe(false);
+    expect(disclosure().contains(box('DeKalb'))).toBe(false);
+  });
+
+  it('shows the archived name alone and keeps the archived note for screen readers', () => {
+    renderGroup({ archivedOptions, archivedLabel: 'Archived projects' });
+    const label = document.querySelector(`label[for="${box('Old plan (archived)').id}"]`)!;
+    expect(label.querySelector('.visually-hidden')!.textContent).toBe('(archived)');
+    expect(label.firstChild!.textContent!.trim()).toBe('Old plan');
+  });
+
+  it('says how many archived options are selected while closed', async () => {
+    renderGroup({ initial: ['old-2'], archivedOptions, archivedLabel: 'Archived projects' });
+    const summary = disclosure().querySelector('summary')!;
+    expect(disclosure().open).toBe(false);
+    expect(summary.textContent).toBe('Archived projects (2, 1 selected)');
+    expect(box('Older plan (archived)').checked).toBe(true);
+    await fireEvent.click(box('Older plan (archived)'));
+    expect(summary.textContent).toBe('Archived projects (2)');
+  });
+
+  it('checks and unchecks archived options into the same bound list', async () => {
+    const registry = renderGroup({ initial: ['13121'], archivedOptions });
+    await fireEvent.click(box('Old plan (archived)'));
+    expect(registry.selected).toEqual(['13121', 'old-1']);
+    await fireEvent.click(box('Old plan (archived)'));
+    expect(registry.selected).toEqual(['13121']);
+  });
+
+  it('gives every checkbox a unique id and does not treat an archived value as unknown', () => {
+    renderGroup({ initial: ['old-1', '13999'], archivedOptions });
+    const ids = [...document.querySelectorAll('input[type="checkbox"]')].map((input) => input.id);
+    expect(ids).toEqual(['counties-0', 'counties-1', 'counties-2', 'counties-3', 'counties-4']);
+    expect(screen.queryByLabelText('old-1 (not in the list)')).toBeNull();
+    expect(disclosure().contains(box('13999 (not in the list)'))).toBe(false);
+    expect(box('13999 (not in the list)').checked).toBe(true);
+  });
+});
 
 describe('CheckboxGroup', () => {
   it('renders a fieldset with the legend and one labeled checkbox per option', () => {

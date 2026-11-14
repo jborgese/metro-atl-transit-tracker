@@ -7,6 +7,8 @@
     hint?: string;
     error?: string;
     options?: Array<{ value: string; label: string }>;
+    archivedOptions?: Array<{ value: string; label: string }>;
+    archivedLabel?: string;
     registry?: { selected?: string[] };
   }
 
@@ -18,6 +20,8 @@
       { value: '13121', label: 'Fulton' },
       { value: '13089', label: 'DeKalb' },
     ],
+    archivedOptions,
+    archivedLabel,
     registry = {},
   }: Props = $props();
 
@@ -28,4 +32,13 @@
   });
 </script>
 
-<CheckboxGroup id="counties" legend="Counties" {hint} {error} {options} bind:selected />
+<CheckboxGroup
+  id="counties"
+  legend="Counties"
+  {hint}
+  {error}
+  {options}
+  {archivedOptions}
+  {archivedLabel}
+  bind:selected
+/>

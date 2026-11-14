@@ -7,13 +7,28 @@
     hint?: string;
     error?: string;
     options: Array<{ value: string; label: string }>;
+    archivedOptions?: Array<{ value: string; label: string }>;
+    archivedLabel?: string;
     selected?: string[];
   }
 
-  let { id, legend, hint, error, options, selected = $bindable([]) }: Props = $props();
+  let {
+    id,
+    legend,
+    hint,
+    error,
+    options,
+    archivedOptions = [],
+    archivedLabel = 'Archived',
+    selected = $bindable([]),
+  }: Props = $props();
 
   const unknown = untrack(() => [
-    ...new Set(selected.filter((value) => !options.some((option) => option.value === value))),
+    ...new Set(
+      selected.filter(
+        (value) => ![...options, ...archivedOptions].some((option) => option.value === value),
+      ),
+    ),
   ]);
 
   const hintId = $derived(`${id}-hint`);
@@ -25,6 +40,13 @@
     ...options,
     ...unknown.map((value) => ({ value, label: `${value} (not in the list)` })),
   ]);
+
+  const archivedSelected = $derived(
+    archivedOptions.filter((option) => selected.includes(option.value)).length,
+  );
+  const archivedSummary = $derived(
+    `${archivedLabel} (${archivedOptions.length}${archivedSelected > 0 ? `, ${archivedSelected} selected` : ''})`,
+  );
 
   function toggle(value: string, checked: boolean) {
     selected = checked ? [...selected, value] : selected.filter((current) => current !== value);
@@ -52,6 +74,27 @@
       </div>
     {/each}
   </div>
+  {#if archivedOptions.length > 0}
+    <details>
+      <summary>{archivedSummary}</summary>
+      <div class="options">
+        {#each archivedOptions as entry, offset (offset)}
+          {@const index = entries.length + offset}
+          <div class="option">
+            <input
+              type="checkbox"
+              id={`${id}-${index}`}
+              checked={selected.includes(entry.value)}
+              onchange={(event) => toggle(entry.value, event.currentTarget.checked)}
+            />
+            <label for={`${id}-${index}`}
+              >{entry.label} <span class="visually-hidden">(archived)</span></label
+            >
+          </div>
+        {/each}
+      </div>
+    </details>
+  {/if}
 </fieldset>
 
 <style>
@@ -106,6 +149,24 @@
 
   label {
     font-size: 0.9rem;
+  }
+
+  summary {
+    width: fit-content;
+    min-height: 2rem;
+    padding: 0.3rem 0.25rem;
+    font-size: 0.86rem;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  summary:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  details .options {
+    padding-top: 0.25rem;
   }
 
   input:focus-visible {
