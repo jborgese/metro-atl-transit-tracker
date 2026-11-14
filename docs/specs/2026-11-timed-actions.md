@@ -384,9 +384,10 @@ As an editor, I need the database to store timed actions and record their histor
 2. A fingerprint of the log: `SELECT COUNT(*) AS n, MIN(timestamp) AS first, MAX(timestamp) AS last, SUM(LENGTH(COALESCE(before_json, ''))) + SUM(LENGTH(COALESCE(after_json, ''))) AS bytes FROM content_history`.
 3. `wrangler d1 migrations apply`.
 4. The same fingerprint again; all four values must match.
-5. `SELECT type, name, tbl_name FROM sqlite_master WHERE tbl_name IN ('content_history', 'content_history_old', 'timed_actions')`: two indexes and two triggers on `content_history`, the table and one index for `timed_actions`, and nothing for `content_history_old`.
+5. `SELECT type, name, tbl_name FROM sqlite_master WHERE tbl_name IN ('content_history', 'content_history_old', 'timed_actions') AND name NOT LIKE 'sqlite_autoindex%'`: exactly seven rows, which are the `content_history` table with its two indexes and two triggers, and the `timed_actions` table with its one index. Any row for `content_history_old` is a failure.
 6. A harmless probe that the log is still immutable: `UPDATE content_history SET actor = actor WHERE id = (SELECT id FROM content_history LIMIT 1)` must fail with "content_history is immutable". Never probe with `DELETE`: if the triggers were missing it would erase the log, and on an empty table it succeeds either way.
-   **Legacy / migration handling:** existing history rows are copied in `rowid` order and renumbered from 1, keeping their relative order. Immediately before the production apply, with no admin edits in between, export the production database and note its Time Travel bookmark (`wrangler d1 time-travel info`); both are documented in [`docs/backup-retention-policy.md`](../backup-retention-policy.md).
+
+**Legacy / migration handling:** existing history rows are copied in `rowid` order and renumbered from 1, keeping their relative order. Immediately before the production apply, with no admin edits in between, export the production database and note its Time Travel bookmark (`wrangler d1 time-travel info`); both are documented in [`docs/backup-retention-policy.md`](../backup-retention-policy.md).
 
 **Definition of done:** migration applied to staging and production; schema check green in CI.
 **Rollback / feature flag:** the new table is inert if unused. Undoing the history rebuild means restoring from the pre-migration export or Time Travel bookmark.
