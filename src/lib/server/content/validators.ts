@@ -13,11 +13,10 @@ import {
   timedActionReplaceSchema,
   timedActionWindowError,
 } from '#lib/content/schemas.ts';
+import { ContentStoreError } from './errors';
+
 export {
-  FIELD_LIMITS,
   ID_PATTERN,
-  TIMED_ACTION_MAX_DAYS_AHEAD,
-  addDays,
   goalCreateSchema,
   goalPatchSchema,
   projectCreateSchema,
@@ -25,9 +24,7 @@ export {
   timedActionCreateSchema,
   timedActionInputSchema,
   timedActionReplaceSchema,
-  timedActionWindowError,
 } from '#lib/content/schemas.ts';
-import { ContentStoreError } from './errors';
 
 export const SEED_ACTOR = 'seed';
 export const FORBIDDEN_MUTATION_FIELDS = new Set(['is_archived', 'archived_at', 'archived_by']);
@@ -40,8 +37,8 @@ export interface TimedActionInput {
   expires_on: string;
 }
 
-function assertTimedActionDateWindow(expiresOn: string, today: string) {
-  const problem = timedActionWindowError(expiresOn, today);
+function assertTimedActionDateWindow(expiresOn: string, today: string, previousExpiresOn?: string) {
+  const problem = timedActionWindowError(expiresOn, today, previousExpiresOn);
   if (problem !== null) {
     throw new ContentStoreError(400, `timed action validation failed - expires_on: ${problem}`);
   }
@@ -88,9 +85,7 @@ export function toTimedActionReplace(
       'timed action validation failed - id: must match the id in the path',
     );
   }
-  if (payload.expires_on !== previousExpiresOn) {
-    assertTimedActionDateWindow(payload.expires_on, today);
-  }
+  assertTimedActionDateWindow(payload.expires_on, today, previousExpiresOn);
   return payload;
 }
 

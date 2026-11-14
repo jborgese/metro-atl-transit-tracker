@@ -1,10 +1,7 @@
 import { projectStatusLabel } from '#lib/content/options.ts';
 
 export function statusLabel(status: string | undefined | null): string {
-  if (!status) {
-    return status ?? '';
-  }
-  return projectStatusLabel(status) ?? status;
+  return status ? projectStatusLabel(status) : '';
 }
 
 export function getStatusColor(status: string | undefined | null): string {

@@ -49,8 +49,8 @@ function lookupLabel(labels: Record<string, string>, value: string): string | un
   return Object.hasOwn(labels, value) ? labels[value] : undefined;
 }
 
-export function projectStatusLabel(status: string): string | undefined {
-  return lookupLabel(PROJECT_STATUS_LABELS, status);
+export function projectStatusLabel(status: string): string {
+  return lookupLabel(PROJECT_STATUS_LABELS, status) ?? status;
 }
 
 export function geoScopeLabel(scope: string): string {
