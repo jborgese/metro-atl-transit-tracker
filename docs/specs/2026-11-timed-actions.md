@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS timed_actions (
   created_by TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   updated_by TEXT NOT NULL,
-  CHECK (json_type(payload_json, '$.expires_on') = 'text')
+  CHECK (json_type(payload_json, '$.expires_on') IS 'text')
 );
 
 CREATE INDEX IF NOT EXISTS idx_timed_actions_archive_state
@@ -151,6 +151,7 @@ DROP TABLE content_history_old;
 - **Schema check changes:** replace the hard-coded `entity_type ... check (...)` line with the fragment `entity_type text not null, entity_id text not null` (adjacency proves no CHECK sits between them), keep the other `content_history` lines, and add `timed_actions` and its index.
 - **A failed D1 migration file rolls back as a whole**, so a half-rebuilt log is not a reachable state.
 - **Timed actions have no seed data.** `ensureSeeded` and `data/content/` need no change.
+- **The `expires_on` CHECK uses `IS`, not `=`.** `json_type` returns NULL for a missing key and a NULL CHECK passes, so `= 'text'` would accept a payload with no `expires_on` at all.
 - **Backups need no change;** the export covers new tables.
 
 **Open questions:** none. The owner confirmed removing the `entity_type` CHECK, rather than widening its list, on 2026-11-13.
@@ -365,7 +366,7 @@ As an editor, I need the database to store timed actions and record their histor
 - **Schema**
   - [ ] `timed_actions` exists with its index and the `expires_on` type check
   - [ ] `content_history` accepts `entity_type = 'timed_action'`
-  - [ ] Both immutability triggers and both history indexes exist after the migration; an `UPDATE` or `DELETE` on `content_history` still aborts
+  - [ ] Both immutability triggers and both history indexes exist after the migration; an `UPDATE` on `content_history` still aborts with "content_history is immutable"
   - [ ] The history row count and contents are unchanged by the migration
 - **Tooling**
   - [ ] `npm run schema:check` passes against a freshly migrated local database and asserts the new table, its index and the new `content_history` shape
@@ -377,11 +378,19 @@ As an editor, I need the database to store timed actions and record their histor
 - **Tooling** (`scripts/check-d1-schema.mjs`): see the schema-check callout in 4.3.1.
 
 **Rollout:**
-**Test plan:** apply locally and run `schema:check`, `test:smoke` and `test:integration`; apply to the staging database and confirm the history row count before and after, then try a `DELETE FROM content_history` there and confirm it aborts. Staging is a database only; there is no staging site (see [6.1](#61-release-strategy)).
-**Legacy / migration handling:** existing history rows are copied in `rowid` order. Export the production database first ([`docs/backup-retention-policy.md`](../backup-retention-policy.md)).
+**Test plan:** apply locally and run `schema:check`, `test:smoke` and `test:integration`. On each remote database (staging first, then production; staging is a database only, there is no staging site, see [6.1](#61-release-strategy)) the owner runs, in order:
+
+1. `wrangler d1 migrations list` to confirm only `0004` is pending.
+2. A fingerprint of the log: `SELECT COUNT(*) AS n, MIN(timestamp) AS first, MAX(timestamp) AS last, SUM(LENGTH(COALESCE(before_json, ''))) + SUM(LENGTH(COALESCE(after_json, ''))) AS bytes FROM content_history`.
+3. `wrangler d1 migrations apply`.
+4. The same fingerprint again; all four values must match.
+5. `SELECT type, name, tbl_name FROM sqlite_master WHERE tbl_name IN ('content_history', 'content_history_old', 'timed_actions') AND name NOT LIKE 'sqlite_autoindex%'`: exactly seven rows, which are the `content_history` table with its two indexes and two triggers, and the `timed_actions` table with its one index. Any row for `content_history_old` is a failure.
+6. A harmless probe that the log is still immutable: `UPDATE content_history SET actor = actor WHERE id = (SELECT id FROM content_history LIMIT 1)` must fail with "content_history is immutable". Never probe with `DELETE`: if the triggers were missing it would erase the log, and on an empty table it succeeds either way.
+
+**Legacy / migration handling:** existing history rows are copied in `rowid` order and renumbered from 1, keeping their relative order. Immediately before the production apply, with no admin edits in between, export the production database and note its Time Travel bookmark (`wrangler d1 time-travel info`); both are documented in [`docs/backup-retention-policy.md`](../backup-retention-policy.md).
 
 **Definition of done:** migration applied to staging and production; schema check green in CI.
-**Rollback / feature flag:** the new table is inert if unused. Undoing the history rebuild means restoring from the pre-migration export.
+**Rollback / feature flag:** the new table is inert if unused. Undoing the history rebuild means restoring from the pre-migration export or Time Travel bookmark.
 
 ### Ticket 3 — Timed-action service and API
 
@@ -496,7 +505,7 @@ The migration must reach production before Ticket 3's code. If the order slips, 
 
 ### 6.3 Rollback triggers
 
-- **Migration:** the history row count differs before and after, or a test `DELETE` on `content_history` succeeds. Restore from the export.
+- **Migration:** the log's fingerprint differs before and after, the schema query shows a missing index or trigger or a leftover `content_history_old`, or the `UPDATE` probe succeeds. Restore from the export or Time Travel bookmark.
 - **Ticket 3:** `/api/history` or the admin load starts failing. Revert the PR.
 - **Ticket 4:** the goals table renders wrongly at any width, or projects or goals save to the wrong endpoint. Revert the PR.
 
