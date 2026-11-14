@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack, type Snippet } from 'svelte';
+  import { tick, untrack, type Snippet } from 'svelte';
   import {
     emptyRecord,
     pruneBlankRows,
@@ -7,12 +7,14 @@
     toRecord,
   } from '#lib/content/formModel/draft.ts';
   import { toJsonText, type JsonResult } from '#lib/content/formModel/json.ts';
-  import { fieldLabel } from '#lib/content/formModel/labels.ts';
+  import { currentIssues } from '#lib/content/formModel/issues.ts';
+  import { fieldId, fieldLabel } from '#lib/content/formModel/labels.ts';
   import { toPayload, type WriteMode } from '#lib/content/formModel/payload.ts';
   import type { ContentKind, ContentRecord } from '#lib/content/formModel/types.ts';
   import { validatePayload, type FieldIssue } from '#lib/content/formModel/validate.ts';
   import type { Goal, Project } from '#types/content.ts';
   import { atlantaDate } from '#utils/timedActions.ts';
+  import ErrorSummary from './ErrorSummary.svelte';
   import JsonView from './JsonView.svelte';
 
   interface Props {
@@ -54,8 +56,11 @@
   const stored = untrack(() => toFormDraft(kind, record ?? emptyRecord(kind)));
   let draft = $state(toFormDraft(stored.kind, stored.base));
   let jsonError = $state('');
-  let issues: FieldIssue[] = $state([]);
+  let issues: FieldIssue[] = $state.raw([]);
+  let validated: ContentRecord = $state.raw({});
+  let sent: ContentRecord | null = $state.raw(null);
   let dismissedIssue: FieldIssue | null = $state(null);
+  let errorSummary: ErrorSummary | undefined = $state();
   let heading: HTMLHeadingElement | undefined = $state();
 
   const mode: WriteMode = $derived(loaded === null ? 'create' : 'update');
@@ -63,13 +68,50 @@
   const payload = $derived(toPayload(kind, mode, next, loaded ?? emptyRecord(kind)));
   const dirty = $derived(payload.changed || jsonError !== '');
   const archived = $derived(loaded?.is_archived === true);
-  const shownServerIssue = $derived(serverIssue === dismissedIssue ? null : serverIssue);
-  const summary = $derived([
-    ...issues.map((issue) => ({ key: `issue:${issue.path}`, message: issue.message })),
-    ...(shownServerIssue === null
-      ? []
-      : [{ key: 'server', message: describeServerIssue(shownServerIssue) }]),
-  ]);
+  const jsonId = $derived(fieldId(kind, 'json'));
+  const shownServerIssue = $derived(
+    serverIssue === null ||
+      serverIssue === dismissedIssue ||
+      currentIssues([serverIssue], sent ?? next, next).length === 0
+      ? null
+      : serverIssue,
+  );
+  const summaryIssues = $derived.by(() => {
+    const href = `#${jsonId}`;
+    if (jsonError !== '') {
+      return [{ path: '', message: jsonError, href }];
+    }
+    return [
+      ...currentIssues(issues, validated, next).map((issue) => ({ ...issue, href })),
+      ...(shownServerIssue === null
+        ? []
+        : [
+            {
+              path: shownServerIssue.path,
+              message: describeServerIssue(shownServerIssue),
+              href,
+            },
+          ]),
+    ];
+  });
+  const hasProblems = $derived(summaryIssues.length > 0);
+
+  $effect(() => {
+    if (!hasProblems) {
+      return;
+    }
+    const normal = document.title;
+    document.title = `Error: ${normal}`;
+    return () => {
+      document.title = normal;
+    };
+  });
+
+  $effect(() => {
+    if (serverIssue !== null && serverIssue !== untrack(() => dismissedIssue)) {
+      void focusSummary();
+    }
+  });
 
   export function isDirty(): boolean {
     return dirty;
@@ -83,13 +125,17 @@
     heading?.focus();
   }
 
+  async function focusSummary() {
+    await tick();
+    errorSummary?.focus();
+  }
+
   function describeServerIssue(issue: FieldIssue): string {
     const label = fieldLabel(kind, issue.path);
     return label === issue.path ? issue.message : `${label}: ${issue.message}`;
   }
 
   function applyJson(result: JsonResult) {
-    dismissedIssue = serverIssue;
     jsonError = result.ok ? '' : result.error;
     if (result.ok) {
       draft = result.draft;
@@ -99,12 +145,14 @@
   function save() {
     dismissedIssue = serverIssue;
     issues = [];
+    sent = null;
     if (jsonError !== '') {
-      issues = [{ path: '', message: jsonError }];
+      void focusSummary();
       return;
     }
     draft = pruneBlankRows(draft);
-    const request = toPayload(kind, mode, toRecord(draft), loaded);
+    const attempted = toRecord(draft);
+    const request = toPayload(kind, mode, attempted, loaded);
     if (!request.changed) {
       onnochanges();
       return;
@@ -117,8 +165,11 @@
     });
     if (found.length > 0) {
       issues = found;
+      validated = attempted;
+      void focusSummary();
       return;
     }
+    sent = attempted;
     onsave({ mode, body: request.body });
   }
 </script>
@@ -136,7 +187,7 @@
 
 {@render meta?.()}
 
-<JsonView {draft} {stored} readonly={saving || loading} onedit={applyJson} />
+<JsonView id={jsonId} {draft} {stored} readonly={saving || loading} onedit={applyJson} />
 
 {#each payload.removedKeys as key (key)}
   <p class="editor-state warning">
@@ -152,16 +203,7 @@
   {/if}
 {/if}
 
-{#if summary.length > 0}
-  <div class="summary" role="alert">
-    <h3>There is a problem</h3>
-    <ul>
-      {#each summary as item (item.key)}
-        <li>{item.message}</li>
-      {/each}
-    </ul>
-  </div>
-{/if}
+<ErrorSummary bind:this={errorSummary} issues={summaryIssues} />
 
 <div class="editor-actions">
   <button class="primary" onclick={save}>
@@ -201,7 +243,7 @@
   }
 
   button:focus-visible {
-    outline: 2px solid var(--link);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 
@@ -224,25 +266,6 @@
 
   .editor-state.warning {
     color: var(--action-accent);
-  }
-
-  .summary {
-    padding: 0.65rem 0.8rem;
-    border: 1px solid var(--border-strong);
-    border-left: 4px solid var(--atl-red);
-    border-radius: 0.5rem;
-    background: var(--surface-1);
-  }
-
-  .summary h3 {
-    margin: 0 0 0.4rem;
-    font-size: 0.95rem;
-  }
-
-  .summary ul {
-    margin: 0;
-    padding-left: 1.1rem;
-    font-size: 0.86rem;
   }
 
   .editor-actions {

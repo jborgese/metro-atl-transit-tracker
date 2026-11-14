@@ -784,6 +784,14 @@ describe('saving', () => {
     expect(editorValue().sources).toEqual([{ label: 'Plan v2', url: 'https://example.org/plan' }]);
 
     await typeIntoEditor(JSON.stringify({ ...editorValue(), title: 'Proj Two' }));
+    expect(screen.getByText('Source 1 web address: Invalid URL')).toBeTruthy();
+
+    await typeIntoEditor(
+      JSON.stringify({
+        ...editorValue(),
+        sources: [{ label: 'Plan v2', url: 'https://example.org/plan-v2' }],
+      }),
+    );
     expect(screen.queryByText('Source 1 web address: Invalid URL')).toBeNull();
   });
 
@@ -1026,5 +1034,127 @@ describe('keeping drafts and focus', () => {
     await settle();
     expect(writes()).toHaveLength(0);
     expect(reads('/api/timed-actions/ta-existing')).toHaveLength(0);
+  });
+});
+
+describe('error summary', () => {
+  const summary = () => screen.getByRole('alert');
+  const normalTitle = () => document.title.replace(/^Error: /, '');
+
+  async function failNewActionSave() {
+    await startNew('Actions');
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+  }
+
+  it('takes focus after a failed save, and again when the same save fails again', async () => {
+    await failNewActionSave();
+    await waitFor(() => expect(document.activeElement).toBe(summary()));
+
+    const button = screen.getByRole('button', { name: 'Create Action' });
+    button.focus();
+    await fireEvent.click(button);
+    await waitFor(() => expect(document.activeElement).toBe(summary()));
+  });
+
+  it('takes focus when the JSON does not parse', async () => {
+    await selectGoal('Regional goal');
+    await typeIntoEditor('{"goal": ');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(document.activeElement).toBe(summary()));
+    expect(within(summary()).getAllByRole('link')).toHaveLength(1);
+  });
+
+  it('takes focus when the server rejects a field', async () => {
+    failWritesWith(
+      json({ message: 'project validation failed - sources.0.url: Invalid URL' }, 400),
+    );
+    await selectProject('Proj One');
+    await typeIntoEditor(
+      JSON.stringify({
+        ...editorValue(),
+        sources: [{ label: 'Plan v2', url: 'https://example.org/plan' }],
+      }),
+    );
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(document.activeElement).toBe(summary()));
+  });
+
+  it('links every problem to the JSON text, and a click focuses it', async () => {
+    await failNewActionSave();
+    const links = within(summary()).getAllByRole('link');
+    expect(links).toHaveLength(3);
+    for (const link of links) {
+      expect(link.getAttribute('href')).toBe('#action-json');
+    }
+    expect(editor().id).toBe('action-json');
+    await fireEvent.click(links[0]!);
+    expect(document.activeElement).toBe(editor());
+  });
+
+  it('prefixes the page title with Error: while problems show, and restores it', async () => {
+    await startNew('Actions');
+    const before = document.title;
+    expect(before.startsWith('Error: ')).toBe(false);
+    await typeIntoEditor(JSON.stringify({ ...newAction, description: '' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await waitFor(() => expect(document.title).toBe(`Error: ${before}`));
+
+    await typeIntoEditor(JSON.stringify(newAction));
+    await waitFor(() => expect(document.title).toBe(before));
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    await settle();
+    expect(document.title).toBe(before);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('restores the title when the pane is closed', async () => {
+    await selectGoal('Regional goal');
+    const before = document.title;
+    await typeIntoEditor('{"goal": ');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(document.title).toBe(`Error: ${before}`));
+    await fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => expect(document.title).toBe(before));
+    expect(normalTitle()).toBe(before);
+  });
+
+  it('drops a problem as soon as the value it names changes, and keeps the others', async () => {
+    await failNewActionSave();
+    expect(within(summary()).getAllByRole('link')).toHaveLength(3);
+    expect(within(summary()).getByText('Enter a description')).toBeTruthy();
+
+    await typeIntoEditor(JSON.stringify({ ...editorValue(), description: 'Something' }));
+    expect(within(summary()).queryByText('Enter a description')).toBeNull();
+    expect(within(summary()).getAllByRole('link')).toHaveLength(2);
+    expect(within(summary()).getByText('Choose a goal')).toBeTruthy();
+  });
+
+  it('disables Format JSON while the text is read-only', async () => {
+    let release = () => {};
+    writeGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await selectGoal('Regional goal');
+    const format = screen.getByRole('button', { name: 'Format JSON' });
+    expect(format.hasAttribute('disabled')).toBe(false);
+    await editGoalActions('Mine');
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(format.hasAttribute('disabled')).toBe(true);
+    release();
+    await waitFor(() => expect(status()).toContain('Updated goal g1.'));
+    await settle();
+    expect(screen.getByRole('button', { name: 'Format JSON' }).hasAttribute('disabled')).toBe(
+      false,
+    );
+  });
+
+  it('moves focus to the heading after Close', async () => {
+    await selectGoal('Regional goal');
+    await fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+    await waitFor(() => expect(heading().textContent).toContain('New'));
+    await waitFor(() => expect(document.activeElement).toBe(heading()));
   });
 });

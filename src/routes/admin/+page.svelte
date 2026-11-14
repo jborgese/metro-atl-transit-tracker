@@ -224,6 +224,8 @@
   async function closeEditor() {
     if (await confirmLeave()) {
       startNew(dataset, true);
+      await tick();
+      pane?.focusHeading();
     }
   }
 
