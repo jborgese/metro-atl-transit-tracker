@@ -945,7 +945,7 @@ describe('action form', () => {
     ).toBe('From the form');
     await typeIntoEditor('{');
     await fireEvent.click(screen.getByRole('button', { name: 'Back to form' }));
-    expect(screen.getAllByText(/^The JSON does not parse/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/^The JSON does not parse/)).toBeTruthy();
     expect(screen.queryByLabelText('Description (required)')).toBeNull();
   });
 
@@ -1100,6 +1100,145 @@ describe('action form', () => {
     expect((field('Description (required)') as HTMLTextAreaElement).matches(':disabled')).toBe(
       false,
     );
+  });
+});
+
+describe('action form after review', () => {
+  const summary = () => screen.getByRole('alert');
+  const field = (label: string) => screen.getByLabelText(label);
+
+  async function openStored(overrides: Row, goals?: Row[]) {
+    stored['/api/timed-actions'] = [{ ...action, ...overrides }];
+    if (goals) {
+      stored['/api/goals'] = goals;
+    }
+    await openActionsTabAndSelect('Existing action');
+  }
+
+  async function saveDescriptionOnly(expected: Row) {
+    await fireEvent.input(field('Description (required)'), { target: { value: 'Edited only' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(JSON.parse(lastWrite().body!)).toEqual({
+      goal_id: 'g1',
+      description: 'Edited only',
+      link: null,
+      location: null,
+      expires_on: '2026-12-01',
+      ...expected,
+    });
+  }
+
+  it('checks the last day against the date at Save, not the date the form opened', async () => {
+    vi.setSystemTime(new Date('2026-11-15T04:59:00Z'));
+    await startNew('Actions');
+    await fireEvent.change(field('Goal (required)'), { target: { value: 'g1' } });
+    await fireEvent.input(field('Description (required)'), { target: { value: 'Late' } });
+    await fireEvent.input(field('Last day (required)'), { target: { value: '2026-11-14' } });
+    expect((field('Last day (required)') as HTMLInputElement).min).toBe('2026-11-14');
+
+    vi.setSystemTime(new Date('2026-11-15T05:01:00Z'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    expect(
+      within(summary()).getByText('Last day must be between 2026-11-15 and 2027-11-16'),
+    ).toBeTruthy();
+    expect(field('Last day (required)').getAttribute('aria-invalid')).toBe('true');
+    expect((field('Last day (required)') as HTMLInputElement).min).toBe('2026-11-15');
+    expect((field('Last day (required)') as HTMLInputElement).max).toBe('2027-11-16');
+    expect(screen.getByText(/From 2026-11-15 to 2027-11-16\.$/)).toBeTruthy();
+  });
+
+  it('forgets a fixed problem until the next Save', async () => {
+    await startNew('Actions');
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    const description = field('Description (required)');
+    await fireEvent.input(description, { target: { value: 'Fixed' } });
+    expect(screen.queryByText('Enter a description')).toBeNull();
+
+    await fireEvent.input(description, { target: { value: '' } });
+    expect(screen.queryByText('Enter a description')).toBeNull();
+    expect(description.hasAttribute('aria-invalid')).toBe(false);
+    expect(within(summary()).getAllByRole('link')).toHaveLength(2);
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    expect(within(summary()).getByText('Enter a description')).toBeTruthy();
+    expect(description.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('shows a JSON error in the summary only as captured by a Save', async () => {
+    await startNew('Actions');
+    await asJson();
+    await typeIntoEditor('{');
+    expect(screen.getByText(/^The JSON does not parse/)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Action' }));
+    const captured = within(summary()).getByText(/^The JSON does not parse/).textContent;
+    expect(document.activeElement).toBe(summary());
+
+    await typeIntoEditor('{ "a"');
+    expect(within(summary()).getByText(/^The JSON does not parse/).textContent).toBe(captured);
+
+    await typeIntoEditor(JSON.stringify(newAction));
+    expect(screen.queryByRole('alert')).toBeNull();
+    await typeIntoEditor('{ "b"');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText(/^The JSON does not parse/)).toBeTruthy();
+  });
+
+  it('keeps an archived stored goal, clean, and saves a description edit with it', async () => {
+    await openStored({ goal_id: 'g2' }, [
+      structuredClone(goal),
+      { id: 'g2', goal: 'Old goal', is_archived: true },
+    ]);
+    const select = field('Goal (required)') as HTMLSelectElement;
+    expect(select.value).toBe('g2');
+    expect(select.selectedOptions[0]!.textContent).toBe('Old goal (g2) (archived)');
+    expect(screen.queryByText('Unsaved changes.')).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    await saveDescriptionOnly({ goal_id: 'g2' });
+  });
+
+  it('keeps a stored goal that matches nothing, clean, and saves a description edit with it', async () => {
+    await openStored({ goal_id: 'zz' });
+    const select = field('Goal (required)') as HTMLSelectElement;
+    expect(select.value).toBe('zz');
+    expect(select.selectedOptions[0]!.textContent).toBe('zz (not found)');
+    expect(screen.queryByText('Unsaved changes.')).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await settle();
+    expect(writes()).toHaveLength(0);
+    await saveDescriptionOnly({ goal_id: 'zz' });
+  });
+
+  it.each([['2026-11-01'], ['2028-06-01']])(
+    'keeps the stored last day %s and saves a description edit without a date problem',
+    async (date) => {
+      await openStored({ expires_on: date });
+      expect((field('Last day (required)') as HTMLInputElement).value).toBe(date);
+      await saveDescriptionOnly({ expires_on: date });
+      expect(screen.queryByRole('alert')).toBeNull();
+    },
+  );
+
+  it('sends location: null when both location fields are cleared', async () => {
+    await openStored({ location: { label: 'Map', address: '1 Main St' } });
+    expect((field('Address') as HTMLInputElement).value).toBe('1 Main St');
+    await fireEvent.input(field('Location button label'), { target: { value: '' } });
+    await fireEvent.input(field('Address'), { target: { value: '' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(JSON.parse(lastWrite().body!)).toEqual({
+      goal_id: 'g1',
+      description: 'Existing action',
+      link: null,
+      location: null,
+      expires_on: '2026-12-01',
+    });
   });
 });
 

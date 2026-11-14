@@ -64,6 +64,8 @@
   let draft = $state(toFormDraft(stored.kind, stored.base));
   let jsonError = $state('');
   let reportedPaths: string[] = $state.raw([]);
+  let capturedJsonError = $state('');
+  let today = $state(atlantaDate(new Date()));
   let sent: ContentRecord | null = $state.raw(null);
   let dismissedIssue: FieldIssue | null = $state(null);
   let errorSummary: ErrorSummary | undefined = $state();
@@ -77,8 +79,7 @@
   const jsonId = $derived(fieldId(kind, 'json'));
   const hasForm = $derived(kind === 'timed_action');
   const showJson = $derived(!hasForm || prefersJson);
-  const today = atlantaDate(new Date());
-  const validationIssues = $derived.by(() => {
+  const liveIssues = $derived.by(() => {
     if (reportedPaths.length === 0) {
       return [];
     }
@@ -89,8 +90,11 @@
       goals,
       existingIds,
       loaded,
-    }).filter((issue) => reportedPaths.includes(issue.path));
+    });
   });
+  const validationIssues = $derived(
+    liveIssues.filter((issue) => reportedPaths.includes(issue.path)),
+  );
   const shownServerIssue = $derived(
     serverIssue === null ||
       serverIssue === dismissedIssue ||
@@ -114,14 +118,23 @@
         ],
   );
   const summaryIssues = $derived(
-    jsonError !== ''
-      ? [{ path: '', message: jsonError, href: `#${jsonId}` }]
+    capturedJsonError !== ''
+      ? [{ path: '', message: capturedJsonError, href: `#${jsonId}` }]
       : fieldIssues.map((issue) => ({
           ...issue,
           href: `#${showJson ? jsonId : fieldId(kind, issue.path)}`,
         })),
   );
   const hasProblems = $derived(summaryIssues.length > 0);
+
+  $effect(() => {
+    const live = new Set(liveIssues.map((issue) => issue.path));
+    const remembered = untrack(() => reportedPaths);
+    const kept = remembered.filter((path) => live.has(path));
+    if (kept.length !== remembered.length) {
+      reportedPaths = kept;
+    }
+  });
 
   $effect(() => {
     if (!hasProblems) {
@@ -165,6 +178,7 @@
   function applyJson(result: JsonResult) {
     jsonError = result.ok ? '' : result.error;
     if (result.ok) {
+      capturedJsonError = '';
       draft = result.draft;
     }
   }
@@ -179,8 +193,11 @@
   function save() {
     dismissedIssue = serverIssue;
     reportedPaths = [];
+    capturedJsonError = '';
     sent = null;
+    today = atlantaDate(new Date());
     if (jsonError !== '') {
+      capturedJsonError = jsonError;
       void focusSummary();
       return;
     }
@@ -192,7 +209,7 @@
       return;
     }
     const found = validatePayload(kind, mode, request.body, {
-      today: atlantaDate(new Date()),
+      today,
       goals,
       existingIds,
       loaded,

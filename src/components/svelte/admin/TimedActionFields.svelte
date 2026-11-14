@@ -24,15 +24,16 @@
   const optionText = (goal: Goal) => `${goal.goal.slice(0, GOAL_TEXT_LENGTH).trim()} (${goal.id})`;
   const latest = $derived(addDays(today, TIMED_ACTION_MAX_DAYS_AHEAD));
   const activeGoals = $derived(goals.filter((goal) => goal.is_archived !== true));
-  const strayOption = $derived.by(() => {
-    if (draft.goal_id.trim() === '') {
-      return null;
-    }
-    const current = goals.find((goal) => goal.id === draft.goal_id);
-    if (current === undefined) {
-      return `${draft.goal_id} (not found)`;
-    }
-    return current.is_archived === true ? `${optionText(current)} (archived)` : null;
+  const strayOptions = $derived.by(() => {
+    const stored = typeof draft.base.goal_id === 'string' ? draft.base.goal_id : '';
+    const ids = [...new Set([draft.goal_id, stored])].filter((value) => value.trim() !== '');
+    return ids.flatMap((value) => {
+      const found = goals.find((goal) => goal.id === value);
+      if (found === undefined) {
+        return [{ value, text: `${value} (not found)` }];
+      }
+      return found.is_archived === true ? [{ value, text: `${optionText(found)} (archived)` }] : [];
+    });
   });
   const linkHintId = `${uid}-link-hint`;
   const locationHintId = `${uid}-location-hint`;
@@ -55,9 +56,9 @@
           {#each activeGoals as goal (goal.id)}
             <option value={goal.id}>{optionText(goal)}</option>
           {/each}
-          {#if strayOption !== null}
-            <option value={draft.goal_id}>{strayOption}</option>
-          {/if}
+          {#each strayOptions as option (option.value)}
+            <option value={option.value}>{option.text}</option>
+          {/each}
         </select>
       {/snippet}
     </FormField>

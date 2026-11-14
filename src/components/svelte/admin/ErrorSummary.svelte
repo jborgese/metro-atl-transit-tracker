@@ -19,7 +19,9 @@
       return;
     }
     event.preventDefault();
-    target.focus();
+    const focusable = 'input, select, textarea, button, [tabindex]';
+    const inner = target.matches(focusable) ? null : target.querySelector<HTMLElement>(focusable);
+    (inner ?? target).focus();
     if (typeof target.scrollIntoView === 'function') {
       target.scrollIntoView({ block: 'center' });
     }

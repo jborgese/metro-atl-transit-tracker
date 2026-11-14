@@ -82,6 +82,21 @@ describe('TimedActionFields goal select', () => {
     expect(changes.at(-1)?.goal_id).toBe('gone');
   });
 
+  it.each([
+    ['g2', 'Second goal (g2) (archived)'],
+    ['gone', 'gone (not found)'],
+  ])('keeps the loaded goal %s pickable after another goal is chosen', async (stored, text) => {
+    const changes: TimedActionDraft[] = [];
+    renderFields({ initial: { goal_id: stored }, onchange: (draft) => changes.push(draft) });
+    const select = screen.getByLabelText('Goal (required)') as HTMLSelectElement;
+    await fireEvent.change(select, { target: { value: 'g1' } });
+    expect(select.value).toBe('g1');
+    expect(optionTexts(select)).toContain(text);
+    await fireEvent.change(select, { target: { value: stored } });
+    expect(select.value).toBe(stored);
+    expect(changes.at(-1)?.goal_id).toBe(stored);
+  });
+
   it('selects the placeholder for a blank goal', () => {
     renderFields();
     expect((screen.getByLabelText('Goal (required)') as HTMLSelectElement).value).toBe('');

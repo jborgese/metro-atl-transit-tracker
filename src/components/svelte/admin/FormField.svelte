@@ -102,6 +102,7 @@
     background: var(--surface-1);
     color: inherit;
     font: inherit;
+    font-size: max(1em, 16px);
     padding: 0.5rem 0.65rem;
   }
 

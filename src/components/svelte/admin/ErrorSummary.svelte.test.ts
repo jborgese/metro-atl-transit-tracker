@@ -36,4 +36,18 @@ describe('ErrorSummary', () => {
     expect(document.activeElement).toBe(input);
     input.remove();
   });
+
+  it('focuses the first control inside a target that cannot take focus itself', async () => {
+    const group = document.createElement('fieldset');
+    group.id = 'action-link';
+    const input = document.createElement('input');
+    group.append(input);
+    document.body.append(group);
+    render(ErrorSummary, {
+      props: { issues: [{ path: 'link', message: 'Fill in both', href: '#action-link' }] },
+    });
+    await fireEvent.click(screen.getByRole('link', { name: 'Fill in both' }));
+    expect(document.activeElement).toBe(input);
+    group.remove();
+  });
 });
