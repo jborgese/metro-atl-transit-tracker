@@ -197,6 +197,23 @@ function addIfAbsent(issues: Map<string, string>, path: string, message: string 
   }
 }
 
+function addMilestoneTitleIssues(body: Body, issues: Map<string, string>): void {
+  if (!Array.isArray(body.milestones)) {
+    return;
+  }
+  body.milestones.forEach((milestone: unknown, index) => {
+    if (!isObject(milestone)) {
+      return;
+    }
+    const { title } = milestone;
+    if (typeof title === 'string' && title.trim() !== '') {
+      return;
+    }
+    const path = `milestones.${index}.title`;
+    addIfAbsent(issues, path, `${fieldLabel('project', path)}: enter a value`);
+  });
+}
+
 function addContextIssues(
   kind: ContentKind,
   mode: WriteMode,
@@ -214,6 +231,9 @@ function addContextIssues(
   }
   if (kind === 'project' && mode === 'update' && leadOrgBlanked(body, context)) {
     issues.set('lead_org.name', LEAD_ORG_MESSAGE);
+  }
+  if (kind === 'project') {
+    addMilestoneTitleIssues(body, issues);
   }
 }
 

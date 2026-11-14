@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isCalendarDate } from '#lib/content/formModel/dates.ts';
   import { fieldId } from '#lib/content/formModel/labels.ts';
   import type { TimedActionDraft } from '#lib/content/formModel/types.ts';
   import type { FieldIssue } from '#lib/content/formModel/validate.ts';
@@ -35,6 +36,13 @@
       return found.is_archived === true ? [{ value, text: `${optionText(found)} (archived)` }] : [];
     });
   });
+  const storedLastDay = $derived(
+    typeof draft.base.expires_on === 'string' ? draft.base.expires_on : '',
+  );
+  const lastDayPicker = $derived(storedLastDay.trim() === '' || isCalendarDate(storedLastDay));
+  const lastDayHint = $derived(
+    `The banner shows through the end of this day, Atlanta time. From ${today} to ${latest}.${lastDayPicker ? '' : ' Stored as text; replace it with a date to use the picker.'}`,
+  );
   const linkHintId = `${uid}-link-hint`;
   const locationHintId = `${uid}-location-hint`;
 </script>
@@ -86,15 +94,15 @@
       id={id('expires_on')}
       label="Last day"
       required
-      hint={`The banner shows through the end of this day, Atlanta time. From ${today} to ${latest}.`}
+      hint={lastDayHint}
       error={errorAt('expires_on')}
     >
       {#snippet children({ describedBy, invalid })}
         <input
           id={id('expires_on')}
-          type="date"
-          min={today}
-          max={latest}
+          type={lastDayPicker ? 'date' : 'text'}
+          min={lastDayPicker ? today : undefined}
+          max={lastDayPicker ? latest : undefined}
           aria-describedby={describedBy}
           aria-invalid={invalid ? 'true' : undefined}
           bind:value={draft.expires_on}

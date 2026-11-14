@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { emptyRelatedOrgRow, KNOWN_FIELDS } from '#lib/content/formModel/draft.ts';
+  import { emptyRelatedOrgRow } from '#lib/content/formModel/draft.ts';
+  import { hiddenKeys } from '#lib/content/formModel/hiddenKeys.ts';
   import { fieldId } from '#lib/content/formModel/labels.ts';
-  import { SERVER_MANAGED_KEYS } from '#lib/content/formModel/payload.ts';
   import type { GoalDraft, RelatedOrgRow } from '#lib/content/formModel/types.ts';
   import type { FieldIssue } from '#lib/content/formModel/validate.ts';
   import type { Project, TimedAction } from '#types/content.ts';
@@ -32,7 +32,6 @@
     onaddaction,
   }: Props = $props();
 
-  const SHOWN_ELSEWHERE: readonly string[] = [...SERVER_MANAGED_KEYS, 'id'];
   const COUNTY_OPTIONS = countyOrder.map((value) => ({ value, label: shortCountyName(value) }));
 
   const uid = $props.id();
@@ -49,13 +48,9 @@
     ...projectOptions(false, ''),
     ...projectOptions(true, ' (archived)'),
   ]);
-  const hiddenKeys = $derived(
-    Object.keys(draft.base).filter(
-      (key) => !Object.hasOwn(KNOWN_FIELDS.goal, key) && !SHOWN_ELSEWHERE.includes(key),
-    ),
-  );
+  const hidden = $derived(hiddenKeys(draft));
   const hiddenNotice = $derived(
-    `This goal has ${hiddenKeys.length} ${hiddenKeys.length === 1 ? 'field' : 'fields'} the form does not show: ${hiddenKeys.join(', ')}. Use Edit as JSON to change them.`,
+    `This goal has ${hidden.length} ${hidden.length === 1 ? 'field' : 'fields'} the form does not show: ${hidden.join(', ')}. Use Edit as JSON to change them.`,
   );
   const actionLines = $derived(
     actions.map((action) => ({
@@ -68,7 +63,7 @@
 
 <form novalidate onsubmit={(event) => event.preventDefault()}>
   <fieldset class="body" disabled={readonly}>
-    {#if hiddenKeys.length > 0}
+    {#if hidden.length > 0}
       <p class="notice">{hiddenNotice}</p>
     {/if}
     <p class="intro">Fields marked (required) must be filled in.</p>

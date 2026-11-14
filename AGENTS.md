@@ -1,6 +1,6 @@
 # AGENTS.md — metro-atl-transit-tracker
 
-SvelteKit 3 app (Svelte 5 runes, TypeScript) that powers maitai.observer, a public transit-advocacy map and content hub for Metro Atlanta. It contains a MapLibre map, goals and history pages, an admin JSON editor, and JSON API endpoints backed by Cloudflare D1. It deploys to Cloudflare Workers and uses npm.
+SvelteKit 3 app (Svelte 5 runes, TypeScript) that powers maitai.observer, a public transit-advocacy map and content hub for Metro Atlanta. It contains a MapLibre map, goals and history pages, an admin form editor, and JSON API endpoints backed by Cloudflare D1. It deploys to Cloudflare Workers and uses npm.
 
 This file provides operational guidance for **all AI agents** (Cursor, Claude Code, Codex, Copilot, etc.). **Canonical coding patterns** live in [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md); area-specific rules live in `.claude/rules/*.md`. Human contributor conventions start in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
@@ -59,8 +59,10 @@ npm run dev
 - `reports/`: audit reports written by `.claude/commands/`
 - `scripts/`: smoke, integration, and schema-check scripts plus asset build utilities
 - `src/components/svelte/`: Svelte components
+- `src/components/svelte/admin/`: the admin editor pane, the project, goal, and action forms, and their building blocks
 - `src/data/`: static geo metadata (fallback seed) and the generated `src/data/static/orgLogos.ts`
 - `src/layouts/`: `BaseLayout.svelte`, which pages import directly (there is no `+layout.svelte`)
+- `src/lib/content/`: Zod schemas shared by the server and the browser, option lists, and the form model used by the admin forms
 - `src/lib/map/`: MapLibre setup and layer helpers, plain TypeScript called from components
 - `src/lib/server/`: server-only code: `auth/` (Cloudflare Access JWT, `requireEditorActor`), `content/` (projects, goals, timed actions, history, profiles), `feedback/`, `openapi/`
 - `src/routes/`: pages (`/`, `/history`, `/admin`) and JSON API endpoints under `src/routes/api/`
@@ -82,10 +84,11 @@ npm run dev
 
 **Navigation hints:**
 
-- New API resource? Add `src/routes/api/<resource>/+server.ts`. Wire it to a domain module in `src/lib/server/<domain>/`, the way `api/projects` wires `makeCollectionHandlers` from `src/lib/server/content/handlers.ts`. Validate input with Zod in that domain's `validators.ts`. Register the schema in `src/lib/server/openapi/spec.ts`.
+- New API resource? Add `src/routes/api/<resource>/+server.ts`. Wire it to a domain module in `src/lib/server/<domain>/`, the way `api/projects` wires `makeCollectionHandlers` from `src/lib/server/content/handlers.ts`. Validate input with Zod in that domain's `validators.ts` (content schemas live in `src/lib/content/schemas.ts` and are re-exported by the server validators). Register the schema in `src/lib/server/openapi/spec.ts`.
 - New component? `src/components/svelte/`, following `.claude/rules/svelte.md`.
 - Schema change? Add the next-numbered file in `migrations/d1/`, and extend `scripts/check-d1-schema.mjs` when it adds a required table, index, or trigger.
-- New content type? Also add an entry in `src/routes/admin/datasets.ts` and a label in `src/utils/entityLabels.ts`.
+- New content type? Also add an entry in `src/routes/admin/datasets.ts` and a label in `src/utils/entityLabels.ts`. Its form also needs `emptyRecord` and `KNOWN_FIELDS` entries in `src/lib/content/formModel/draft.ts`, a `*Fields` component in `src/components/svelte/admin/`, and a branch for it in `EditorPane.svelte`.
+- New editable field? Add it to the schema in `src/lib/content/schemas.ts`, to the draft type in `src/lib/content/formModel/types.ts`, to the draft, toRecord and `KNOWN_FIELDS` in `src/lib/content/formModel/draft.ts`, to `labels.ts`, and to the matching `*Fields` component; the round-trip test must still pass.
 - New shared type? `src/types/<domain>.ts`, exported through the barrel (`CONTRIBUTING.md` → "Type declaration placement").
 - New color, surface, or spacing value? Reuse or add a token per [`docs/design-tokens.md`](docs/design-tokens.md).
 

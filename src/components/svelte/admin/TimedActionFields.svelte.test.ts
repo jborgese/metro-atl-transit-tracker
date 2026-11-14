@@ -135,6 +135,35 @@ describe('TimedActionFields limits and hints', () => {
     );
   });
 
+  it.each(['2026-02-30', 'Next week'])(
+    'shows the stored last day %s, which is not a real date, as text with a hint',
+    async (stored) => {
+      renderFields({ initial: { expires_on: stored }, today: '2026-11-14' });
+      const date = screen.getByLabelText('Last day (required)') as HTMLInputElement;
+      expect(date.type).toBe('text');
+      expect(date.value).toBe(stored);
+      expect(date.hasAttribute('min')).toBe(false);
+      expect(date.hasAttribute('max')).toBe(false);
+      expect(document.getElementById(date.getAttribute('aria-describedby')!)!.textContent).toBe(
+        'The banner shows through the end of this day, Atlanta time. From 2026-11-14 to 2027-11-15. Stored as text; replace it with a date to use the picker.',
+      );
+      await fireEvent.input(date, { target: { value: '2026-12-05' } });
+      expect(screen.getByLabelText('Last day (required)')).toBe(date);
+      expect(date.type).toBe('text');
+    },
+  );
+
+  it.each([[''], ['2026-12-01'], ['2028-02-29']])(
+    'uses the date picker for the stored last day %j',
+    (stored) => {
+      renderFields({ initial: { expires_on: stored } });
+      const date = screen.getByLabelText('Last day (required)') as HTMLInputElement;
+      expect(date.type).toBe('date');
+      expect(date.value).toBe(stored);
+      expect(screen.queryByText(/Stored as text/)).toBeNull();
+    },
+  );
+
   it('gives the other hints', () => {
     renderFields();
     expect(screen.getByText('Shown on the banner.')).toBeTruthy();

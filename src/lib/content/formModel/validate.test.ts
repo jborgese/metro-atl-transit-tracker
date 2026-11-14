@@ -152,6 +152,62 @@ describe('validatePayload', () => {
     });
   });
 
+  describe('milestone titles', () => {
+    const loaded = { id: 'p1', title: 'T', milestones: [{ title: 'Kickoff' }] };
+    const edit = (milestones: unknown) =>
+      validatePayload('project', 'update', { milestones }, { ...context, loaded });
+
+    it.each([
+      ['blank', { title: '', date: '2026-01-01' }],
+      ['missing', { date: '2026-01-01' }],
+      ['whitespace', { title: '   ', date: '2026-01-01' }],
+      ['not text', { title: 5, date: '2026-01-01' }],
+    ])('reports a %s title at the row', (_name, milestone) => {
+      expect(edit([{ title: 'Kickoff' }, milestone])).toEqual(
+        only('milestones.1.title', 'Milestone 2 title: enter a value'),
+      );
+    });
+
+    it('reports every row without a title, on create too', () => {
+      expect(
+        validatePayload(
+          'project',
+          'create',
+          { id: 'p2', title: 'T', milestones: [{ date: '2026-01-01' }, { title: '' }] },
+          context,
+        ),
+      ).toEqual([
+        { path: 'milestones.0.title', message: 'Milestone 1 title: enter a value' },
+        { path: 'milestones.1.title', message: 'Milestone 2 title: enter a value' },
+      ]);
+    });
+
+    it('accepts a milestone with a title and no date', () => {
+      expect(edit([{ title: 'Kickoff' }, { title: 'Opening' }])).toEqual([]);
+    });
+
+    it('checks nothing when the milestones are not in the body', () => {
+      expect(
+        validatePayload('project', 'update', { title: 'Renamed' }, { ...context, loaded }),
+      ).toEqual([]);
+    });
+
+    it('leaves a row that is not an object to the schema', () => {
+      expect(edit(['text'])).toEqual(only('milestones.0', 'Milestone 1: enter a value'));
+    });
+
+    it('has no milestone rule for goals', () => {
+      expect(
+        validatePayload(
+          'goal',
+          'update',
+          { milestones: [{ date: '2026-01-01' }] },
+          { ...context, loaded: { id: 'g1', goal: 'G' } },
+        ),
+      ).toEqual([]);
+    });
+  });
+
   describe('remaining message rows', () => {
     it('rejects a date that does not exist', () => {
       expect(
