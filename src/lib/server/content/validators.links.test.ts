@@ -54,29 +54,47 @@ describe('http(s)-only organisation and source links', () => {
     );
   });
 
-  it('rejects a javascript link on a project patch', () => {
-    expectFieldError(
-      () => toProjectPatch({ sources: [{ label: 'L', url: 'javascript:alert(1)' }] }),
-      'sources.0.url',
-    );
+  it.each(bad)('rejects %s on a project patch', (url) => {
+    expectFieldError(() => toProjectPatch({ lead_org: { name: 'A', url } }), 'lead_org.url');
+    expectFieldError(() => toProjectPatch({ partners: [{ name: 'A', url }] }), 'partners.0.url');
+    expectFieldError(() => toProjectPatch({ sources: [{ label: 'L', url }] }), 'sources.0.url');
   });
 
-  it('rejects a javascript link on a goal patch', () => {
+  it.each(bad)('rejects %s on a goal patch', (url) => {
     expectFieldError(
-      () => toGoalPatch({ related_orgs: [{ name: 'A', url: 'javascript:alert(1)' }] }),
+      () => toGoalPatch({ related_orgs: [{ name: 'A', url }] }),
       'related_orgs.0.url',
     );
   });
 
-  it('accepts http and https', () => {
+  it('accepts http and https in every position', () => {
     expect(() =>
       toProjectCreate({
         id: 'p',
         title: 'T',
         lead_org: { name: 'A', url: 'http://a.example' },
+        partners: [{ name: 'B', url: 'https://b.example' }],
         sources: [{ label: 'L', url: 'https://a.example/x' }],
       }),
     ).not.toThrow();
+    expect(() =>
+      toGoalCreate({
+        id: 'g',
+        goal: 'G',
+        related_orgs: [{ name: 'A', url: 'http://a.example/y' }],
+      }),
+    ).not.toThrow();
+  });
+
+  it('stores a link trimmed and otherwise unchanged', () => {
+    const project = toProjectCreate({
+      id: 'p',
+      title: 'T',
+      lead_org: { name: 'A', url: '  https://A.example/Path?q=1#f \n' },
+      sources: [{ label: 'L', url: '\thttps://a.example/x ' }],
+    });
+    expect(project.lead_org?.url).toBe('https://A.example/Path?q=1#f');
+    expect(project.sources?.[0]?.url).toBe('https://a.example/x');
   });
 
   it('still loads every seed record', () => {

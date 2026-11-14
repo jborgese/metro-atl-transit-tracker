@@ -108,7 +108,9 @@ flowchart LR
 
 **Callouts:**
 
-- **`url` in those three schemas becomes http(s)-only** (`z.httpUrl()`), matching timed-action links. Today `z.string().url()` accepts `javascript:alert(1)` and `data:` URLs, and the public page renders them as `href`.
+- **`url` in those three schemas becomes http(s)-only** (`z.httpUrl()`), the same scheme rule as timed-action links (action links also cap length at 2,048 and reject credentials; these three fields do neither). Today `z.string().url()` accepts `javascript:alert(1)` and `data:` URLs, and the public page renders them as `href`.
+- **`z.httpUrl()` also requires an ordinary domain name.** It rejects `http://localhost`, IP addresses, hostnames with underscores or a trailing dot, and non-ASCII top-level domains. No live URL is affected.
+- **The published OpenAPI schema keeps `format: "uri"` for these fields.** The rule is written as plain `z.httpUrl()`, which trims surrounding whitespace itself; wrapping it in a pipe would drop the format from the generated document. A test asserts the format.
 - **This tightens validation on existing routes.** Every URL in the live data is `https`, so no stored record is affected, but it is a behavior change on the published API and needs the owner's approval.
 - **Seeding uses the same schemas.** Confirm the seed files still load.
 
@@ -145,7 +147,7 @@ flowchart LR
 
 - **Round-trip identity is the acceptance test:** `toRecord(toFormDraft(kind, r))` deep-equals `r` for a fixture copy of every live record (personal values anonymised).
 - **Never write Zod's parse output back into the draft.** It trims strings and reorders keys.
-- **Context rules, outside the schema:** the expiry window against today's date in Atlanta (only when the date changed on an edit); the goal exists and is active; a new id is not already used, including by archived records; a stored lead organisation or geographic scope cannot be blanked.
+- **Context rules, outside the schema:** the expiry window against today's date in Atlanta (only when the date changed on an edit); the goal exists and is active (checked on create, and on an edit only when the goal changed, as the server does); a new id is not already used, including by archived records; a stored lead organisation or geographic scope cannot be blanked.
 - **Messages are mapped in the browser** from the issue code and the field's label ("Enter a title", "Description must be 300 characters or fewer", "Source 2: enter a full web address starting with https://"). The server's message text does not change.
 - **Server errors:** read `message`, falling back to `error` (the 403 and 429 bodies use `error` and currently show as raw JSON); find the field with the existing `"… validation failed - <path>: <message>"` format; map 409 "already exists" to the id field.
 
@@ -396,7 +398,7 @@ As an editor, I need to edit every part of a project by form.
 
 ### 6.1 Release strategy
 
-Seven merges in order. Tickets 1 to 3 change nothing an editor sees. Ticket 4 changes how the existing JSON editor writes, so the new write path is exercised under a view the editors already know before any form depends on it. Tickets 5 to 7 switch one record type at a time to a form, smallest first. There is no staging site; each ticket is checked on a local Worker before merge and on production after.
+Seven merges in order. Tickets 1 to 3 change nothing an editor sees. Ticket 4 changes how the existing JSON editor writes, so the new write path is exercised under a view the editors already know before any form depends on it. Tickets 5 to 7 switch one record type at a time to a form, smallest first. There is no staging site to check against: `env.staging` exists in `wrangler.jsonc` with its own database, but that database holds no content and deploying to it would take over the production routes. Each ticket is checked on a local Worker before merge and on production after.
 
 ### 6.2 Operational readiness
 
