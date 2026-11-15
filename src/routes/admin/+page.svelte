@@ -31,7 +31,6 @@
   let history: ContentHistoryEvent[] = $state([]);
   let selectedId = $state('');
   let searchQuery = $state('');
-  let includeArchived = $state(true);
   let loading = $state(false);
   let message = $state('');
   let messageKind: MessageKind = $state('info');
@@ -63,11 +62,9 @@
   const entityKinds = Object.keys(DATASETS).filter(isEditorEntity);
   const activeItems: EntityItem[] = $derived(lists[dataset]);
   const searchTerm = $derived(searchQuery.trim().toLowerCase());
-  const filteredItems: EntityItem[] = $derived(
+  const isArchived = (item: EntityItem) => item.is_archived === true;
+  const matchingItems: EntityItem[] = $derived(
     activeItems.filter((item) => {
-      if (!includeArchived && item.is_archived === true) {
-        return false;
-      }
       if (!searchTerm) {
         return true;
       }
@@ -77,10 +74,15 @@
       return haystack.includes(searchTerm);
     }),
   );
+  const currentItems: EntityItem[] = $derived(matchingItems.filter((item) => !isArchived(item)));
+  const archivedItems: EntityItem[] = $derived(matchingItems.filter(isArchived));
+  const currentTotal = $derived(activeItems.filter((item) => !isArchived(item)).length);
+  const hasArchived = $derived(activeItems.some(isArchived));
   const selectedEntity: EntityItem | null = $derived(
     selectedId ? (lists[selectedDataset].find((item) => item.id === selectedId) ?? null) : null,
   );
   const selectedArchived = $derived(selectedEntity?.is_archived === true);
+  let archivedOpen = $derived(selectedArchived && selectedDataset === dataset);
   const selectedRecord: ContentRecord | null = $derived(
     selectedEntity === null ? null : { ...selectedEntity },
   );
@@ -847,7 +849,7 @@
               onkeydown={(event) => handleTabKeydown(event, kind)}
               disabled={loading}
             >
-              {DATASETS[kind].tabLabel} ({lists[kind].length})
+              {DATASETS[kind].tabLabel} ({lists[kind].filter((item) => !isArchived(item)).length})
             </button>
           {/each}
         </div>
@@ -856,7 +858,7 @@
           <label class="search-field">
             <span class="search-label">
               <span>Search</span>
-              <span class="collection-meta">{filteredItems.length} of {activeItems.length}</span>
+              <span class="collection-meta">{currentItems.length} of {currentTotal}</span>
             </span>
             <input
               bind:value={searchQuery}
@@ -870,33 +872,45 @@
             <button class="new-button" onclick={handleNew} disabled={loading}>
               + New {DATASETS[dataset].title}
             </button>
-            <label class="archive-toggle">
-              <input type="checkbox" bind:checked={includeArchived} />
-              Include archived
-            </label>
           </div>
 
-          <ul>
-            {#if filteredItems.length === 0}
-              <li class="empty-state">No {entityNoun(dataset)}s match this filter.</li>
-            {:else}
-              {#each filteredItems as item (item.id)}
-                <li class:selected={selectedDataset === dataset && selectedId === item.id}>
-                  <button
-                    onclick={() => handleSelect(item.id, dataset)}
-                    disabled={loading}
-                    title={item.id}
-                  >
-                    <span class="item-headline">{toEntityHeadline(item, dataset)}</span>
-                    <span class="item-subline">{toEntitySubline(item, dataset)}</span>
-                    {#if item.is_archived === true}
-                      <span class="badge">archived</span>
-                    {/if}
-                  </button>
-                </li>
-              {/each}
-            {/if}
-          </ul>
+          {#snippet entries(items: EntityItem[], emptyText: string)}
+            <ul>
+              {#if items.length === 0}
+                <li class="empty-state">{emptyText}</li>
+              {:else}
+                {#each items as item (item.id)}
+                  <li class:selected={selectedDataset === dataset && selectedId === item.id}>
+                    <button
+                      onclick={() => handleSelect(item.id, dataset)}
+                      disabled={loading}
+                      title={item.id}
+                    >
+                      <span class="item-headline">{toEntityHeadline(item, dataset)}</span>
+                      <span class="item-subline">{toEntitySubline(item, dataset)}</span>
+                    </button>
+                  </li>
+                {/each}
+              {/if}
+            </ul>
+          {/snippet}
+
+          {@render entries(
+            currentItems,
+            searchTerm
+              ? `No ${entityNoun(dataset)}s match this search.`
+              : `No active ${entityNoun(dataset)}s.`,
+          )}
+
+          {#if hasArchived}
+            <details class="archived-list" bind:open={archivedOpen}>
+              <summary>Archived {entityNoun(dataset)}s ({archivedItems.length})</summary>
+              {@render entries(
+                archivedItems,
+                `No archived ${entityNoun(dataset)}s match this search.`,
+              )}
+            </details>
+          {/if}
         </div>
       </aside>
 
@@ -1272,13 +1286,17 @@
     flex: 1;
   }
 
-  .archive-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
+  .archived-list summary {
+    width: fit-content;
+    padding: 0.3rem 0.25rem;
     font-size: 0.82rem;
     color: var(--text-muted, #c6cbc6);
-    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .archived-list ul {
+    margin-top: 0.4rem;
+    max-height: 20rem;
   }
 
   .search-field {
@@ -1318,8 +1336,6 @@
     gap: 0.18rem;
     align-items: flex-start;
     font-size: 0.8rem;
-    position: relative;
-    padding-right: 3.8rem;
   }
 
   .entity-list li.selected button {
@@ -1337,16 +1353,6 @@
   .item-subline {
     color: var(--text-muted, #c6cbc6);
     font-size: 0.74rem;
-  }
-
-  .badge {
-    position: absolute;
-    right: 0.5rem;
-    top: 0.45rem;
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #f7d7b5;
   }
 
   .empty-state {
@@ -1563,7 +1569,6 @@
 
   @media (pointer: coarse) {
     .admin-page button,
-    .admin-page .archive-toggle,
     .admin-page summary {
       min-height: 2.75rem;
     }
@@ -1571,8 +1576,7 @@
     .admin-page .refresh-button,
     .admin-page .action-pill,
     .admin-page .meta-pill,
-    .admin-page .status-pill,
-    .admin-page .badge {
+    .admin-page .status-pill {
       min-height: 0;
     }
 
@@ -1582,11 +1586,6 @@
 
     .admin-page .refresh-button {
       padding-block: 0.3rem;
-    }
-
-    .admin-page input[type='checkbox'] {
-      width: 1.15rem;
-      height: 1.15rem;
     }
   }
 </style>

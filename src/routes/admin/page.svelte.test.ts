@@ -215,11 +215,14 @@ const summaryLinks = () =>
     .getAllByRole('link')
     .map((link) => [link.textContent, link.getAttribute('href')]);
 
+const currentCount = (path: string) =>
+  (stored[path] ?? []).filter((row) => row.is_archived !== true).length;
+
 async function renderLoaded() {
   render(AdminPage);
-  await screen.findByRole('tab', { name: `Projects (${stored['/api/projects']?.length ?? 0})` });
+  await screen.findByRole('tab', { name: `Projects (${currentCount('/api/projects')})` });
   await screen.findByRole('tab', {
-    name: `Actions (${stored['/api/timed-actions']?.length ?? 0})`,
+    name: `Actions (${currentCount('/api/timed-actions')})`,
   });
 }
 
@@ -2580,5 +2583,102 @@ describe('project form', () => {
     await waitFor(() => expect(status()).toContain('Updated project p1.'));
     await settle();
     expect(screen.getByLabelText('Summary').matches(':disabled')).toBe(false);
+  });
+});
+
+describe('admin record list', () => {
+  const archivedGoal = {
+    id: 'g-old',
+    goal: 'Retired goal',
+    actions: '',
+    related_project_ids: [],
+    related_counties: [],
+    related_orgs: [],
+    provenance: { updated_at: '2026-10-01T00:00:00Z', updated_by: 'AB' },
+    is_archived: true,
+    archived_at: '2026-10-02T00:00:00Z',
+    archived_by: 'AB',
+  };
+  const panel = () => screen.getByRole('tabpanel');
+  const disclosure = () => panel().querySelector('details.archived-list') as HTMLDetailsElement;
+  const listed = (root: Element) =>
+    [...root.querySelectorAll('li button .item-headline')].map((node) => node.textContent);
+
+  async function openGoalsWithArchived() {
+    stored['/api/goals'] = [...stored['/api/goals']!, archivedGoal];
+    await renderLoaded();
+    await fireEvent.click(screen.getByRole('tab', { name: /Goals/ }));
+  }
+
+  it('counts only current records on the tab and offers no include-archived checkbox', async () => {
+    await openGoalsWithArchived();
+    expect(screen.getByRole('tab', { name: 'Goals (1)' })).toBeTruthy();
+    expect(screen.queryByLabelText('Include archived')).toBeNull();
+    expect(panel().querySelector('.collection-meta')!.textContent).toBe('1 of 1');
+  });
+
+  it('keeps archived records apart in a closed disclosure under the current ones', async () => {
+    await openGoalsWithArchived();
+    expect(disclosure().open).toBe(false);
+    expect(disclosure().querySelector('summary')!.textContent).toBe('Archived goals (1)');
+    expect(listed(disclosure())).toEqual(['Retired goal']);
+    const current = panel().querySelector(':scope > ul')!;
+    expect(listed(current)).toEqual(['Regional goal']);
+    expect(panel().textContent).not.toMatch(/archived\s*$/i);
+  });
+
+  it('shows no disclosure for a record type with nothing archived', async () => {
+    await renderLoaded();
+    expect(panel().querySelector('details.archived-list')).toBeNull();
+  });
+
+  it('opens the disclosure when an archived record is selected and editing works from there', async () => {
+    await openGoalsWithArchived();
+    await fireEvent.click(within(disclosure()).getByRole('button', { name: /Retired goal/ }));
+    expect(screen.getByRole('heading', { name: 'Editing Goal g-old' })).toBeTruthy();
+    expect(disclosure().open).toBe(true);
+    expect(disclosure().querySelector('li.selected')).not.toBeNull();
+  });
+
+  it('moves a record into the disclosure when it is archived, and opens it', async () => {
+    await openGoalsWithArchived();
+    await fireEvent.click(screen.getByRole('button', { name: /Regional goal/ }));
+    expect(disclosure().open).toBe(false);
+    await fireEvent.click(screen.getByRole('button', { name: 'Archive' }));
+    await fireEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Archive' }),
+    );
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Goals (0)' })).toBeTruthy());
+    expect(disclosure().querySelector('summary')!.textContent).toBe('Archived goals (2)');
+    expect(listed(disclosure())).toContain('Regional goal');
+    expect(disclosure().open).toBe(true);
+    expect(panel().querySelector(':scope > ul')!.textContent).toContain('No active goals.');
+  });
+
+  it('searches both groups and counts the matches in each', async () => {
+    await openGoalsWithArchived();
+    await fireEvent.input(screen.getByPlaceholderText('Search goals by id or text'), {
+      target: { value: 'retired' },
+    });
+    expect(panel().querySelector('.collection-meta')!.textContent).toBe('0 of 1');
+    expect(panel().querySelector(':scope > ul')!.textContent).toContain(
+      'No goals match this search.',
+    );
+    expect(disclosure().querySelector('summary')!.textContent).toBe('Archived goals (1)');
+    await fireEvent.input(screen.getByPlaceholderText('Search goals by id or text'), {
+      target: { value: 'regional' },
+    });
+    expect(disclosure().querySelector('summary')!.textContent).toBe('Archived goals (0)');
+    expect(disclosure().textContent).toContain('No archived goals match this search.');
+  });
+
+  it('closes the disclosure again on another tab unless the selected record is archived there', async () => {
+    await openGoalsWithArchived();
+    await fireEvent.click(within(disclosure()).getByRole('button', { name: /Retired goal/ }));
+    expect(disclosure().open).toBe(true);
+    await fireEvent.click(screen.getByRole('tab', { name: /Projects/ }));
+    expect(panel().querySelector('details.archived-list')).toBeNull();
+    await fireEvent.click(screen.getByRole('tab', { name: /Goals/ }));
+    expect(disclosure().open).toBe(true);
   });
 });
