@@ -924,6 +924,7 @@
             {goals}
             {projects}
             actions={goalActions}
+            allActions={timedActions}
             {existingIds}
             {saving}
             {loading}
