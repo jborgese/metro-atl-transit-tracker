@@ -484,6 +484,160 @@ describe('GoalsTable public output', () => {
       </div>"
     `);
   });
+
+  it('renders the same county-selected markup as before the preview mode was added', () => {
+    const { container } = render(GoalsTable, {
+      props: {
+        goals: publicGoals,
+        projects: publicProjects,
+        timedActions: publicActions,
+        now,
+        selectedCounty: '13121',
+      },
+    });
+    const markup = container.innerHTML.replaceAll('<!---->', '').replaceAll('><', '>\n<');
+    expect(markup).toMatchInlineSnapshot(`
+      "<div class="goals-table svelte-1m2rtvo">
+      <div class="goals-nav svelte-1m2rtvo">
+      <nav class="county-jump svelte-1m2rtvo" aria-label="Jump to section">
+      <a href="#section-regional" class="svelte-1m2rtvo">Regional</a> <a class="svelte-1m2rtvo" href="#section-13121">Fulton</a>
+      <a class="svelte-1m2rtvo" href="#section-13089">DeKalb</a>
+      <a class="svelte-1m2rtvo" href="#section-13067">Cobb</a>
+      <a class="svelte-1m2rtvo" href="#section-13135">Gwinnett</a>
+      <a class="svelte-1m2rtvo" href="#section-13063">Clayton</a>
+      <a class="svelte-1m2rtvo" href="#section-13151">Henry</a>
+      </nav> <button type="button" class="clear-filter svelte-1m2rtvo">Show all counties</button>
+      </div> <div class="county-section svelte-1m2rtvo" id="section-13121">
+      <h2 class="county-header svelte-1m2rtvo">Fulton County <span class="goal-count svelte-1m2rtvo">(1)</span>
+      </h2> <div class="table-scroll svelte-1m2rtvo">
+      <table class="data-table goals-data-table svelte-1m2rtvo">
+      <thead class="svelte-1m2rtvo">
+      <tr>
+      <th>Goal</th>
+      <th>Status</th>
+      <th>Ongoing actions</th>
+      <th>Orgs</th>
+      </tr>
+      </thead>
+      <tbody class="svelte-1m2rtvo">
+      <tr class="goal-row svelte-1m2rtvo">
+      <td data-label="Goal" class="svelte-1m2rtvo">Fulton goal</td>
+      <td data-label="Status" class="svelte-1m2rtvo">
+      </td>
+      <td data-label="Ongoing actions" class="svelte-1m2rtvo">
+      </td>
+      <td data-label="Orgs" class="svelte-1m2rtvo">
+      </td>
+      </tr> <tr class="timed-action-row svelte-1m2rtvo">
+      <td class="nested-cell svelte-1m2rtvo" colspan="4">
+      <div class="timed-action svelte-1m2rtvo">
+      <span class="timed-action-label svelte-1m2rtvo">Act now</span> <div class="timed-action-content svelte-1m2rtvo">
+      <div class="timed-action-body svelte-1m2rtvo">Testify next year.</div>  <a class="timed-action-button svelte-1m2rtvo" target="_blank" rel="noopener noreferrer external" href="https://www.google.com/maps/search/?api=1&amp;query=55%20Trinity%20Ave%20SW%2C%20Atlanta%2C%20GA" aria-label="Map: City Hall">
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="svelte-1m2rtvo">
+      <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z">
+      </path>
+      <circle cx="12" cy="10" r="2.5">
+      </circle>
+      </svg> City Hall</a> <span class="timed-action-tag svelte-1m2rtvo">Closes Jan. 5, 2027</span>
+      </div>
+      </div>
+      </td>
+      </tr> <tr class="project-row svelte-1m2rtvo">
+      <td class="nested-cell svelte-1m2rtvo" colspan="4">
+      <div class="project-card svelte-1m2rtvo" role="button" tabindex="0" aria-label="View details for Proj Three" style="--status-color: #4280c4;">
+      <div class="project-header svelte-1m2rtvo">
+      <span class="project-indicator svelte-1m2rtvo" aria-hidden="true">→</span> <span class="project-title svelte-1m2rtvo">Proj Three</span> <span class="project-status svelte-1m2rtvo" style="background: rgb(66, 128, 196); color: rgb(255, 255, 255);">on-hold</span>
+      </div> <p class="project-summary svelte-1m2rtvo">Third summary</p>  <div class="project-card-footer svelte-1m2rtvo">
+      <span class="project-card-hint svelte-1m2rtvo">View details</span> </div>
+      </div>
+      </td>
+      </tr>
+      </tbody>
+      </table>
+      </div>
+      </div> <div class="county-section svelte-1m2rtvo" id="section-regional">
+      <h2 class="county-header svelte-1m2rtvo">Regional <span class="goal-count svelte-1m2rtvo">(1)</span>
+      </h2> <div class="table-scroll svelte-1m2rtvo">
+      <table class="data-table goals-data-table svelte-1m2rtvo">
+      <thead class="svelte-1m2rtvo">
+      <tr>
+      <th>Goal</th>
+      <th>Status</th>
+      <th>Ongoing actions</th>
+      <th>Orgs</th>
+      </tr>
+      </thead>
+      <tbody class="svelte-1m2rtvo">
+      <tr class="goal-row svelte-1m2rtvo">
+      <td data-label="Goal" class="svelte-1m2rtvo">Regional goal</td>
+      <td data-label="Status" class="svelte-1m2rtvo">See <a target="_blank" rel="noopener noreferrer" class="svelte-1m2rtvo" href="https://example.org/status/a/b">example.org/status/...</a>, then wait.</td>
+      <td data-label="Ongoing actions" class="svelte-1m2rtvo">Show up</td>
+      <td data-label="Orgs" class="svelte-1m2rtvo">
+      <div class="related-org svelte-1m2rtvo">
+      <a target="_blank" rel="noopener noreferrer" class="svelte-1m2rtvo" href="https://a.example">Org A</a> <span class="contact-info svelte-1m2rtvo">(call first)</span>
+      </div>
+      <div class="related-org svelte-1m2rtvo">
+      <span>Org B</span> </div>
+      </td>
+      </tr> <tr class="timed-action-row svelte-1m2rtvo">
+      <td class="nested-cell svelte-1m2rtvo" colspan="4">
+      <div class="timed-action svelte-1m2rtvo">
+      <span class="timed-action-label svelte-1m2rtvo">Act now</span> <div class="timed-action-content svelte-1m2rtvo">
+      <div class="timed-action-body svelte-1m2rtvo">Last chance today.</div>   <span class="timed-action-tag svelte-1m2rtvo is-today">Expires today</span>
+      </div>
+      </div>
+      </td>
+      </tr>
+      <tr class="timed-action-row svelte-1m2rtvo">
+      <td class="nested-cell svelte-1m2rtvo" colspan="4">
+      <div class="timed-action svelte-1m2rtvo">
+      <span class="timed-action-label svelte-1m2rtvo">Act now</span> <div class="timed-action-content svelte-1m2rtvo">
+      <div class="timed-action-body svelte-1m2rtvo">Comment on the study.</div> <a class="timed-action-button svelte-1m2rtvo" target="_blank" rel="noopener noreferrer external" href="https://beltline.org/x">Submit a comment <svg viewBox="0 0 24 24" aria-hidden="true" class="svelte-1m2rtvo">
+      <path d="M7 17 17 7M8 7h9v9">
+      </path>
+      </svg>
+      </a> <a class="timed-action-button svelte-1m2rtvo" target="_blank" rel="noopener noreferrer external" href="https://www.google.com/maps/search/?api=1&amp;query=1050%20Murphy%20Ave%20SW%2C%20Atlanta%2C%20GA" aria-label="Map: Murphy Crossing site">
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="svelte-1m2rtvo">
+      <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z">
+      </path>
+      <circle cx="12" cy="10" r="2.5">
+      </circle>
+      </svg> Murphy Crossing site</a> <span class="timed-action-tag svelte-1m2rtvo">Closes Dec. 10</span>
+      </div>
+      </div>
+      </td>
+      </tr> <tr class="project-row svelte-1m2rtvo">
+      <td class="nested-cell svelte-1m2rtvo" colspan="4">
+      <div class="project-card svelte-1m2rtvo" role="button" tabindex="0" aria-label="View details for Proj One" style="--status-color: #4280c4;">
+      <div class="project-header svelte-1m2rtvo">
+      <span class="project-indicator svelte-1m2rtvo" aria-hidden="true">→</span> <span class="project-title svelte-1m2rtvo">Proj One</span> <span class="project-status svelte-1m2rtvo" style="background: rgb(66, 128, 196); color: rgb(31, 31, 31);">Planning</span>
+      </div> <p class="project-summary svelte-1m2rtvo">First summary</p> <div class="project-org svelte-1m2rtvo">
+      <span class="org-label svelte-1m2rtvo">Lead:</span> <a target="_blank" rel="noopener noreferrer" class="svelte-1m2rtvo" href="https://itsmarta.com/">MARTA</a>
+      </div> <div class="project-card-footer svelte-1m2rtvo">
+      <span class="project-card-hint svelte-1m2rtvo">View details</span> <a class="project-source-link svelte-1m2rtvo" target="_blank" rel="noopener noreferrer" href="https://example.org/plan">View source →</a>
+      </div>
+      </div>
+      </td>
+      </tr>
+      <tr class="project-row svelte-1m2rtvo">
+      <td class="nested-cell svelte-1m2rtvo" colspan="4">
+      <div class="project-card svelte-1m2rtvo" role="button" tabindex="0" aria-label="View details for Proj Two" style="--status-color: #c4a042;">
+      <div class="project-header svelte-1m2rtvo">
+      <span class="project-indicator svelte-1m2rtvo" aria-hidden="true">→</span> <span class="project-title svelte-1m2rtvo">Proj Two</span> <span class="project-status svelte-1m2rtvo" style="background: rgb(196, 160, 66); color: rgb(31, 31, 31);">Implementation</span>
+      </div> <p class="project-summary svelte-1m2rtvo">Second summary</p> <div class="project-org svelte-1m2rtvo">
+      <span class="org-label svelte-1m2rtvo">Lead:</span> <span>GDOT</span>
+      </div> <div class="project-card-footer svelte-1m2rtvo">
+      <span class="project-card-hint svelte-1m2rtvo">View details</span> </div>
+      </div>
+      </td>
+      </tr>
+      </tbody>
+      </table>
+      </div>
+      </div>
+      </div>"
+    `);
+  });
 });
 
 describe('GoalsTable preview', () => {

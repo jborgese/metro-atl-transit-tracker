@@ -378,7 +378,7 @@ As an editor, I need to edit every part of a project by form.
 
 **Acceptance Criteria (checkbox-ready):**
 
-- [ ] Every project field is editable by form: status with a badge preview, dates, milestones, scope, counties, modes, lead organization, partners, sources
+- [ ] Every project field is editable by form: status, dates, milestones, scope, counties, modes, lead organization, partners, sources; the form ends with a live preview of the card
 - [ ] Sources can be moved up and down
 - [ ] A stored value outside a fixed list is kept and shown
 - [ ] `README.md` and `AGENTS.md` describe the form editor and where a new field is added

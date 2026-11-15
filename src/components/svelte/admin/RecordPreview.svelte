@@ -34,23 +34,30 @@
     goal: 'How this goal will look on the site. It updates as you edit.',
     timed_action: 'How the action banner will look on the site. It updates as you edit.',
   };
+  const PHONE: Record<ContentKind, string> = {
+    project:
+      'Shown as it looks on a phone. On wider screens the card is the same, with slightly larger text.',
+    goal: 'Shown as it looks on a phone. On wider screens a goal is a table row with the same content.',
+    timed_action:
+      'Shown as it looks on a phone. On wider screens the banner is the same, with slightly larger text.',
+  };
   const NOUN: Record<ContentKind, string> = {
     project: 'project',
     goal: 'goal',
     timed_action: 'action',
   };
   const PASSED = 'Its last day has passed, so it is not shown on the site.';
-  const NEEDS_LAST_DAY = 'It needs a last day before it can be shown.';
+  const NEEDS_LAST_DAY = 'It needs a valid last day before it can be shown.';
   const NEEDS_GOAL = 'It needs an active goal before it can be shown.';
   const NOT_LINKED =
-    'No goal links to this project yet. Project cards appear under the goals that link to them.';
-
-  const now = new Date();
-  const today = atlantaDate(now);
+    'No active goal links to this project yet. Project cards appear under the goals that link to them.';
+  const NOT_LISTED = 'Not listed: its counties are not ones the site shows.';
 
   const text = (value: unknown): string => (typeof value === 'string' ? value : '');
   const filled = (value: unknown): value is string =>
     typeof value === 'string' && value.trim() !== '';
+  const webUrl = (value: unknown): string | undefined =>
+    typeof value === 'string' && /^https?:\/\//i.test(value.trim()) ? value.trim() : undefined;
   const isPlain = (value: unknown): value is Plain =>
     typeof value === 'object' && value !== null && !Array.isArray(value);
   const strings = (value: unknown): string[] =>
@@ -59,30 +66,34 @@
   const isActive = (item: { is_archived?: boolean }) => item.is_archived !== true;
 
   function relatedOrgs(value: unknown): RelatedOrg[] {
-    return plains(value).flatMap((org) =>
-      filled(org.name)
+    return plains(value).flatMap((org) => {
+      const url = webUrl(org.url);
+      return filled(org.name)
         ? [
             {
               name: org.name,
-              ...(filled(org.url) ? { url: org.url } : {}),
+              ...(url ? { url } : {}),
               ...(filled(org.contact_info) ? { contact_info: org.contact_info } : {}),
             },
           ]
-        : [],
-    );
+        : [];
+    });
   }
 
   function leadOrg(value: unknown): OrganizationRef | undefined {
     if (!isPlain(value) || !filled(value.name)) {
       return undefined;
     }
-    return filled(value.url) ? { name: value.name, url: value.url } : { name: value.name };
+    const url = webUrl(value.url);
+    return url ? { name: value.name, url } : { name: value.name };
   }
 
   function link(value: unknown): TimedActionLink | null {
-    return isPlain(value) && filled(value.label) && filled(value.url)
-      ? { label: value.label, url: value.url }
-      : null;
+    if (!isPlain(value)) {
+      return null;
+    }
+    const url = webUrl(value.url);
+    return filled(value.label) && url ? { label: value.label, url } : null;
   }
 
   function location(value: unknown): TimedActionLocation | null {
@@ -112,10 +123,9 @@
       summary: text(source.summary),
       status: text(source.status),
       lead_org: leadOrg(source.lead_org),
-      sources: plains(source.sources).map((item) => ({
-        label: text(item.label),
-        url: filled(item.url) ? item.url : '',
-      })),
+      sources: plains(source.sources)
+        .filter((item) => filled(item.label) || filled(item.url))
+        .map((item) => ({ label: text(item.label), url: webUrl(item.url) ?? '' })),
     };
   }
 
@@ -132,7 +142,7 @@
     };
   }
 
-  function actionNotes(source: ContentRecord): string[] {
+  function actionNotes(source: ContentRecord, today: string): string[] {
     const lastDay = text(source.expires_on);
     const goalId = text(source.goal_id);
     const hasGoal = filled(goalId) && goals.some((goal) => goal.id === goalId && isActive(goal));
@@ -146,22 +156,25 @@
   function projectNotes(source: ContentRecord): string[] {
     const id = text(source.id);
     const linked =
-      !isNew &&
+      filled(id) &&
       goals.some((goal) => isActive(goal) && (goal.related_project_ids ?? []).includes(id));
     return linked ? [] : [NOT_LINKED];
   }
 
-  function listedUnder(source: ContentRecord): string {
+  function listedNames(source: ContentRecord): string[] {
     const counties = strings(source.related_counties);
-    if (counties.length === 0) {
-      return 'Listed under: Regional';
-    }
-    const names = countyOrder
-      .filter((county) => counties.includes(county))
-      .map((county) => shortCountyName(county));
-    return `Listed under: ${names.join(', ')}`;
+    return counties.length === 0
+      ? ['Regional']
+      : countyOrder
+          .filter((county) => counties.includes(county))
+          .map((county) => shortCountyName(county));
   }
 
+  const now = $derived.by(() => {
+    void record;
+    return new Date();
+  });
+  const today = $derived(atlantaDate(now));
   const shown: Shown = $derived(
     kind === 'goal'
       ? { goal: goalCopy(record) }
@@ -169,24 +182,26 @@
         ? { project: projectCopy(record) }
         : { action: actionCopy(record) },
   );
+  const listed = $derived(kind === 'goal' ? listedNames(record) : []);
   const notes = $derived([
     ...(archived ? [`This ${NOUN[kind]} is archived, so it is not shown on the site.`] : []),
-    ...(kind === 'timed_action' ? actionNotes(record) : []),
+    ...(kind === 'timed_action' ? actionNotes(record, today) : []),
     ...(kind === 'project' ? projectNotes(record) : []),
+    ...(kind === 'goal' && listed.length === 0 ? [NOT_LISTED] : []),
   ]);
   const activeProjects = $derived(projects.filter(isActive));
   const goalActions = $derived(isNew ? [] : actions);
-  const placement = $derived(kind === 'goal' ? listedUnder(record) : '');
 </script>
 
 <section class="record-preview">
   <h3>Preview</h3>
   <p class="help">{HELP[kind]}</p>
+  <p class="help">{PHONE[kind]}</p>
   {#each notes as note (note)}
     <p class="note">{note}</p>
   {/each}
-  {#if placement !== ''}
-    <p class="help">{placement}</p>
+  {#if listed.length > 0}
+    <p class="help">Listed under: {listed.join(', ')}</p>
   {/if}
   <div class="preview-frame" inert>
     <GoalsTable preview={shown} projects={activeProjects} timedActions={goalActions} {now} />

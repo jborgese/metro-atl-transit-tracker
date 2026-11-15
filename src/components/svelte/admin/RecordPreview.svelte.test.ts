@@ -49,11 +49,19 @@ const HELP: Record<ContentKind, string> = {
   goal: 'How this goal will look on the site. It updates as you edit.',
   timed_action: 'How the action banner will look on the site. It updates as you edit.',
 };
+const PHONE: Record<ContentKind, string> = {
+  project:
+    'Shown as it looks on a phone. On wider screens the card is the same, with slightly larger text.',
+  goal: 'Shown as it looks on a phone. On wider screens a goal is a table row with the same content.',
+  timed_action:
+    'Shown as it looks on a phone. On wider screens the banner is the same, with slightly larger text.',
+};
 const PASSED = 'Its last day has passed, so it is not shown on the site.';
-const NEEDS_LAST_DAY = 'It needs a last day before it can be shown.';
+const NEEDS_LAST_DAY = 'It needs a valid last day before it can be shown.';
 const NEEDS_GOAL = 'It needs an active goal before it can be shown.';
 const NOT_LINKED =
-  'No goal links to this project yet. Project cards appear under the goals that link to them.';
+  'No active goal links to this project yet. Project cards appear under the goals that link to them.';
+const NOT_LISTED = 'Not listed: its counties are not ones the site shows.';
 
 const validAction = { goal_id: 'g-active', description: 'Comment now', expires_on: '2026-12-01' };
 
@@ -76,7 +84,7 @@ const section = () => screen.getByRole('heading', { name: 'Preview' }).closest('
 const frame = () => section().querySelector<HTMLElement>('.preview-frame')!;
 const lines = () =>
   [...section().querySelectorAll(':scope > p')].map((line) => line.textContent?.trim());
-const notes = () => lines().slice(1);
+const notes = () => lines().slice(2);
 const inFrame = (selector: string) => frame().querySelector(selector)?.textContent?.trim();
 
 beforeEach(() => {
@@ -94,15 +102,18 @@ describe('RecordPreview layout', () => {
     ['project', { id: 'p-linked', title: 'Linked project' }, '.project-card'],
     ['goal', { id: 'g-active', goal: 'Active goal' }, '.goal-row'],
     ['timed_action', validAction, '.timed-action'],
-  ] as const)('shows the %s heading, help line and an inert mock', (kind, record, mockSelector) => {
-    show({ kind, record });
-    expect(screen.getByRole('heading', { level: 3, name: 'Preview' })).toBeTruthy();
-    expect(lines()[0]).toBe(HELP[kind]);
-    expect(frame().hasAttribute('inert')).toBe(true);
-    expect(frame().querySelector(mockSelector)).toBeTruthy();
-    expect(frame().querySelector('.goals-table-preview')).toBeTruthy();
-    expect(frame().querySelectorAll('p.help, p.note')).toHaveLength(0);
-  });
+  ] as const)(
+    'shows the %s heading, both help lines and an inert mock',
+    (kind, record, mockSelector) => {
+      show({ kind, record });
+      expect(screen.getByRole('heading', { level: 3, name: 'Preview' })).toBeTruthy();
+      expect(lines().slice(0, 2)).toEqual([HELP[kind], PHONE[kind]]);
+      expect(frame().hasAttribute('inert')).toBe(true);
+      expect(frame().querySelector(mockSelector)).toBeTruthy();
+      expect(frame().querySelector('.goals-table-preview')).toBeTruthy();
+      expect(frame().querySelectorAll('p.help, p.note')).toHaveLength(0);
+    },
+  );
 });
 
 describe('RecordPreview notes', () => {
@@ -167,7 +178,9 @@ describe('RecordPreview notes', () => {
   });
 
   it.each([
-    ['a new project', [NOT_LINKED], 'p-linked', true],
+    ['a new project with a blank id', [NOT_LINKED], '', true],
+    ['a new project no goal links to', [NOT_LINKED], 'p-unlinked', true],
+    ['a new project an active goal already links to', [], 'p-linked', true],
     ['a project no goal links to', [NOT_LINKED], 'p-unlinked', false],
     ['a project only an archived goal links to', [NOT_LINKED], 'p-archived-link', false],
     ['a project an active goal links to', [], 'p-linked', false],
@@ -181,9 +194,12 @@ describe('RecordPreview notes', () => {
     [undefined, 'Listed under: Regional'],
     [['13089'], 'Listed under: DeKalb'],
     [['13135', '99999', '13121'], 'Listed under: Fulton, Gwinnett'],
-  ])('lists a goal with counties %j under where it appears', (counties, expected) => {
+    [['99999'], NOT_LISTED],
+    [['99999', '88888'], NOT_LISTED],
+  ])('places a goal with counties %j', (counties, expected) => {
     show({ kind: 'goal', record: { id: 'g-active', goal: 'G', related_counties: counties } });
     expect(notes()).toEqual([expected]);
+    expect(lines()).not.toContain('Listed under:');
   });
 });
 
@@ -211,7 +227,7 @@ describe('RecordPreview with incomplete or wrong data', () => {
   function expectClean() {
     const html = section().innerHTML;
     const text = section().textContent ?? '';
-    for (const bad of ['undefined', 'null', '[object Object]', 'NaN']) {
+    for (const bad of ['undefined', 'null', '[object Object]', 'NaN', 'Invalid Date']) {
       expect(text).not.toContain(bad);
       expect(html).not.toContain(bad);
     }
@@ -251,6 +267,24 @@ describe('RecordPreview with incomplete or wrong data', () => {
     expect(frame().querySelector('.project-source-link')).toBeNull();
   });
 
+  it('links the first source that is not blank', () => {
+    show({
+      kind: 'project',
+      record: {
+        title: 'T',
+        sources: [
+          { label: ' ', url: '' },
+          { label: 'News', url: 'https://example.org/news' },
+        ],
+      },
+    });
+    const source = frame().querySelector('.project-source-link')!;
+    expect([source.textContent, source.getAttribute('href')]).toEqual([
+      'View source →',
+      'https://example.org/news',
+    ]);
+  });
+
   it('leaves out a half-filled link and location', () => {
     show({
       kind: 'timed_action',
@@ -261,6 +295,75 @@ describe('RecordPreview with incomplete or wrong data', () => {
       },
     });
     expect(frame().querySelectorAll('.timed-action-button')).toHaveLength(0);
+  });
+});
+
+describe('RecordPreview links', () => {
+  const kinds = ['project', 'goal', 'timed_action'] as const;
+  const withUrl = (url: string): ContentRecord => ({
+    ...validAction,
+    id: 'p-linked',
+    title: 'T',
+    goal: 'G',
+    link: { label: 'Open', url },
+    lead_org: { name: 'Lead org', url },
+    sources: [{ label: 'Plan', url }],
+    related_orgs: [{ name: 'Partner org', url }],
+  });
+  const hrefs = () =>
+    [...frame().querySelectorAll('[href]')].map((node) => node.getAttribute('href'));
+  const stillShown: Record<ContentKind, [string, string]> = {
+    project: ['.project-org', 'Lead: Lead org'],
+    goal: ['.related-org', 'Partner org'],
+    timed_action: ['.timed-action-body', 'Comment now'],
+  };
+
+  it.each(
+    kinds.flatMap((kind) =>
+      ['javascript:alert(1)', 'data:text/html,x', 'ftp://x'].map((url) => [kind, url] as const),
+    ),
+  )('keeps no %s link to %s', (kind, url) => {
+    show({ kind, record: withUrl(url) });
+    expect(hrefs()).toEqual([]);
+    const [selector, shownText] = stillShown[kind];
+    expect(inFrame(selector)).toBe(shownText);
+  });
+
+  it.each([
+    ['project', ['HTTPS://A.example', 'HTTPS://A.example']],
+    ['goal', ['HTTPS://A.example']],
+    ['timed_action', ['HTTPS://A.example']],
+  ] as const)('keeps a %s web address in any case, trimmed', (kind, expected) => {
+    show({ kind, record: withUrl('  HTTPS://A.example ') });
+    expect(hrefs()).toEqual(expected);
+  });
+});
+
+describe('RecordPreview clock', () => {
+  const lastDayAction = { ...validAction, expires_on: '2026-11-14' };
+
+  it('treats late evening in Atlanta as still the last day', () => {
+    vi.setSystemTime(new Date('2026-11-15T04:30:00Z'));
+    show({ kind: 'timed_action', record: lastDayAction });
+    expect(inFrame('.timed-action-tag')).toBe('Expires today');
+    expect(notes()).toEqual([]);
+  });
+
+  it('says the last day has passed just after midnight in Atlanta', () => {
+    vi.setSystemTime(new Date('2026-11-15T05:30:00Z'));
+    show({ kind: 'timed_action', record: lastDayAction });
+    expect(inFrame('.timed-action-tag')).toBe('Closes Nov. 14');
+    expect(notes()).toEqual([PASSED]);
+  });
+
+  it('reads the clock again when the record changes', async () => {
+    vi.setSystemTime(new Date('2026-11-15T04:30:00Z'));
+    const { rerender } = show({ kind: 'timed_action', record: lastDayAction });
+    expect(notes()).toEqual([]);
+    vi.setSystemTime(new Date('2026-11-15T05:30:00Z'));
+    await rerender({ record: { ...lastDayAction, description: 'Comment tonight' } });
+    expect(inFrame('.timed-action-tag')).toBe('Closes Nov. 14');
+    expect(notes()).toEqual([PASSED]);
   });
 });
 
