@@ -2,7 +2,6 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/sve
 import { tick, type ComponentProps } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ProjectDraft } from '#lib/content/formModel/types.ts';
-import { getStatusColor, getStatusTextColor } from '#utils/statusHelpers.ts';
 import ProjectFieldsHarness from './ProjectFieldsHarness.svelte';
 
 type HarnessProps = ComponentProps<typeof ProjectFieldsHarness>;
@@ -57,13 +56,6 @@ const hintOf = (element: HTMLElement) => {
     .filter((id) => id.endsWith('-hint'))
     .map((id) => document.getElementById(id)!.textContent);
 };
-const badge = () => document.querySelector<HTMLElement>('.badge');
-const colorOf = (value: string) => {
-  const probe = document.createElement('span');
-  probe.style.color = value;
-  return probe.style.color;
-};
-
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -277,31 +269,6 @@ describe('ProjectFields status', () => {
   it('offers no Not set once a status is stored', () => {
     renderFields({ initial: stored });
     expect(screen.queryByRole('option', { name: 'Not set' })).toBeNull();
-  });
-
-  it('previews the badge in the status colors, hidden from assistive technology', async () => {
-    renderFields({ initial: stored });
-    const preview = badge()!;
-    expect(preview.textContent).toBe('Implementation');
-    expect(preview.style.backgroundColor).toBe(colorOf(getStatusColor('implementation')));
-    expect(preview.style.color).toBe(colorOf(getStatusTextColor('implementation')));
-    expect(preview.closest('[aria-hidden="true"]')).toBeTruthy();
-    expect(preview.closest('[aria-hidden="true"]')!.textContent).toContain('Preview');
-
-    await fireEvent.change(select('Status'), { target: { value: 'ongoing' } });
-    expect(badge()!.textContent).toBe('Ongoing');
-    expect(badge()!.style.backgroundColor).toBe(colorOf(getStatusColor('ongoing')));
-    expect(badge()!.style.color).toBe(colorOf(getStatusTextColor('ongoing')));
-  });
-
-  it('previews a status that is not in the list by its stored text', () => {
-    renderFields({ initial: { ...stored, status: 'on-hold' } });
-    expect(badge()!.textContent).toBe('on-hold');
-  });
-
-  it('shows no badge while no status is set', () => {
-    renderFields({ initial: { id: 'p1', title: 'T' } });
-    expect(badge()).toBeNull();
   });
 });
 

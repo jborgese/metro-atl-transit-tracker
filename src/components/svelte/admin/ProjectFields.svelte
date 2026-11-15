@@ -18,7 +18,7 @@
     PROJECT_STATUSES,
   } from '#lib/content/options.ts';
   import { countyOrder, shortCountyName } from '#utils/countyLookup.ts';
-  import { getStatusColor, getStatusTextColor, statusLabel } from '#utils/statusHelpers.ts';
+  import { statusLabel } from '#utils/statusHelpers.ts';
   import CheckboxGroup from './CheckboxGroup.svelte';
   import FormField from './FormField.svelte';
   import RepeatableRows from './RepeatableRows.svelte';
@@ -137,16 +137,6 @@
               <option value={option.value}>{option.label}</option>
             {/each}
           </select>
-          {#if draft.status !== ''}
-            <p class="preview" aria-hidden="true">
-              <span>Preview</span>
-              <span
-                class="badge"
-                style:background-color={getStatusColor(draft.status)}
-                style:color={getStatusTextColor(draft.status)}>{statusLabel(draft.status)}</span
-              >
-            </p>
-          {/if}
         {/snippet}
       </FormField>
 
@@ -501,26 +491,6 @@
     padding: 0 0.3rem;
     font-size: 0.86rem;
     font-weight: 600;
-  }
-
-  .preview {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-  }
-
-  .badge {
-    display: inline-block;
-    padding: 0.22rem 0.65rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    word-break: break-word;
   }
 
   select,

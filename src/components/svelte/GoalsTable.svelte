@@ -13,6 +13,7 @@
     countyNames = {},
     onclearCounty,
     onselectProject,
+    preview = null,
   }: {
     goals?: Goal[];
     projects?: Project[];
@@ -22,6 +23,7 @@
     countyNames?: Record<string, string>;
     onclearCounty?: () => void;
     onselectProject?: (detail: { project: Project }) => void;
+    preview?: { goal: Goal } | { project: Project } | { action: TimedAction } | null;
   } = $props();
 
   function getCountyName(geoid: string): string {
@@ -153,79 +155,74 @@
   }
 </script>
 
-<div class="goals-table">
-  <div class="goals-nav">
-    <nav class="county-jump" aria-label="Jump to section">
-      <a href="#section-regional">Regional</a>
-      {#each countyOrder as countyId}
-        <a href="#section-{countyId}">{shortCountyName(countyId)}</a>
-      {/each}
-    </nav>
-    {#if selectedCounty}
-      <button type="button" class="clear-filter" onclick={() => onclearCounty?.()}>
-        Show all counties
-      </button>
-    {/if}
-  </div>
-
-  {#if groupedByCounty}
-    <!-- No county selected: show Regional first, then grouped by county -->
-
-    <!-- Regional Section (at top when no county selected) -->
-    <div class="county-section" id="section-regional">
-      <h2 class="county-header">
-        Regional
-        {#if regionalGoals.length > 0}
-          <span class="goal-count">({regionalGoals.length})</span>
+{#if preview}
+  <div class="goals-table goals-table-preview">
+    <div class="table-scroll">
+      <table class="data-table goals-data-table">
+        {#if 'goal' in preview}
+          <thead>
+            <tr>
+              <th>Goal</th>
+              <th>Status</th>
+              <th>Ongoing actions</th>
+              <th>Orgs</th>
+            </tr>
+          </thead>
         {/if}
-      </h2>
-      {#if regionalGoals.length === 0}
-        <p class="no-goals-message">No regional goal information is available.</p>
-      {:else}
-        <div class="table-scroll">
-          <table class="data-table goals-data-table">
-            <thead>
-              <tr>
-                <th>Goal</th>
-                <th>Status</th>
-                <th>Ongoing actions</th>
-                <th>Orgs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each regionalGoals as goal}
-                {@render goalRows(goal)}
-              {/each}
-            </tbody>
-          </table>
-        </div>
+        <tbody>
+          {#if 'goal' in preview}
+            {@render goalRows(preview.goal)}
+          {:else if 'action' in preview}
+            {@render actionRow(preview.action)}
+          {:else}
+            {@render projectRow(preview.project)}
+          {/if}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{:else}
+  <div class="goals-table">
+    <div class="goals-nav">
+      <nav class="county-jump" aria-label="Jump to section">
+        <a href="#section-regional">Regional</a>
+        {#each countyOrder as countyId}
+          <a href="#section-{countyId}">{shortCountyName(countyId)}</a>
+        {/each}
+      </nav>
+      {#if selectedCounty}
+        <button type="button" class="clear-filter" onclick={() => onclearCounty?.()}>
+          Show all counties
+        </button>
       {/if}
     </div>
 
-    <!-- County Sections -->
-    {#each [...groupedByCounty.entries()] as [countyId, countyGoals]}
-      <div class="county-section" id="section-{countyId}">
+    {#if groupedByCounty}
+      <!-- No county selected: show Regional first, then grouped by county -->
+
+      <!-- Regional Section (at top when no county selected) -->
+      <div class="county-section" id="section-regional">
         <h2 class="county-header">
-          {getCountyName(countyId)}
-          {#if countyGoals.length > 0}
-            <span class="goal-count">({countyGoals.length})</span>
+          Regional
+          {#if regionalGoals.length > 0}
+            <span class="goal-count">({regionalGoals.length})</span>
           {/if}
         </h2>
-        {#if countyGoals.length === 0}
-          <p class="no-goals-message">No goal information is available for this county.</p>
+        {#if regionalGoals.length === 0}
+          <p class="no-goals-message">No regional goal information is available.</p>
         {:else}
           <div class="table-scroll">
             <table class="data-table goals-data-table">
               <thead>
                 <tr>
                   <th>Goal</th>
-                  <th>Status/Related Projects</th>
+                  <th>Status</th>
                   <th>Ongoing actions</th>
-                  <th>Related Orgs</th>
+                  <th>Orgs</th>
                 </tr>
               </thead>
               <tbody>
-                {#each countyGoals as goal}
+                {#each regionalGoals as goal}
                   {@render goalRows(goal)}
                 {/each}
               </tbody>
@@ -233,71 +230,104 @@
           </div>
         {/if}
       </div>
-    {/each}
-  {:else}
-    <!-- County selected: show county goals first, then Regional section -->
-    <div class="county-section" id="section-{selectedCounty}">
-      <h2 class="county-header">
-        {getCountyName(selectedCounty ?? '')}
-        {#if filtered.length > 0}
-          <span class="goal-count">({filtered.length})</span>
-        {/if}
-      </h2>
-      {#if filtered.length === 0}
-        <p class="no-goals-message">No goal information is available for this county.</p>
-      {:else}
-        <div class="table-scroll">
-          <table class="data-table goals-data-table">
-            <thead>
-              <tr>
-                <th>Goal</th>
-                <th>Status</th>
-                <th>Ongoing actions</th>
-                <th>Orgs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each filtered as goal}
-                {@render goalRows(goal)}
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {/if}
-    </div>
 
-    <!-- Regional Section (below selected county) -->
-    <div class="county-section" id="section-regional">
-      <h2 class="county-header">
-        Regional
-        {#if regionalGoals.length > 0}
-          <span class="goal-count">({regionalGoals.length})</span>
-        {/if}
-      </h2>
-      {#if regionalGoals.length === 0}
-        <p class="no-goals-message">No regional goal information is available.</p>
-      {:else}
-        <div class="table-scroll">
-          <table class="data-table goals-data-table">
-            <thead>
-              <tr>
-                <th>Goal</th>
-                <th>Status</th>
-                <th>Ongoing actions</th>
-                <th>Orgs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each regionalGoals as goal}
-                {@render goalRows(goal)}
-              {/each}
-            </tbody>
-          </table>
+      <!-- County Sections -->
+      {#each [...groupedByCounty.entries()] as [countyId, countyGoals]}
+        <div class="county-section" id="section-{countyId}">
+          <h2 class="county-header">
+            {getCountyName(countyId)}
+            {#if countyGoals.length > 0}
+              <span class="goal-count">({countyGoals.length})</span>
+            {/if}
+          </h2>
+          {#if countyGoals.length === 0}
+            <p class="no-goals-message">No goal information is available for this county.</p>
+          {:else}
+            <div class="table-scroll">
+              <table class="data-table goals-data-table">
+                <thead>
+                  <tr>
+                    <th>Goal</th>
+                    <th>Status/Related Projects</th>
+                    <th>Ongoing actions</th>
+                    <th>Related Orgs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each countyGoals as goal}
+                    {@render goalRows(goal)}
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {/if}
         </div>
-      {/if}
-    </div>
-  {/if}
-</div>
+      {/each}
+    {:else}
+      <!-- County selected: show county goals first, then Regional section -->
+      <div class="county-section" id="section-{selectedCounty}">
+        <h2 class="county-header">
+          {getCountyName(selectedCounty ?? '')}
+          {#if filtered.length > 0}
+            <span class="goal-count">({filtered.length})</span>
+          {/if}
+        </h2>
+        {#if filtered.length === 0}
+          <p class="no-goals-message">No goal information is available for this county.</p>
+        {:else}
+          <div class="table-scroll">
+            <table class="data-table goals-data-table">
+              <thead>
+                <tr>
+                  <th>Goal</th>
+                  <th>Status</th>
+                  <th>Ongoing actions</th>
+                  <th>Orgs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each filtered as goal}
+                  {@render goalRows(goal)}
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Regional Section (below selected county) -->
+      <div class="county-section" id="section-regional">
+        <h2 class="county-header">
+          Regional
+          {#if regionalGoals.length > 0}
+            <span class="goal-count">({regionalGoals.length})</span>
+          {/if}
+        </h2>
+        {#if regionalGoals.length === 0}
+          <p class="no-goals-message">No regional goal information is available.</p>
+        {:else}
+          <div class="table-scroll">
+            <table class="data-table goals-data-table">
+              <thead>
+                <tr>
+                  <th>Goal</th>
+                  <th>Status</th>
+                  <th>Ongoing actions</th>
+                  <th>Orgs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each regionalGoals as goal}
+                  {@render goalRows(goal)}
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
+      </div>
+    {/if}
+  </div>
+{/if}
 {#snippet goalRows(goal: Goal)}
   <tr class="goal-row">
     <td data-label="Goal">{goal.goal}</td>
@@ -331,97 +361,107 @@
     </td>
   </tr>
   {#each getLiveActions(goal) as action (action.id)}
-    <tr class="timed-action-row">
-      <td class="nested-cell" colspan="4">
-        <div class="timed-action">
-          <span class="timed-action-label">Act now</span>
-          <div class="timed-action-content">
-            <div class="timed-action-body">{action.description}</div>
-            {#if action.link}
-              <a
-                class="timed-action-button"
-                href={action.link.url}
-                target="_blank"
-                rel="noopener noreferrer external"
-              >
-                {action.link.label}
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
-              </a>
-            {/if}
-            {#if action.location}
-              <a
-                class="timed-action-button"
-                href={mapsSearchUrl(action.location.address)}
-                aria-label={`Map: ${action.location.label}`}
-                target="_blank"
-                rel="noopener noreferrer external"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
-                  <circle cx="12" cy="10" r="2.5" />
-                </svg>
-                {action.location.label}
-              </a>
-            {/if}
-            <span class="timed-action-tag" class:is-today={action.expires_on === atlantaDate(now)}
-              >{expiryTag(action.expires_on, now)}</span
-            >
-          </div>
-        </div>
-      </td>
-    </tr>
+    {@render actionRow(action)}
   {/each}
   <!-- Nested project rows -->
   {#each getRelatedProjects(goal) as project (project.id)}
-    <tr class="project-row">
-      <td class="nested-cell" colspan="4">
-        <div
-          class="project-card"
-          role="button"
-          tabindex="0"
-          aria-label="View details for {project.title}"
-          style="--status-color: {getStatusColor(project.status)}"
-          onclick={(e) => handleProjectCardClick(project, e)}
-          onkeydown={(e) => handleProjectCardKeydown(project, e)}
-        >
-          <div class="project-header">
-            <span class="project-indicator" aria-hidden="true">&rarr;</span>
-            <span class="project-title">{project.title}</span>
-            <span
-              class="project-status"
-              style="background: {getStatusColor(project.status)}; color: {getStatusTextColor(
-                project.status,
-              )}">{statusLabel(project.status)}</span
+    {@render projectRow(project)}
+  {/each}
+{/snippet}
+
+{#snippet actionRow(action: TimedAction)}
+  <tr class="timed-action-row">
+    <td class="nested-cell" colspan="4">
+      <div class="timed-action">
+        <span class="timed-action-label">Act now</span>
+        <div class="timed-action-content">
+          <div class="timed-action-body">{action.description}</div>
+          {#if action.link}
+            <a
+              class="timed-action-button"
+              href={action.link.url}
+              target="_blank"
+              rel="noopener noreferrer external"
             >
-          </div>
-          <p class="project-summary">{project.summary}</p>
-          {#if project.lead_org}
-            <div class="project-org">
-              <span class="org-label">Lead:</span>
-              {#if project.lead_org.url}
-                <a href={project.lead_org.url} target="_blank" rel="noopener noreferrer"
-                  >{project.lead_org.name}</a
-                >
-              {:else}
-                <span>{project.lead_org.name}</span>
-              {/if}
-            </div>
+              {action.link.label}
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
+            </a>
           {/if}
-          <div class="project-card-footer">
-            <span class="project-card-hint">View details</span>
-            {#if project.sources?.[0]?.url}
-              <a
-                class="project-source-link"
-                href={project.sources[0].url}
-                target="_blank"
-                rel="noopener noreferrer">View source →</a
+          {#if action.location}
+            <a
+              class="timed-action-button"
+              href={mapsSearchUrl(action.location.address)}
+              aria-label={`Map: ${action.location.label}`}
+              target="_blank"
+              rel="noopener noreferrer external"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
+                <circle cx="12" cy="10" r="2.5" />
+              </svg>
+              {action.location.label}
+            </a>
+          {/if}
+          {#if action.expires_on}
+            <span class="timed-action-tag" class:is-today={action.expires_on === atlantaDate(now)}
+              >{expiryTag(action.expires_on, now)}</span
+            >
+          {/if}
+        </div>
+      </div>
+    </td>
+  </tr>
+{/snippet}
+
+{#snippet projectRow(project: Project)}
+  <tr class="project-row">
+    <td class="nested-cell" colspan="4">
+      <div
+        class="project-card"
+        role="button"
+        tabindex="0"
+        aria-label="View details for {project.title}"
+        style="--status-color: {getStatusColor(project.status)}"
+        onclick={(e) => handleProjectCardClick(project, e)}
+        onkeydown={(e) => handleProjectCardKeydown(project, e)}
+      >
+        <div class="project-header">
+          <span class="project-indicator" aria-hidden="true">&rarr;</span>
+          <span class="project-title">{project.title}</span>
+          <span
+            class="project-status"
+            style="background: {getStatusColor(project.status)}; color: {getStatusTextColor(
+              project.status,
+            )}">{statusLabel(project.status)}</span
+          >
+        </div>
+        <p class="project-summary">{project.summary}</p>
+        {#if project.lead_org}
+          <div class="project-org">
+            <span class="org-label">Lead:</span>
+            {#if project.lead_org.url}
+              <a href={project.lead_org.url} target="_blank" rel="noopener noreferrer"
+                >{project.lead_org.name}</a
               >
+            {:else}
+              <span>{project.lead_org.name}</span>
             {/if}
           </div>
+        {/if}
+        <div class="project-card-footer">
+          <span class="project-card-hint">View details</span>
+          {#if project.sources?.[0]?.url}
+            <a
+              class="project-source-link"
+              href={project.sources[0].url}
+              target="_blank"
+              rel="noopener noreferrer">View source →</a
+            >
+          {/if}
         </div>
-      </td>
-    </tr>
-  {/each}
+      </div>
+    </td>
+  </tr>
 {/snippet}
 
 <style>
@@ -430,6 +470,9 @@
     container-type: inline-size;
     container-name: goals-layout;
     scroll-behavior: smooth;
+  }
+  .goals-table-preview {
+    margin-top: 0;
   }
   .goals-nav {
     display: flex;

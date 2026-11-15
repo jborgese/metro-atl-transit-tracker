@@ -2682,3 +2682,110 @@ describe('admin record list', () => {
     expect(disclosure().open).toBe(true);
   });
 });
+
+describe('record preview', () => {
+  const previewHeading = () => screen.getByRole('heading', { level: 3, name: 'Preview' });
+  const preview = () => previewHeading().closest('section')!;
+  const inPreview = (selector: string) => preview().querySelector(selector)?.textContent?.trim();
+  const pane = () => heading().closest('section')!;
+  const comesBefore = (first: Node, second: Node) =>
+    (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+  function expectBetween(before: Element, button: string) {
+    const main = screen.getByRole('button', { name: button });
+    expect(before.contains(preview())).toBe(false);
+    expect(comesBefore(before, preview())).toBe(true);
+    expect(comesBefore(preview(), main)).toBe(true);
+  }
+
+  it.each([
+    ['Projects', 'Create Project'],
+    ['Goals', 'Create Goal'],
+    ['Actions', 'Create Action'],
+  ] as const)('sits after the new %s form and before %s', async (tabLabel, button) => {
+    await startNew(tabLabel);
+    expectBetween(pane().querySelector('form')!, button);
+  });
+
+  it.each([
+    ['project', () => selectProject('Proj One')],
+    ['goal', () => selectGoal('Regional goal')],
+    ['action', () => openActionsTabAndSelect('Existing action')],
+  ] as const)('sits after a stored %s form and before Save Changes', async (_kind, open) => {
+    await open();
+    expectBetween(pane().querySelector('form')!, 'Save Changes');
+  });
+
+  it('sits before the error summary', async () => {
+    await startNew('Projects');
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Project' }));
+    await settle();
+    expect(comesBefore(preview(), screen.getByRole('alert'))).toBe(true);
+  });
+
+  it('follows the project title and status as they are edited', async () => {
+    await selectProject('Proj One');
+    expect([inPreview('.project-title'), inPreview('.project-status')]).toEqual([
+      'Proj One',
+      'Planning',
+    ]);
+    await editLabeled('Title (required)', 'Proj Renamed');
+    await fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'ongoing' } });
+    expect([inPreview('.project-title'), inPreview('.project-status')]).toEqual([
+      'Proj Renamed',
+      'Ongoing',
+    ]);
+  });
+
+  it('follows the goal text as it is edited', async () => {
+    await selectGoal('Regional goal');
+    expect(inPreview('.goal-row td')).toBe('Regional goal');
+    expect(inPreview('.timed-action-body')).toBe('Existing action');
+    await editLabeled('Goal (required)', 'Faster buses everywhere');
+    expect(inPreview('.goal-row td')).toBe('Faster buses everywhere');
+  });
+
+  it('follows the action description and link label as they are edited', async () => {
+    await openActionsTabAndSelect('Existing action');
+    expect(inPreview('.timed-action-body')).toBe('Existing action');
+    expect(preview().querySelector('.timed-action-button')).toBeNull();
+    await editLabeled('Description (required)', 'Comment by Friday');
+    await editLabeled('Link button label', 'Send a comment');
+    await editLabeled('Link web address', 'https://example.org/comment');
+    expect(inPreview('.timed-action-body')).toBe('Comment by Friday');
+    expect(inPreview('.timed-action-button')).toBe('Send a comment');
+  });
+
+  it('is shown in the JSON view and follows the JSON', async () => {
+    await selectProject('Proj One');
+    await asJson();
+    expectBetween(editor(), 'Save Changes');
+    await typeIntoEditor(JSON.stringify({ ...editorValue(), title: 'Typed in JSON' }));
+    expect(inPreview('.project-title')).toBe('Typed in JSON');
+  });
+
+  it('is inert, has no ids for summary links to reach, and leaves them on the form', async () => {
+    await startNew('Projects');
+    expect(preview().querySelector('.preview-frame')!.hasAttribute('inert')).toBe(true);
+    expect(preview().querySelectorAll('[id]')).toHaveLength(0);
+    await fireEvent.click(screen.getByRole('button', { name: 'Create Project' }));
+    await settle();
+    const links = within(screen.getByRole('alert')).getAllByRole('link');
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) {
+      const target = document.getElementById(link.getAttribute('href')!.slice(1));
+      expect(target).not.toBeNull();
+      expect(preview().contains(target)).toBe(false);
+    }
+    await fireEvent.click(links[0]!);
+    expect(preview().contains(document.activeElement)).toBe(false);
+    expect(pane().querySelector('form')!.contains(document.activeElement)).toBe(true);
+  });
+
+  it('replaces the status badge under the Status select', async () => {
+    await selectProject('Proj One');
+    expect(screen.queryByText('Preview')).toBe(previewHeading());
+    const statusField = screen.getByLabelText('Status').parentElement!;
+    expect(statusField.querySelector('.badge')).toBeNull();
+  });
+});

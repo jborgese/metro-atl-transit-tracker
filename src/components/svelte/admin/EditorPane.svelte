@@ -25,6 +25,7 @@
   import GoalFields from './GoalFields.svelte';
   import JsonView from './JsonView.svelte';
   import ProjectFields from './ProjectFields.svelte';
+  import RecordPreview from './RecordPreview.svelte';
   import TimedActionFields from './TimedActionFields.svelte';
 
   interface Props {
@@ -34,6 +35,7 @@
     goals: Goal[];
     projects: Project[];
     actions?: TimedAction[];
+    allActions: TimedAction[];
     existingIds: string[];
     saving: boolean;
     loading: boolean;
@@ -58,6 +60,7 @@
     goals,
     projects,
     actions = [],
+    allActions,
     existingIds,
     saving,
     loading,
@@ -322,6 +325,16 @@
     readonly={saving || loading}
   />
 {/if}
+
+<RecordPreview
+  {kind}
+  record={next}
+  {archived}
+  isNew={loaded === null}
+  {goals}
+  {projects}
+  actions={allActions}
+/>
 
 {#each payload.removedKeys as key (key)}
   <p class="editor-state warning">
